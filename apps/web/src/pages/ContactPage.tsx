@@ -29,117 +29,134 @@ export function ContactPage() {
       setForm({ fullName: "", email: "", subject: "", message: "" });
     } catch (err: any) {
       setStatus("error");
-      setFeedback(err.message || "መልዕክት መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።");
+      setFeedback(err.message || "Failed to submit message. Please try again.");
     }
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
       <SectionHeading
+        badge="GET IN TOUCH"
         title={t("contactTitle")}
         subtitle={t("contactDescription")}
       />
 
-      <div className="grid gap-12 lg:grid-cols-2">
+      <div className="grid gap-10 lg:grid-cols-2">
         {/* Contact Form */}
-        <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+        <div className="rounded-3xl bg-white p-8 sm:p-10 shadow-sm ring-1 ring-slate-200/90">
           <form onSubmit={handleSubmit} className="space-y-5">
             {status === "success" ? (
-              <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                ✓ {feedback}
+              <div className="rounded-2xl bg-emerald-50 p-4 text-xs sm:text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200 flex items-center gap-2">
+                <span>✓</span>
+                <span>{feedback}</span>
               </div>
             ) : null}
 
             {status === "error" ? (
-              <div className="rounded-2xl bg-rose-50 p-4 text-sm font-semibold text-rose-800 ring-1 ring-rose-200">
-                ⚠ {feedback}
+              <div className="rounded-2xl bg-rose-50 p-4 text-xs sm:text-sm font-semibold text-rose-800 ring-1 ring-rose-200 flex items-center gap-2">
+                <span>⚠</span>
+                <span>{feedback}</span>
               </div>
             ) : null}
 
             <div>
-              <label className="block text-xs font-bold text-slate-700">{t("fullName")}</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("fullName")}</label>
               <input
                 required
                 type="text"
                 value={form.fullName}
                 onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-                placeholder="ለምሳሌ፡ አበበ ከበደ"
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                placeholder="e.g. Samuel Haile"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700">{t("email")}</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("email")}</label>
               <input
                 required
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-                placeholder="abebe@example.com"
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                placeholder="samuel@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700">{t("subject")}</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("subject")}</label>
               <input
                 required
                 type="text"
                 value={form.subject}
                 onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-                placeholder="የትምህርት መረጃ ጥያቄ"
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                placeholder="Inquiry about full-stack web development cohort"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700">{t("message")}</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("message")}</label>
               <textarea
                 required
                 rows={4}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-                placeholder="መልዕክትዎን እዚህ ይጻፉ..."
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                placeholder="Write your question or request here..."
               />
             </div>
 
             <button
               disabled={status === "submitting"}
               type="submit"
-              className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition-all hover:scale-101"
             >
               {status === "submitting" ? t("loading") : t("submit")}
             </button>
           </form>
         </div>
 
-        {/* Contact Info & Office */}
+        {/* Contact Info & Office Card */}
         <div className="space-y-8">
-          <div className="rounded-3xl bg-slate-900 p-8 text-white">
-            <h3 className="text-xl font-bold">የቀጥታ ድጋፍ ማዕከል</h3>
-            <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-              ስለ ምዝገባ፣ ክፍለ ጊዜዎች እና የአስተማሪነት ማመልከቻ ማንኛውንም ጥያቄ በኢሜይል ወይም በቅጹ በኩል መላክ ይችላሉ።
+          <div className="rounded-3xl bg-slate-950 p-8 sm:p-10 text-white shadow-xl ring-1 ring-white/10">
+            <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-400/30">
+              OFFICIAL SUPPORT
+            </span>
+            <h3 className="mt-4 text-2xl font-black">{t("supportCenter")}</h3>
+            <p className="mt-3 text-sm text-slate-300 leading-relaxed font-normal">
+              {t("supportCenterDesc")}
             </p>
 
-            <div className="mt-8 space-y-4 text-sm">
-              <div className="flex items-center gap-3 text-slate-200">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-cyan-400">
+            <div className="mt-8 space-y-5 text-sm">
+              <div className="flex items-center gap-3.5 text-slate-200">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-cyan-400 text-lg">
                   ✉️
                 </span>
-                <span>support@learnhub.et</span>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase">Direct Email</p>
+                  <p className="font-semibold text-white">support@learnhub.et</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-slate-200">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-cyan-400">
+
+              <div className="flex items-center gap-3.5 text-slate-200">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-cyan-400 text-lg">
                   📍
                 </span>
-                <span>Addis Ababa, Ethiopia</span>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase">Headquarters</p>
+                  <p className="font-semibold text-white">{t("addisAbabaEthiopia")}</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-slate-200">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-cyan-400">
+
+              <div className="flex items-center gap-3.5 text-slate-200">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-cyan-400 text-lg">
                   ⏰
                 </span>
-                <span>ሰኞ - ቅዳሜ / Mon - Sat (8:30 AM - 6:00 PM EAT)</span>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase">Operational Hours</p>
+                  <p className="font-semibold text-white">{t("businessHours")}</p>
+                </div>
               </div>
             </div>
           </div>

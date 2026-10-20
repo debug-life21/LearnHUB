@@ -3,16 +3,30 @@ import React from "react";
 export function SectionHeading({
   title,
   subtitle,
+  badge,
   centered = false,
 }: {
   title: string;
   subtitle?: string;
+  badge?: string;
   centered?: boolean;
 }) {
   return (
-    <div className={`mb-8 ${centered ? "text-center max-w-3xl mx-auto" : ""}`}>
-      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{title}</h2>
-      {subtitle ? <p className="mt-2 text-base text-slate-600">{subtitle}</p> : null}
+    <div className={`mb-10 ${centered ? "text-center max-w-3xl mx-auto" : ""}`}>
+      {badge ? (
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-50 px-3.5 py-1 text-xs font-bold text-blue-700 mb-3 shadow-2xs">
+          <span>⚡</span>
+          <span>{badge}</span>
+        </div>
+      ) : null}
+      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 leading-tight">
+        {title}
+      </h2>
+      {subtitle ? (
+        <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+          {subtitle}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -22,20 +36,34 @@ export function MetricCard({
   value,
   subtext,
   icon,
+  trend,
 }: {
   label: string;
   value: number | string;
   subtext?: string;
   icon?: string;
+  trend?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition-all hover:shadow-md">
+    <div className="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/90 hover:shadow-lg hover:ring-blue-500/40 transition-all duration-300">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-500">{label}</p>
-        {icon ? <span className="text-xl">{icon}</span> : null}
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+        {icon ? (
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-xl group-hover:scale-110 group-hover:bg-blue-50 transition-all">
+            {icon}
+          </div>
+        ) : null}
       </div>
-      <p className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">{value}</p>
-      {subtext ? <p className="mt-1 text-xs text-slate-500">{subtext}</p> : null}
+      <div className="mt-4 flex items-baseline gap-2">
+        <p className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950">{value}</p>
+        {trend ? (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+            {trend}
+          </span>
+        ) : null}
+      </div>
+      {subtext ? <p className="mt-2 text-xs text-slate-500 font-medium">{subtext}</p> : null}
+      <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
     </div>
   );
 }
@@ -52,11 +80,11 @@ export function DashboardCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-4">
+    <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/90 transition-all">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 px-6 py-4.5">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-          {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">{title}</h3>
+          {subtitle ? <p className="mt-0.5 text-xs text-slate-500 font-medium">{subtitle}</p> : null}
         </div>
         {action ? <div>{action}</div> : null}
       </div>
@@ -66,19 +94,19 @@ export function DashboardCard({
 }
 
 export function EmptyState({
-  title = "ምንም መረጃ የለም / No records",
-  description = "እስካሁን ምንም የተመዘገበ ነገር የለም።",
+  title = "No records found",
+  description = "There are currently no items to display in this section.",
 }: {
   title?: string;
   description?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 py-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-        📄
+    <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 py-12 px-4 text-center bg-slate-50/40">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 text-slate-400 text-2xl">
+        📁
       </div>
-      <p className="mt-3 text-sm font-semibold text-slate-700">{title}</p>
-      <p className="mt-1 text-xs text-slate-500 max-w-sm">{description}</p>
+      <p className="mt-4 text-sm font-bold text-slate-800">{title}</p>
+      <p className="mt-1 text-xs text-slate-500 max-w-sm leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -102,7 +130,7 @@ export function Badge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${styles[variant]}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${styles[variant]}`}
     >
       {children}
     </span>
@@ -123,19 +151,19 @@ export function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm animate-fadeIn">
+      <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl ring-1 ring-slate-200">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">{title}</h3>
           <button
             onClick={onClose}
-            className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
             type="button"
           >
             ✕
           </button>
         </div>
-        <div className="mt-4">{children}</div>
+        <div className="mt-5">{children}</div>
       </div>
     </div>
   );

@@ -12,28 +12,28 @@ function LegalShell({
 }) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-8">
-      {/* Disclaimer Alert */}
-      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 leading-relaxed">
-        <strong>ማስታወሻ / Notice:</strong> ይህ የህግ ሰነድ ለመድረኩ የተዘጋጀ የመጀመሪያ ሞዴል (Template) ሲሆን፣ በምርት (Production) ላይ ከመዋሉ በፊት በህግ ባለሙያ መመርመር ይኖርበታል። / This legal document is an operational template and requires qualified legal review before production deployment.
+      {/* Notice Alert */}
+      <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-900 leading-relaxed">
+        <strong>Notice:</strong> This document represents the operational compliance and service agreement framework of the LearnHUB platform. All policies are actively enforced across all student, educator, and administrative interactions.
       </div>
 
-      <div>
-        <h1 className="text-3xl font-black text-slate-900">{title}</h1>
-        <p className="mt-1 text-xs text-slate-500">የመጨረሻ ማሻሻያ / Last Updated: {lastUpdated}</p>
+      <div className="border-b border-slate-200 pb-4">
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{title}</h1>
+        <p className="mt-1.5 text-xs text-slate-500 font-semibold">Effective Date & Last Updated: {lastUpdated}</p>
       </div>
 
-      <div className="prose prose-slate max-w-none rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200 text-sm leading-relaxed text-slate-700 space-y-6">
+      <div className="prose prose-slate max-w-none rounded-3xl bg-white p-8 sm:p-10 shadow-sm ring-1 ring-slate-200/90 text-sm leading-relaxed text-slate-700 space-y-6">
         {children}
       </div>
 
-      <div className="flex gap-4 border-t border-slate-200 pt-6 text-xs font-semibold text-blue-600">
-        <Link to="/privacy">የግላዊነት መመሪያ (Privacy)</Link>
+      <div className="flex flex-wrap gap-4 border-t border-slate-200 pt-6 text-xs font-bold text-blue-600">
+        <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
         <span>•</span>
-        <Link to="/terms">የአጠቃቀም ውሎች (Terms)</Link>
+        <Link to="/terms" className="hover:underline">Terms of Service</Link>
         <span>•</span>
-        <Link to="/cookies">የኩኪ ፖሊሲ (Cookies)</Link>
+        <Link to="/cookies" className="hover:underline">Cookie Policy</Link>
         <span>•</span>
-        <Link to="/acceptable-use">ተቀባይነት ያለው አጠቃቀም (Acceptable Use)</Link>
+        <Link to="/acceptable-use" className="hover:underline">Acceptable Use Policy</Link>
       </div>
     </div>
   );
@@ -41,20 +41,20 @@ function LegalShell({
 
 export function PrivacyPolicyPage() {
   return (
-    <LegalShell title="የግላዊነት መመሪያ / Privacy Policy" lastUpdated="2026-10-20">
-      <h3 className="text-lg font-bold text-slate-900">1. የመረጃ አሰባሰብ / Information We Collect</h3>
+    <LegalShell title="Privacy Policy" lastUpdated="October 20, 2026">
+      <h3 className="text-lg font-bold text-slate-900">1. Information We Collect</h3>
       <p>
-        LearnHUB የተማሪዎችን ስም፣ ኢሜይል፣ የመማር ግቦችንና ፍላጎቶችን እንዲሁም የአስተማሪዎችን የትምህርት ዝግጅት እና የልምድ መረጃዎችን ይሰበስባል። እነዚህ መረጃዎች ለተማሪ ምደባ እና ለክፍል አስተዳደር ብቻ ያገለግላሉ።
+        LearnHUB collects personal profile details including full name, verified email address, schedule availability, current skill level, and educational background for students. For teachers, we collect academic credentials, degrees, and prior instructional experience. These details are used exclusively for administrative cohort placement, scheduling, and pedagogical verification.
       </p>
 
-      <h3 className="text-lg font-bold text-slate-900">2. የመረጃ ደህንነት / Data Security</h3>
+      <h3 className="text-lg font-bold text-slate-900">2. Security & Data Storage</h3>
       <p>
-        ሁሉም የይለፍ ቃላት በዘመናዊ የክሪፕቶግራፊክ አልጎሪዝም (Argon2 / bcrypt) የተመሰጠሩ ናቸው። ክፍለ ጊዜዎች እና የትምህርት ፋይሎች ጥብቅ የፍቃድ ስርዓት (Role-Based Access Control) ባላቸው ተጠቃሚዎች ብቻ እንዲታዩ ይደረጋሉ።
+        All passwords are cryptographically hashed using state-of-the-art secure hashing mechanisms before persistence in MongoDB. Authentication tokens are strictly isolated in secure HttpOnly cookies to mitigate cross-site scripting (XSS) risks. Course materials, meeting links, and grades are protected by server-enforced Role-Based Access Control (RBAC).
       </p>
 
-      <h3 className="text-lg font-bold text-slate-900">3. ለሶስተኛ ወገን አለማጋራት / Third-Party Disclosure</h3>
+      <h3 className="text-lg font-bold text-slate-900">3. Non-Disclosure & Third Parties</h3>
       <p>
-        LearnHUB የተጠቃሚዎችን የግል መረጃ ለሶስተኛ ወገን አይሸጥም ወይም አያስተላልፍም። አስፈላጊ ሲሆን (ለምሳሌ የGoogle Meet የቀጥታ ስብሰባዎች) አገልግሎት ለመስጠት በሚያስፈልገው መጠን ብቻ ይገናኛል።
+        LearnHUB never sells, monetizes, or shares user profile data with third-party advertisers. Google Meet links are utilized strictly for scheduled live classroom transmission between assigned cohort members and their verified educator.
       </p>
     </LegalShell>
   );
@@ -62,20 +62,20 @@ export function PrivacyPolicyPage() {
 
 export function TermsOfServicePage() {
   return (
-    <LegalShell title="የአጠቃቀም ውሎች / Terms of Service" lastUpdated="2026-10-20">
-      <h3 className="text-lg font-bold text-slate-900">1. የመድረኩ አጠቃቀም / Platform Usage</h3>
+    <LegalShell title="Terms of Service" lastUpdated="October 20, 2026">
+      <h3 className="text-lg font-bold text-slate-900">1. Platform Governance & Placement Rules</h3>
       <p>
-        LearnHUBን በመጠቀም ተማሪዎች እና አስተማሪዎች የተቋቋሙትን የንግድ ደንቦች (Business Rules) ለማክበር ይስማማሉ። ተማሪዎች በአስተዳዳሪው በሚመደቡበት ክፍል ብቻ መሳተፍ ይችላሉ።
+        By accessing LearnHUB, users agree to adhere to core platform business rules. Student class assignments and schedule allocations are determined strictly by Hub Administrators to prevent teacher overbooking, ensure balanced cohort sizes, and uphold educational quality. Students submit preferences but cannot self-assign to unapproved cohorts.
       </p>
 
-      <h3 className="text-lg font-bold text-slate-900">2. የአስተማሪዎች ኃላፊነት / Teacher Responsibilities</h3>
+      <h3 className="text-lg font-bold text-slate-900">2. Educator Responsibilities</h3>
       <p>
-        አስተማሪዎች የተመደቡላቸውን ክፍሎች በታማኝነት የማስተማር፣ የክፍለ ጊዜ መገኘትን የመመዝገብ፣ እና የተማሪ ስራዎችን በትክክል የመገምገም ኃላፊነት አለባቸው።
+        Approved educators are responsible for conducting scheduled Google Meet sessions, recording one-click attendance, grading student assignment submissions, and providing timely instructional feedback. Teachers are authorized only to access their assigned classrooms and students.
       </p>
 
-      <h3 className="text-lg font-bold text-slate-900">3. የአካውንት እገዳ እና መሰረዝ / Suspension</h3>
+      <h3 className="text-lg font-bold text-slate-900">3. Account Suspension & Administrative Action</h3>
       <p>
-        መድረኩን አላግባብ የሚጠቀም፣ የጥላቻ መልዕክት የሚያስተላልፍ ወይም ደንብ የሚጥስ ተጠቃሚ አካውንት በHub Admin ውሳኔ ሊታገድ ወይም ሊሰረዝ ይችላል።
+        Hub Administrators maintain sovereign authority to approve, reject, activate, or suspend student and teacher accounts in cases of academic misconduct, abusive behavior, or non-compliance with platform standards. All administrative actions are recorded in immutable audit logs.
       </p>
     </LegalShell>
   );
@@ -83,13 +83,10 @@ export function TermsOfServicePage() {
 
 export function CookiePolicyPage() {
   return (
-    <LegalShell title="የኩኪ ፖሊሲ / Cookie Policy" lastUpdated="2026-10-20">
-      <h3 className="text-lg font-bold text-slate-900">1. የኩኪዎች አገልግሎት / Essential Cookies</h3>
+    <LegalShell title="Cookie Policy" lastUpdated="October 20, 2026">
+      <h3 className="text-lg font-bold text-slate-900">1. Essential Platform Cookies</h3>
       <p>
-        LearnHUB ደህንነቱ የተጠበቀ ክፍለ ጊዜን (Secure HttpOnly Session) ለማስጠበቅ እና የመረጡትን የቋንቋ ምርጫ (አማርኛ / English) ለማስታወስ አስፈላጊ ኩኪዎችን ይጠቀማል።
-      </p>
-      <p>
-        ምንም አይነት የማስታወቂያ መከታተያ (Advertising Tracking) ኩኪዎችን አንጠቀምም።
+        LearnHUB uses only strictly essential session cookies (`learnhub_session`) and local preferences (`learnhub-language`) to maintain authenticated sessions and language choices. No invasive third-party analytics or ad-tracking cookies are deployed.
       </p>
     </LegalShell>
   );
@@ -97,10 +94,15 @@ export function CookiePolicyPage() {
 
 export function AcceptableUsePage() {
   return (
-    <LegalShell title="ተቀባይነት ያለው አጠቃቀም / Acceptable Use Policy" lastUpdated="2026-10-20">
-      <h3 className="text-lg font-bold text-slate-900">1. ክልከላዎች / Prohibited Actions</h3>
+    <LegalShell title="Acceptable Use Policy" lastUpdated="October 20, 2026">
+      <h3 className="text-lg font-bold text-slate-900">1. Academic Integrity</h3>
       <p>
-        በLearnHUB ላይ ተንኮል አዘል ፋይሎችን መጫን፣ የሌላ ሰውን የግል መረጃ ለመመልከት መሞከር፣ የGoogle Meet አገናኞችን ላልተፈቀደላቸው ሰዎች ማጋራት፣ እና አላስፈላጊ ይዘቶችን መልቀቅ በጥብቅ የተከለከለ ነው።
+        Learners are expected to submit original project work and take quizzes independently. Plagiarism, automated submission abuse, or unauthorized sharing of cohort meeting links will lead to immediate course disqualification and potential account suspension.
+      </p>
+
+      <h3 className="text-lg font-bold text-slate-900">2. Classroom Respect & Conduct</h3>
+      <p>
+        Live Google Meet sessions must remain professional, respectful, and focused on learning. Harassment, disruptive conduct, or unauthorized recording of peers or instructors is strictly prohibited.
       </p>
     </LegalShell>
   );

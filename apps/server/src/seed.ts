@@ -44,26 +44,26 @@ async function seed() {
   console.log("Seeding default FAQs...");
   const faqs = [
     {
-      question: "ተማሪዎች እንዴት ይመዘገባሉ እና ወደ ክፍል ይመደባሉ? / How do students register and get placed?",
-      answer: "ተማሪዎች ፍላጎታቸውንና ደረጃቸውን በመሙላት ይመዘገባሉ። የአስተዳዳሪው ቡድን (Hub Admin) መረጃውን መርምሮ ተገቢውን ኮርስ፣ ክፍል እና አስተማሪ ይመድብላቸዋል። / Students submit their profile and goals, and the Hub Admin assigns them to the appropriate class and teacher.",
+      question: "How do students register and get placed in a cohort?",
+      answer: "Students complete their profile with their goals, background, and schedule preferences. The Hub Admin evaluates the application and assigns the learner to the optimal course, cohort size, and certified teacher. (ተማሪዎች ፍላጎታቸውንና ደረጃቸውን በመሙላት ይመዘገባሉ። የአስተዳዳሪው ቡድን መረጃውን መርምሮ ተገቢውን ኮርስ፣ ክፍል እና አስተማሪ ይመድብላቸዋል።)",
       sortOrder: 1,
       isPublished: true,
     },
     {
-      question: "አስተማሪዎች እንዴት ይቀጠራሉ? / How do teachers apply?",
-      answer: "አስተማሪዎች የትምህርት ዝግጅታቸውን እና የልምድ መረጃቸውን ሞልተው ያመለክታሉ። ማመልከቻው በHub Admin ታይቶ ተቀባይነት ሲያገኝ ብቻ ማስተማር ይፈቀድላቸዋል። / Teachers apply through the teacher registration portal. Teaching privileges are activated only after Hub Admin approval.",
+      question: "How do educators apply and get approved to teach?",
+      answer: "Educators apply through the teacher portal with their academic qualifications and experience. Administrative privileges and classroom assignments are activated only after rigorous Hub Admin verification and credential review. (አስተማሪዎች የትምህርት ዝግጅታቸውን እና የልምድ መረጃቸውን ሞልተው ያመለክታሉ። ማመልከቻው በHub Admin ታይቶ ተቀባይነት ሲያገኝ ብቻ ማስተማር ይፈቀድላቸዋል።)",
       sortOrder: 2,
       isPublished: true,
     },
     {
-      question: "የቀጥታ ትምህርት በGoogle Meet እንዴት ይሰጣል? / How do Google Meet live lessons work?",
-      answer: "ሁሉም የክፍለ ጊዜ መርሃ ግብሮች የተረጋገጡ የGoogle Meet አገናኞችን ይይዛሉ። ክፍለ ጊዜው ሲደርስ ተማሪዎች እና አስተማሪዎች በአንድ ቁልፍ በቀጥታ መግባት ይችላሉ። / Scheduled sessions feature authorized Google Meet links with time indicators and one-click join buttons.",
+      question: "How do live Google Meet lessons work?",
+      answer: "Every scheduled session is generated with a secure, verified Google Meet URL. Teachers and enrolled students can join with one click directly from their respective dashboards. (ሁሉም የክፍለ ጊዜ መርሃ ግብሮች የተረጋገጡ የGoogle Meet አገናኞችን ይይዛሉ። ክፍለ ጊዜው ሲደርስ ተማሪዎች እና አስተማሪዎች በአንድ ቁልፍ በቀጥታ መግባት ይችላሉ።)",
       sortOrder: 3,
       isPublished: true,
     },
     {
-      question: "የተማሪ ውጤት እና እድገት እንዴት ይሰላል? / How is student progress tracked?",
-      answer: "የተማሪ እድገት በእውነተኛ መረጃ (የክፍለ ጊዜ ተሳትፎ፣ የተሰሩ ስራዎች እና የፈተና ውጤቶች) ተሰልቶ በዳሽቦርዱ ላይ ይታያል። / Student progress is calculated from actual attendance, submitted assignments, and scored assessments.",
+      question: "How is student progress and grade calculated?",
+      answer: "Progress is computed transparently using a weighted formula: 40% Session Attendance + 40% Practical Assignments + 20% Scored Quizzes, permanently recorded in MongoDB. (የተማሪ እድገት በእውነተኛ መረጃ: 40% መገኘት + 40% ስራዎች + 20% ፈተናዎች ተሰልቶ በዳሽቦርዱ ላይ ይታያል።)",
       sortOrder: 4,
       isPublished: true,
     },
