@@ -1,0 +1,22 @@
+import mongoose, { Schema } from "mongoose";
+
+const classSessionSchema = new Schema(
+  {
+    classroom: { type: Schema.Types.ObjectId, ref: "Classroom", required: true, index: true },
+    teacher: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    startsAt: { type: Date, required: true, index: true },
+    endsAt: { type: Date, required: true },
+    meetingUrl: { type: String, default: "" },
+    status: {
+      type: String,
+      enum: ["scheduled", "completed", "cancelled"],
+      default: "scheduled",
+      index: true,
+    },
+  },
+  { timestamps: true },
+);
+
+export const ClassSessionModel = mongoose.model("ClassSession", classSessionSchema);

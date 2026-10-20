@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #0f172a;
+    --primary-light: #1e293b;
+    --royal-blue: #2563eb;
+    --royal-blue-hover: #1d4ed8;
+    --teal-accent: #0d9488;
+    --teal-light: #ccfbf1;
+    --slate-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border-color: #e2e8f0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Ethiopic', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    background-color: var(--slate-bg);
+    color: #0f172a;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+  }
+}
+
+/* Dynamic Animated Background Styles */
+@keyframes kenburns1 {
+  0% {
+    transform: scale(1.0) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.12) translate(-1.5%, -1%);
+  }
+}
+
+@keyframes kenburns2 {
+  0% {
+    transform: scale(1.14) translate(-1%, 0.5%);
+  }
+  100% {
+    transform: scale(1.02) translate(1%, -1%);
+  }
+}
+
+@keyframes kenburns3 {
+  0% {
+    transform: scale(1.02) translate(1%, 1%);
+  }
+  100% {
+    transform: scale(1.14) translate(-1%, -1.5%);
+  }
+}
+
+@keyframes kenburns4 {
+  0% {
+    transform: scale(1.13) translate(-1%, -1%);
+  }
+  100% {
+    transform: scale(1.03) translate(1.5%, 1%);
+  }
+}
+
+@keyframes floatOrb1 {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateY(-25px) translateX(15px) scale(1.15);
+    opacity: 0.75;
+  }
+}
+
+@keyframes floatOrb2 {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(30px) translateX(-20px) scale(1.2);
+    opacity: 0.65;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.35;
+    filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.4));
+  }
+  50% {
+    opacity: 0.75;
+    filter: drop-shadow(0 0 45px rgba(6, 182, 212, 0.85));
+  }
+}
+
+@keyframes hudFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes beamSweep {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateX(250%) skewX(-20deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+.animate-kenburns-1 {
+  animation: kenburns1 14s ease-out forwards;
+}
+
+.animate-kenburns-2 {
+  animation: kenburns2 14s ease-out forwards;
+}
+
+.animate-kenburns-3 {
+  animation: kenburns3 14s ease-out forwards;
+}
+
+.animate-kenburns-4 {
+  animation: kenburns4 14s ease-out forwards;
+}
+
+.animate-float-1 {
+  animation: floatOrb1 9s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: floatOrb2 12s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 5s ease-in-out infinite;
+}
+
+.animate-hud-float {
+  animation: hudFloat 6s ease-in-out infinite;
+}
+
+.animate-hud-float-delayed {
+  animation: hudFloat 6s ease-in-out infinite 2.5s;
+}
+
+.animate-beam-sweep {
+  animation: beamSweep 10s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes progressFill {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
