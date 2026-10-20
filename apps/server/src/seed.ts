@@ -12,6 +12,7 @@ import { AssessmentModel } from "./models/Assessment.js";
 import { LearningResourceModel } from "./models/LearningResource.js";
 import { AnnouncementModel } from "./models/Announcement.js";
 import { slugify } from "./utils.js";
+import { env } from "./config.js";
 
 async function seed() {
   console.log("Connecting to database for seeding...");
@@ -71,6 +72,12 @@ async function seed() {
 
   for (const faq of faqs) {
     await FAQModel.findOneAndUpdate({ question: faq.question }, faq, { upsert: true });
+  }
+
+  if (env.SEED_DEMO_DATA !== "true") {
+    console.log("Skipping demo accounts and sample classroom data.");
+    await mongoose.disconnect();
+    return;
   }
 
   console.log("Seeding default accounts...");

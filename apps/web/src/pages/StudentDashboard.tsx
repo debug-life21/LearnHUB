@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { apiRequest } from "../lib/api";
+import { API_BASE_URL, apiRequest } from "../lib/api";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
 import type { AuthUser } from "../context/AuthContext";
 
@@ -444,7 +444,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                   <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
                     <span className="text-slate-400">{(res.fileSize / 1024).toFixed(1)} KB</span>
                     <a
-                      href={`http://localhost:4000/api/resources/${res._id}/download`}
+                      href={`${API_BASE_URL}/api/resources/${res._id}/download`}
                       className="font-bold text-blue-600 hover:underline"
                     >
                       {t("download")} ↓

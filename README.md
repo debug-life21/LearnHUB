@@ -40,7 +40,7 @@ LearnHUB is a modern, responsive, and secure full-stack education management pla
 
 ### Prerequisites
 - **Node.js** (v18+)
-- **MongoDB** running locally on port 27017 or remote connection string
+- **MongoDB Community Server** installed locally and listening on port 27017
 
 ### 1. Installation
 Clone the repository and install all workspace dependencies:
@@ -48,13 +48,32 @@ Clone the repository and install all workspace dependencies:
 npm install
 ```
 
-### 2. Database Seeding
-Seed initial categories (Languages, Web Development, Programming, CS, Digital Marketing, etc.), FAQs, and demo accounts:
+### 2. Configure and Start Local MongoDB
+Copy the example environment files:
+```bash
+cp apps/server/.env.example apps/server/.env
+cp apps/web/.env.example apps/web/.env
+```
+
+Start MongoDB from the repository root (keep this terminal open):
+```bash
+mkdir -p .data/db
+mongod --dbpath .data/db --bind_ip 127.0.0.1 --port 27017
+```
+
+The server connects to `mongodb://127.0.0.1:27017/learnhub` by default. The web app sends API requests to `http://localhost:4000`; these addresses can be changed in the respective `.env` files.
+
+To enable Google sign-in and sign-up, create a **Web application** OAuth client ID in the Google Cloud Console. Add `http://localhost:5173` as an authorized JavaScript origin, then set the same client ID as `GOOGLE_CLIENT_ID` in `apps/server/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`. Restart both development servers after changing environment variables. Students can register or sign in using a verified Google account. Teachers can submit an application using Google and must still be approved by an administrator before accessing the teacher portal. Admin accounts cannot use Google sign-in.
+
+### 3. Database Seeding
+Seed initial categories (Languages, Web Development, Programming, CS, Digital Marketing, etc.) and FAQs. Demo accounts are not created:
 ```bash
 npm run seed --workspace server
 ```
 
-### 3. Development Mode
+Create the first administrator at [http://localhost:5173/setup/admin](http://localhost:5173/setup/admin), using the setup key configured in `apps/server/.env`. Students can register and teachers can submit an application from the sign-in page.
+
+### 4. Development Mode
 Run both backend API and frontend Vite dev servers concurrently:
 ```bash
 npm run dev
@@ -62,23 +81,15 @@ npm run dev
 - **Web App**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:4000](http://localhost:4000)
 
-### 4. Production Build & Linting
+Check that the API is running at [http://localhost:4000/api/health](http://localhost:4000/api/health). If the browser reports a network error, start both servers with `npm run dev` and confirm MongoDB is running.
+
+### 5. Production Build & Linting
 ```bash
 npm run build
 npm run lint
 ```
 
 ---
-
-## 🔑 Demo Logins
-
-The Sign In page ([/sign-in](http://localhost:5173/sign-in)) includes instant 1-click login buttons for testing each role:
-
-| Role | Email | Password | Primary Capabilities |
-| :--- | :--- | :--- | :--- |
-| **Hub Admin** | `admin@learnhub.et` | `LearnHub2026!` | Teacher approval/rejection, student placement, class scheduling, course CRUD, announcements, reports, audit logs |
-| **Teacher** | `teacher@learnhub.et` | `LearnHub2026!` | View assigned classes, launch Google Meet sessions, record attendance, create & grade assignments, create quizzes, upload files |
-| **Student** | `student@learnhub.et` | `LearnHub2026!` | Access assigned classes, Join Meeting, submit assignments, take quizzes with instant scoring, track real progress, update preferences |
 
 ---
 

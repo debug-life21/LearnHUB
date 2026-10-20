@@ -1,8 +1,95 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: {
+            client_id: string;
+            callback: (response: { credential: string }) => void;
+          }) => void;
+          renderButton: (
+            element: HTMLElement,
+            options: {
+              theme: "outline";
+              size: "large";
+              text: "signin_with" | "signup_with";
+              width: number;
+            },
+          ) => void;
+        };
+      };
+    };
+  }
+}
+
+function GoogleAuthButton({
+  text,
+  onCredential,
+}: {
+  text: "signin_with" | "signup_with";
+  onCredential: (credential: string) => void;
+}) {
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const credentialHandlerRef = useRef(onCredential);
+  const [error, setError] = useState("");
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    credentialHandlerRef.current = onCredential;
+  }, [onCredential]);
+
+  useEffect(() => {
+    if (!googleClientId || !buttonRef.current) return;
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = () => {
+      if (!window.google || !buttonRef.current) {
+        setError("Google sign-in could not be loaded. Please try again.");
+        return;
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: ({ credential }) => credentialHandlerRef.current(credential),
+      });
+      window.google.accounts.id.renderButton(buttonRef.current, {
+        theme: "outline",
+        size: "large",
+        text,
+        width: Math.min(buttonRef.current.clientWidth, 400),
+      });
+    };
+    script.onerror = () => setError("Google sign-in could not be loaded. Please try again.");
+    document.head.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
+  }, [googleClientId, text]);
+
+  if (!googleClientId) {
+    return (
+      <p className="mb-5 text-center text-xs text-slate-500">
+        Google sign-in is not configured. Set VITE_GOOGLE_CLIENT_ID in apps/web/.env.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mb-5">
+      <div ref={buttonRef} className="flex justify-center" />
+      {error ? <p className="mt-2 text-center text-xs text-rose-600">{error}</p> : null}
+    </div>
+  );
+}
 
 function AuthShell({
   title,
@@ -58,10 +145,22 @@ export function SignInPage() {
     }
   };
 
-  const quickLogin = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword("LearnHub2026!");
-  };
+  const handleGoogleLogin = useCallback(async (credential: string) => {
+    setLoading(true);
+    setFeedback("");
+    try {
+      await apiRequest("/api/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ credential }),
+      });
+      await refreshUser();
+      navigate("/dashboard");
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "Google sign-in failed.");
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshUser, navigate]);
 
   return (
     <AuthShell
@@ -75,40 +174,10 @@ export function SignInPage() {
         </div>
       ) : null}
 
-      {/* Quick Demo Logins Bar */}
-      <div className="mb-6 rounded-2xl bg-slate-50 p-4 border border-slate-200/90 shadow-2xs">
-        <div className="flex items-center justify-between mb-2.5">
-          <p className="text-[11px] font-black uppercase tracking-wider text-slate-600">
-            {t("quickDemoLogin")}
-          </p>
-          <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200/60">
-            Pre-seeded Accounts
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => quickLogin("admin@learnhub.et")}
-            className="rounded-xl bg-white border border-slate-200/90 px-2.5 py-2 text-[11px] font-bold text-slate-800 hover:bg-slate-100 hover:border-slate-300 shadow-2xs transition-all text-center"
-          >
-            🛡️ Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin("teacher@learnhub.et")}
-            className="rounded-xl bg-white border border-slate-200/90 px-2.5 py-2 text-[11px] font-bold text-slate-800 hover:bg-slate-100 hover:border-slate-300 shadow-2xs transition-all text-center"
-          >
-            👨‍🏫 Teacher
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin("student@learnhub.et")}
-            className="rounded-xl bg-white border border-slate-200/90 px-2.5 py-2 text-[11px] font-bold text-slate-800 hover:bg-slate-100 hover:border-slate-300 shadow-2xs transition-all text-center"
-          >
-            🎓 Student
-          </button>
-        </div>
-      </div>
+      <GoogleAuthButton text="signin_with" onCredential={handleGoogleLogin} />
+      <p className="-mt-3 mb-5 text-center text-xs text-slate-500">
+        Sign in to an existing student or teacher account.
+      </p>
 
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
@@ -119,14 +188,13 @@ export function SignInPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
-            placeholder="e.g. user@learnhub.et"
+            placeholder="name@example.com"
           />
         </div>
 
         <div>
           <div className="flex items-center justify-between">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("password")}</label>
-            <span className="text-[11px] text-slate-400 font-medium">Default: LearnHub2026!</span>
           </div>
           <input
             required
@@ -177,6 +245,30 @@ export function StudentRegistrationPage() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
 
+  const handleGoogleSignup = useCallback(async (credential: string) => {
+    setLoading(true);
+    setFeedback("");
+    try {
+      await apiRequest("/api/auth/google/register/student", {
+        method: "POST",
+        body: JSON.stringify({
+          credential,
+          learningGoals: form.learningGoals,
+          learningInterests: [form.learningInterests],
+          currentSkillLevel: form.currentSkillLevel,
+          preferredSchedule: form.preferredSchedule,
+          languagePreference: form.languagePreference,
+        }),
+      });
+      await refreshUser();
+      navigate("/dashboard");
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "Google sign-up failed.");
+    } finally {
+      setLoading(false);
+    }
+  }, [form, refreshUser, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -219,6 +311,11 @@ export function StudentRegistrationPage() {
       <div className="mb-5 rounded-2xl bg-blue-50/80 p-3.5 text-xs text-blue-900 leading-relaxed border border-blue-200/80">
         💡 <strong>Placement Note:</strong> LearnHUB operates on guided cohort placement. Once registered, our Hub Admin reviews your preferences and assigns you to the right live class cohort and teacher.
       </div>
+
+      <GoogleAuthButton text="signup_with" onCredential={handleGoogleSignup} />
+      <p className="-mt-3 mb-5 text-center text-xs text-slate-500">
+        Google creates a student account using your verified Google name and email.
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -337,6 +434,32 @@ export function TeacherApplicationPage() {
   const [success, setSuccess] = useState(false);
   const [feedback, setFeedback] = useState("");
 
+  const handleGoogleApplication = useCallback(async (credential: string) => {
+    if (form.qualifications.trim().length < 10 || form.experience.trim().length < 10) {
+      setFeedback("Enter your qualifications and experience before applying with Google.");
+      return;
+    }
+
+    setLoading(true);
+    setFeedback("");
+    try {
+      await apiRequest("/api/auth/google/apply/teacher", {
+        method: "POST",
+        body: JSON.stringify({
+          credential,
+          qualifications: form.qualifications,
+          experience: form.experience,
+          teachingCategories: [form.teachingCategories],
+        }),
+      });
+      setSuccess(true);
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : "Google application failed.");
+    } finally {
+      setLoading(false);
+    }
+  }, [form]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -398,6 +521,11 @@ export function TeacherApplicationPage() {
           {feedback}
         </div>
       ) : null}
+
+      <GoogleAuthButton text="signup_with" onCredential={handleGoogleApplication} />
+      <p className="-mt-3 mb-5 text-center text-xs text-slate-500">
+        Apply with Google after entering your qualifications and experience. Admin approval is still required.
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -553,7 +681,7 @@ export function AdminSetupPage() {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none"
-            placeholder="admin@learnhub.et"
+            placeholder="name@example.com"
           />
         </div>
 
