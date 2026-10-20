@@ -1,6 +1,6 @@
 # LearnHUB — Complete Online Learning & Education Management Platform
 
-LearnHUB is a modern, responsive, and secure full-stack education management platform built using the **MERN** stack (MongoDB, Express.js, React.js, Node.js) with TypeScript throughout.
+LearnHUB is a modern, responsive, and secure full-stack education management platform built using the **MERN** stack (MongoDB, Express.js, React.js, Node.js) with JavaScript throughout.
 
 ---
 
@@ -98,23 +98,23 @@ npm run lint
 ```
 LearnHUB/
 ├── apps/
-│   ├── server/                   # Express.js + Mongoose + TypeScript Backend
+│   ├── server/                   # Express.js + Mongoose + JavaScript Backend
 │   │   ├── src/
 │   │   │   ├── models/           # Mongoose schemas (User, Classroom, Course, Assignment, etc.)
 │   │   │   ├── routes/           # REST endpoints (auth, admin, teacher, student, resources, public)
 │   │   │   ├── lib/              # Storage helpers, HTTP error wrappers
-│   │   │   ├── auth.ts           # Argon2 hashing, JWT cookies, RBAC middlewares
-│   │   │   ├── seed.ts           # Automated database seeding script
-│   │   │   ├── app.ts            # Express setup with Helmet, CORS, Rate Limiting
-│   │   │   └── index.ts          # Server entry point
+│   │   │   ├── auth.js           # Argon2 hashing, JWT cookies, RBAC middlewares
+│   │   │   ├── seed.js           # Automated database seeding script
+│   │   │   ├── app.js            # Express setup with Helmet, CORS, Rate Limiting
+│   │   │   └── index.js          # Server entry point
 │   │   └── package.json
-│   └── web/                      # React 19 + Vite + Tailwind CSS + TypeScript Frontend
+│   └── web/                      # React 19 + Vite + Tailwind CSS + JavaScript Frontend
 │       ├── src/
 │       │   ├── components/       # Navbar, Footer, MetricCard, DashboardCard, Modal, Badge
 │       │   ├── pages/            # Public, Auth, Admin, Teacher, and Student Dashboards
 │       │   ├── context/          # AuthContext with session refresh
-│       │   ├── i18n.ts           # Bilingual translations (Amharic & English)
-│       │   ├── App.tsx           # Route definitions & portal dispatching
+│       │   ├── i18n.js           # Bilingual translations (Amharic & English)
+│       │   ├── App.jsx           # Route definitions & portal dispatching
 │       │   └── index.css         # Tailwind tokens & Ethiopic typography
 │       └── package.json
 ├── PROJECT_ LearnH (2).pdf       # Project requirement specification
