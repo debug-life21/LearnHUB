@@ -30,11 +30,12 @@ async function writeAudit(actorId, action, targetType, targetId, details = {}) {
 }
 adminRouter.get("/dashboard", asyncHandler(async (_req, res) => {
     const now = new Date();
-    const [totalStudents, activeStudents, pendingStudentPlacement, totalTeachers, pendingTeacherApplications, activeCourses, activeClasses, upcomingClasses, pendingSupportInquiries,] = await Promise.all([
+    const [totalStudents, activeStudents, pendingStudentPlacement, totalTeachers, activeTeachers, pendingTeacherApplications, activeCourses, activeClasses, upcomingClasses, pendingSupportInquiries,] = await Promise.all([
         UserModel.countDocuments({ role: "student" }),
         UserModel.countDocuments({ role: "student", accountStatus: "active" }),
         UserModel.countDocuments({ role: "student", "studentProfile.placementStatus": "pending" }),
         UserModel.countDocuments({ role: "teacher" }),
+        UserModel.countDocuments({ role: "teacher", accountStatus: "active" }),
         TeacherApplicationModel.countDocuments({ status: "pending" }),
         CourseModel.countDocuments({ status: "published" }),
         ClassroomModel.countDocuments({ status: { $in: ["planned", "active"] } }),
@@ -47,6 +48,7 @@ adminRouter.get("/dashboard", asyncHandler(async (_req, res) => {
             activeStudents,
             pendingStudentPlacement,
             totalTeachers,
+            activeTeachers,
             pendingTeacherApplications,
             activeCourses,
             activeClasses,
@@ -65,8 +67,11 @@ adminRouter.get("/teacher-applications", asyncHandler(async (_req, res) => {
 adminRouter.patch("/teacher-applications/:applicationId", asyncHandler(async (req, res) => {
     const data = z.object({
         status: z.enum(["approved", "rejected"]),
-        rejectionReason: z.string().default(""),
+        rejectionReason: z.string().trim().default(""),
     }).parse(req.body);
+    if (data.status === "rejected" && data.rejectionReason.length < 5) {
+        throw new ApiError(400, "Provide a rejection reason of at least 5 characters.");
+    }
     const application = await TeacherApplicationModel.findById(req.params.applicationId);
     if (!application) {
         throw new ApiError(404, "Teacher application not found.");
