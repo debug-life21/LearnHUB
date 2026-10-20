@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
+import { BrandLogo } from "./BrandLogo";
 
 export function Navbar() {
   const { t, i18n } = useTranslation();
@@ -22,28 +23,8 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl transition-all shadow-xs">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-        {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-slate-900 text-lg font-black text-cyan-300 shadow-md shadow-blue-500/20 ring-1 ring-white/20 transition-transform group-hover:scale-105">
-            <span>LH</span>
-            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span>
-            </span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl font-black tracking-tight text-slate-950 group-hover:text-blue-600 transition-colors">
-                Learn<span className="text-blue-600 group-hover:text-slate-950">HUB</span>
-              </span>
-              <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-extrabold text-cyan-800 border border-cyan-200/60">
-                2026
-              </span>
-            </div>
-            <p className="hidden text-xs text-slate-500 sm:block font-medium truncate max-w-xs">
-              {t("brandTagline")}
-            </p>
-          </div>
+        <Link to="/" className="group flex items-center gap-3">
+          <BrandLogo />
         </Link>
 
         {/* Desktop Nav Links */}

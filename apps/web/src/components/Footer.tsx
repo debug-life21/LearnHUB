@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { BrandLogo } from "./BrandLogo";
 
 export function Footer() {
   const { t } = useTranslation();
@@ -11,10 +12,7 @@ export function Footer() {
           {/* Brand Column */}
           <div className="space-y-4 md:col-span-1">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-sm font-black text-white shadow-md shadow-blue-500/20">
-                LH
-              </div>
-              <span className="text-xl font-black text-white tracking-tight">LearnHUB</span>
+              <BrandLogo appearance="dark" />
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               {t("brandTagline")}
