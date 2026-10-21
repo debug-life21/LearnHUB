@@ -31,7 +31,7 @@ export function ContactPage() {
         }
     };
     return (<div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
-      <SectionHeading badge="GET IN TOUCH" title={t("contactTitle")} subtitle={t("contactDescription")}/>
+      <SectionHeading badge="WE’RE LISTENING" title={t("contactTitle")} subtitle={t("contactDescription")}/>
 
       <div className="grid gap-10 lg:grid-cols-2">
         {/* Contact Form */}
@@ -59,12 +59,12 @@ export function ContactPage() {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("subject")}</label>
-              <input required type="text" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Inquiry about full-stack web development cohort"/>
+              <input required type="text" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="How can we help?"/>
             </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("message")}</label>
-              <textarea required rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Write your question or request here..."/>
+              <textarea required rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Tell us a little about what you need…"/>
             </div>
 
             <button disabled={status === "submitting"} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition-all hover:scale-101">
@@ -90,7 +90,7 @@ export function ContactPage() {
                   ✉️
                 </span>
                 <div>
-                  <p className="text-xs text-slate-400 font-bold uppercase">Direct Email</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase">                  Email our team</p>
                   <p className="font-semibold text-white">support@learnhub.et</p>
                 </div>
               </div>
@@ -110,7 +110,7 @@ export function ContactPage() {
                   ⏰
                 </span>
                 <div>
-                  <p className="text-xs text-slate-400 font-bold uppercase">Operational Hours</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase">Support hours</p>
                   <p className="font-semibold text-white">{t("businessHours")}</p>
                 </div>
               </div>

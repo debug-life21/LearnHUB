@@ -7,7 +7,7 @@ export function AboutPage() {
       <div className="max-w-3xl">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-50 px-3.5 py-1 text-xs font-bold text-blue-700 mb-4 shadow-2xs">
           <span>📖</span>
-          <span>ABOUT LEARNHUB</span>
+          <span>WHY LEARNHUB</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-tight">
           {t("aboutHeroTitle")}
@@ -70,6 +70,9 @@ export function AboutPage() {
             </Link>
             <Link to="/apply/teacher" className="rounded-2xl border border-white/20 bg-slate-900 px-6 py-3 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors">
               {t("applyToTeach")}
+            </Link>
+            <Link to="/contact" className="rounded-2xl px-6 py-3 text-xs font-bold text-slate-300 hover:text-white transition-colors">
+              Have a question? Talk to us →
             </Link>
           </div>
         </div>

@@ -37,7 +37,7 @@ function NavigationLinks({ onNavigate }) {
 }
 
 export function Navbar() {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -61,11 +61,6 @@ export function Navbar() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [closeMobileMenu, mobileMenuOpen]);
 
-    const toggleLanguage = () => {
-        const nextLang = i18n.language === "am" ? "en" : "am";
-        void i18n.changeLanguage(nextLang);
-    };
-
     const handleLogout = async () => {
         setLoggingOut(true);
         setLogoutError("");
@@ -80,13 +75,11 @@ export function Navbar() {
         }
     };
 
-    const roleLabel = user?.role === "hub_admin"
+    const roleLabel = user?.role === "hub_admin" || user?.role === "admin"
         ? "Admin"
         : user?.role === "teacher"
             ? "Teacher"
             : "Student";
-    const languageLabel = i18n.language === "am" ? "English" : "አማርኛ";
-
     return (
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.03] backdrop-blur-xl">
             <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 lg:px-8">
@@ -103,16 +96,6 @@ export function Navbar() {
                 </nav>
 
                 <div className="flex shrink-0 items-center gap-2">
-                    <button
-                        onClick={toggleLanguage}
-                        type="button"
-                        className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:px-3"
-                        title={t("language")}
-                        aria-label={`${t("language")}: ${languageLabel}`}
-                    >
-                        {languageLabel}
-                    </button>
-
                     {user ? (
                         <div className="hidden items-center gap-2 md:flex">
                             <Link

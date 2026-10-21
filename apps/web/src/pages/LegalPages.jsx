@@ -67,7 +67,7 @@ export function CookiePolicyPage() {
     return (<LegalShell title="Cookie Policy" lastUpdated="October 20, 2026">
       <h3 className="text-lg font-bold text-slate-900">1. Essential Platform Cookies</h3>
       <p>
-        LearnHUB uses only strictly essential session cookies (`learnhub_session`) and local preferences (`learnhub-language`) to maintain authenticated sessions and language choices. No invasive third-party analytics or ad-tracking cookies are deployed.
+        LearnHUB uses an essential HttpOnly session cookie (`learnhub_token`) to maintain your signed-in session. The site currently uses English and does not store a language preference. No advertising cookies are used by the application.
       </p>
     </LegalShell>);
 }

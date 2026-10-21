@@ -8,7 +8,7 @@ import { saveLocalFile, getLocalFilePath, validateFileType } from "../lib/storag
 export const resourceRouter = Router();
 resourceRouter.use(requireAuth);
 resourceRouter.post("/upload", asyncHandler(async (req, res) => {
-    if (req.user.role !== "teacher" && req.user.role !== "hub_admin") {
+    if (req.user.role !== "teacher" && req.user.role !== "hub_admin" && req.user.role !== "admin") {
         throw new ApiError(403, "Only teachers and administrators can upload learning resources.");
     }
     const data = z.object({
@@ -136,7 +136,7 @@ resourceRouter.delete("/:id", asyncHandler(async (req, res) => {
     if (!resource) {
         throw new ApiError(404, "Resource not found.");
     }
-    if (req.user.role !== "hub_admin" && resource.uploader.toString() !== req.user.id) {
+    if (req.user.role !== "hub_admin" && req.user.role !== "admin" && resource.uploader.toString() !== req.user.id) {
         throw new ApiError(403, "You cannot delete resources uploaded by someone else.");
     }
     await LearningResourceModel.findByIdAndDelete(req.params.id);

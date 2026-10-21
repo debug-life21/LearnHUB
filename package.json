@@ -10,6 +10,7 @@
     "dev": "npm run dev --workspace server & npm run dev --workspace web",
     "dev:web": "npm run dev --workspace web",
     "dev:server": "npm run dev --workspace server",
+    "seed:admin": "npm run seed:admin --workspace server",
     "build": "npm run build --workspace server && npm run build --workspace web",
     "lint": "npm run lint --workspaces",
     "check": "npm run build"

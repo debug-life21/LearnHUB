@@ -63,7 +63,20 @@ mongod --dbpath .data/db --bind_ip 127.0.0.1 --port 27017
 
 The server connects to `mongodb://127.0.0.1:27017/learnhub` by default. The web app sends API requests to `http://localhost:4000`; these addresses can be changed in the respective `.env` files.
 
-To enable Google sign-in and sign-up, create a **Web application** OAuth client ID in the Google Cloud Console. Add `http://localhost:5173` as an authorized JavaScript origin, then set the same client ID as `GOOGLE_CLIENT_ID` in `apps/server/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`. Restart both development servers after changing environment variables. Students can register or sign in using a verified Google account. Teachers can submit an application using Google and must still be approved by an administrator before accessing the teacher portal. Admin accounts cannot use Google sign-in.
+To enable Google sign-in and sign-up:
+1. Open **Google Cloud Console → APIs & Services → Credentials** and create an **OAuth client ID** of type **Web application**.
+2. Under **Authorized JavaScript origins**, add `http://localhost:5173`.
+3. Copy the client ID into `GOOGLE_CLIENT_ID` in `apps/server/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`.
+4. Restart both development servers after changing environment variables.
+
+Google sign-in verifies the credential on the API. New Google users choose a student or teacher role on the sign-up form; teacher accounts still require administrator approval.
+
+Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` in `apps/server/.env` to send email verification codes. Create an administrator account using `ADMIN_EMAIL` and `ADMIN_PASSWORD`, then run:
+```bash
+npm run seed:admin
+```
+Use a unique administrator password of at least 12 characters.
+Admin accounts cannot be created from the public signup flow. Student and teacher email/password accounts must verify their 6-digit code before a session is created. Teacher accounts remain pending approval after verification.
 
 ### 3. Database Seeding
 Seed initial categories (Languages, Web Development, Programming, CS, Digital Marketing, etc.) and FAQs. Demo accounts are not created:
@@ -71,7 +84,7 @@ Seed initial categories (Languages, Web Development, Programming, CS, Digital Ma
 npm run seed --workspace server
 ```
 
-Create the first administrator at [http://localhost:5173/setup/admin](http://localhost:5173/setup/admin), using the setup key configured in `apps/server/.env`. Students can register and teachers can submit an application from the sign-in page.
+Run the admin seed command above to provision an administrator. Students and teachers can register from the sign-in page; teachers are approved through the admin portal.
 
 ### 4. Development Mode
 Run both backend API and frontend Vite dev servers concurrently:
@@ -103,8 +116,12 @@ LearnHUB/
 │   │   │   ├── models/           # Mongoose schemas (User, Classroom, Course, Assignment, etc.)
 │   │   │   ├── routes/           # REST endpoints (auth, admin, teacher, student, resources, public)
 │   │   │   ├── lib/              # Storage helpers, HTTP error wrappers
-│   │   │   ├── auth.js           # Argon2 hashing, JWT cookies, RBAC middlewares
-│   │   │   ├── seed.js           # Automated database seeding script
+│   │   │   ├── controllers/      # Authentication request handlers
+│   │   │   ├── middleware/       # Authentication and role authorization
+│   │   │   ├── utils/            # SMTP verification email delivery
+│   │   │   ├── auth.js           # Password hashing, JWT cookies, RBAC helpers
+│   │   │   ├── seed.js           # Platform data seeding
+│   │   │   ├── seedAdmin.js      # Environment-driven administrator seeding
 │   │   │   ├── app.js            # Express setup with Helmet, CORS, Rate Limiting
 │   │   │   └── index.js          # Server entry point
 │   │   └── package.json

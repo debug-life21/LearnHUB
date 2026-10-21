@@ -1,97 +1,67 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
-function GoogleAuthButton({ text, onCredential, }) {
-    const buttonRef = useRef(null);
-    const credentialHandlerRef = useRef(onCredential);
-    const [error, setError] = useState("");
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    useEffect(() => {
-        credentialHandlerRef.current = onCredential;
-    }, [onCredential]);
-    useEffect(() => {
-        if (!googleClientId || !buttonRef.current)
-            return;
-        const script = document.createElement("script");
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.onload = () => {
-            if (!window.google || !buttonRef.current) {
-                setError("Google sign-in could not be loaded. Please try again.");
-                return;
-            }
-            window.google.accounts.id.initialize({
-                client_id: googleClientId,
-                callback: ({ credential }) => credentialHandlerRef.current(credential),
-            });
-            window.google.accounts.id.renderButton(buttonRef.current, {
-                theme: "outline",
-                size: "large",
-                text,
-                width: Math.min(buttonRef.current.clientWidth, 400),
-            });
-        };
-        script.onerror = () => setError("Google sign-in could not be loaded. Please try again.");
-        document.head.appendChild(script);
-        return () => {
-            script.remove();
-        };
-    }, [googleClientId, text]);
-    if (!googleClientId) {
-        return (<p className="mb-5 text-center text-xs text-slate-500">
-        Google sign-in is not configured. Set VITE_GOOGLE_CLIENT_ID in apps/web/.env.
-      </p>);
-    }
-    return (<div className="mb-5">
-      <div ref={buttonRef} className="flex justify-center"/>
-      {error ? <p className="mt-2 text-center text-xs text-rose-600">{error}</p> : null}
-    </div>);
-}
-function AuthShell({ title, subtitle, children, }) {
-    return (<div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
-      <div className="rounded-3xl bg-white p-8 sm:p-10 shadow-xl ring-1 ring-slate-200/90">
-        <div className="mb-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-slate-900 text-lg font-black text-cyan-300 shadow-md shadow-blue-500/20 ring-1 ring-white/20">
-            LH
-          </div>
-          <h2 className="mt-4 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{title}</h2>
-          <p className="mt-1.5 text-xs sm:text-sm text-slate-500 font-medium">{subtitle}</p>
+
+function AuthShell({ title, subtitle, children }) {
+    return (
+        <div className="mx-auto max-w-lg px-4 py-12 sm:px-6 sm:py-16">
+            <div className="rounded-3xl bg-white p-7 shadow-xl ring-1 ring-slate-200/90 sm:p-10">
+                <div className="mb-7 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-slate-900 text-lg font-black text-cyan-300 shadow-md shadow-blue-500/20 ring-1 ring-white/20">
+                        LH
+                    </div>
+                    <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
+                    <p className="mt-1.5 text-sm font-medium text-slate-500">{subtitle}</p>
+                </div>
+                {children}
+            </div>
         </div>
-        {children}
-      </div>
-    </div>);
+    );
 }
+
+function Feedback({ children }) {
+    if (!children) return null;
+    const success = children.startsWith("A new code has been sent");
+    return <div role={success ? "status" : "alert"} className={`mb-5 rounded-2xl p-3.5 text-sm font-semibold ring-1 ${success ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-rose-50 text-rose-700 ring-rose-200"}`}>{children}</div>;
+}
+
+function GoogleSignIn({ onCredential, disabled }) {
+    if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        return <p className="mb-5 text-center text-xs text-slate-500">Google sign-in is not configured.</p>;
+    }
+    return (
+        <div className={`mb-5 flex justify-center ${disabled ? "pointer-events-none opacity-60" : ""}`}>
+            <GoogleLogin
+                onSuccess={(response) => {
+                    if (response.credential) onCredential(response.credential);
+                }}
+                onError={() => onCredential(null)}
+                text="continue_with"
+                shape="pill"
+                width="360"
+                useOneTap={false}
+            />
+        </div>
+    );
+}
+
 export function SignInPage() {
     const { t } = useTranslation();
-    const { refreshUser } = useAuth();
+    const { login, refreshUser } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
-    const handleLogin = async (e) => {
-        if (e)
-            e.preventDefault();
-        setLoading(true);
-        setFeedback("");
-        try {
-            await apiRequest("/api/auth/login", {
-                method: "POST",
-                body: JSON.stringify({ email, password }),
-            });
-            await refreshUser();
-            navigate("/dashboard");
+
+    const continueWithGoogle = useCallback(async (credential) => {
+        if (!credential) {
+            setFeedback("Google sign-in could not be completed. Please try again.");
+            return;
         }
-        catch (err) {
-            setFeedback(err.message || "Failed to sign in. Please verify your credentials.");
-        }
-        finally {
-            setLoading(false);
-        }
-    };
-    const handleGoogleLogin = useCallback(async (credential) => {
         setLoading(true);
         setFeedback("");
         try {
@@ -101,385 +71,231 @@ export function SignInPage() {
             });
             await refreshUser();
             navigate("/dashboard");
-        }
-        catch (err) {
-            setFeedback(err instanceof Error ? err.message : "Google sign-in failed.");
-        }
-        finally {
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
             setLoading(false);
         }
-    }, [refreshUser, navigate]);
-    return (<AuthShell title={t("signIn")} subtitle="Access your LearnHUB learning and management portal">
-      {feedback ? (<div className="mb-5 rounded-2xl bg-rose-50 p-3.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 flex items-center gap-2">
-          <span>⚠</span>
-          <span>{feedback}</span>
-        </div>) : null}
+    }, [navigate, refreshUser]);
 
-      <GoogleAuthButton text="signin_with" onCredential={handleGoogleLogin}/>
-      <p className="-mt-3 mb-5 text-center text-xs text-slate-500">
-        Sign in to an existing student or teacher account.
-      </p>
-
-      <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("email")}</label>
-          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="name@example.com"/>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("password")}</label>
-          </div>
-          <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="••••••••"/>
-        </div>
-
-        <button disabled={loading} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition-all hover:scale-101">
-          {loading ? t("loading") : t("signIn")}
-        </button>
-      </form>
-
-      <div className="mt-8 flex flex-col gap-2.5 text-center text-xs text-slate-600 border-t border-slate-100 pt-5">
-        <Link to="/register/student" className="font-bold text-blue-600 hover:underline">
-          New Student? Register & Request Placement →
-        </Link>
-        <Link to="/apply/teacher" className="font-bold text-teal-600 hover:underline">
-          Want to Teach? Submit Educator Application →
-        </Link>
-      </div>
-    </AuthShell>);
-}
-export function StudentRegistrationPage() {
-    const { t } = useTranslation();
-    const { refreshUser } = useAuth();
-    const navigate = useNavigate();
-    const [form, setForm] = useState({
-        fullName: "",
-        email: "",
-        password: "",
-        learningGoals: "",
-        learningInterests: "Web Development",
-        currentSkillLevel: "Beginner",
-        preferredSchedule: "Evenings",
-        languagePreference: "en",
-    });
-    const [loading, setLoading] = useState(false);
-    const [feedback, setFeedback] = useState("");
-    const handleGoogleSignup = useCallback(async (credential) => {
+    const handleSubmit = async (event) => {
+        event.preventDefault();
         setLoading(true);
         setFeedback("");
         try {
-            await apiRequest("/api/auth/google/register/student", {
-                method: "POST",
-                body: JSON.stringify({
-                    credential,
-                    learningGoals: form.learningGoals,
-                    learningInterests: [form.learningInterests],
-                    currentSkillLevel: form.currentSkillLevel,
-                    preferredSchedule: form.preferredSchedule,
-                    languagePreference: form.languagePreference,
-                }),
-            });
-            await refreshUser();
-            navigate("/dashboard");
-        }
-        catch (err) {
-            setFeedback(err instanceof Error ? err.message : "Google sign-up failed.");
-        }
-        finally {
-            setLoading(false);
-        }
-    }, [form, refreshUser, navigate]);
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setFeedback("");
-        try {
-            await apiRequest("/api/auth/register/student", {
-                method: "POST",
-                body: JSON.stringify({
-                    fullName: form.fullName,
-                    email: form.email,
-                    password: form.password,
-                    learningGoals: form.learningGoals,
-                    learningInterests: [form.learningInterests],
-                    currentSkillLevel: form.currentSkillLevel,
-                    preferredSchedule: form.preferredSchedule,
-                    languagePreference: form.languagePreference,
-                }),
-            });
-            await refreshUser();
-            navigate("/dashboard");
-        }
-        catch (err) {
-            setFeedback(err.message || "Registration failed. Please try again.");
-        }
-        finally {
+            const response = await login({ email, password });
+            sessionStorage.setItem("learnhub_pending_email", response.email);
+            sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
+            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose } });
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
             setLoading(false);
         }
     };
-    return (<AuthShell title={t("studentSignUp")} subtitle="Complete your profile to request administrative cohort placement">
-      {feedback ? (<div className="mb-4 rounded-2xl bg-rose-50 p-3.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
-          {feedback}
-        </div>) : null}
 
-      <div className="mb-5 rounded-2xl bg-blue-50/80 p-3.5 text-xs text-blue-900 leading-relaxed border border-blue-200/80">
-        💡 <strong>Placement Note:</strong> LearnHUB operates on guided cohort placement. Once registered, our Hub Admin reviews your preferences and assigns you to the right live class cohort and teacher.
-      </div>
-
-      <GoogleAuthButton text="signup_with" onCredential={handleGoogleSignup}/>
-      <p className="-mt-3 mb-5 text-center text-xs text-slate-500">
-        Google creates a student account using your verified Google name and email.
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("fullName")}</label>
-          <input required type="text" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="e.g. Yonas Haile"/>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("email")}</label>
-          <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="yonas@example.com"/>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("password")}</label>
-          <input required type="password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Minimum 8 characters"/>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("learningInterests")}</label>
-            <select value={form.learningInterests} onChange={(e) => setForm({ ...form, learningInterests: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-3 py-3 text-xs font-semibold outline-none bg-white">
-              <option value="Web Development">Web Development</option>
-              <option value="Programming">Programming</option>
-              <option value="Languages">Languages</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Digital Marketing">Digital Marketing</option>
-              <option value="Business Skills">Business Skills</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("skillLevel")}</label>
-            <select value={form.currentSkillLevel} onChange={(e) => setForm({ ...form, currentSkillLevel: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-3 py-3 text-xs font-semibold outline-none bg-white">
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("preferredSchedule")}</label>
-          <input type="text" value={form.preferredSchedule} onChange={(e) => setForm({ ...form, preferredSchedule: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none" placeholder="e.g. Evenings after 6:00 PM EAT"/>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("learningGoals")}</label>
-          <textarea rows={2} value={form.learningGoals} onChange={(e) => setForm({ ...form, learningGoals: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none" placeholder="What skills or projects do you want to accomplish?"/>
-        </div>
-
-        <button disabled={loading} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-50 transition-all hover:scale-101">
-          {loading ? t("loading") : t("studentSignUp")}
-        </button>
-      </form>
-    </AuthShell>);
+    return (
+        <AuthShell title={t("signIn")} subtitle="Access your LearnHUB learning and management portal">
+            <Feedback>{feedback}</Feedback>
+            <GoogleSignIn onCredential={continueWithGoogle} disabled={loading} />
+            <div className="mb-5 flex items-center gap-3 text-xs font-semibold text-slate-400">
+                <span className="h-px flex-1 bg-slate-200" />OR CONTINUE WITH EMAIL<span className="h-px flex-1 bg-slate-200" />
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    {t("email")}
+                    <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="name@example.com" />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    {t("password")}
+                    <input required autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your password" />
+                </label>
+                <button disabled={loading} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50">
+                    {loading ? t("loading") : "Continue"}
+                </button>
+            </form>
+            <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-600">
+                New to LearnHUB? <Link to="/signup" className="font-bold text-blue-600 hover:underline">Create an account</Link>
+            </p>
+        </AuthShell>
+    );
 }
-export function TeacherApplicationPage() {
+
+export function SignupPage({ initialRole = "student" }) {
     const { t } = useTranslation();
-    const [form, setForm] = useState({
-        fullName: "",
-        email: "",
-        password: "",
-        qualifications: "",
-        experience: "",
-        teachingCategories: "Web Development",
-    });
+    const { refreshUser } = useAuth();
+    const navigate = useNavigate();
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [role, setRole] = useState(initialRole);
     const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
     const [feedback, setFeedback] = useState("");
-    const handleGoogleApplication = useCallback(async (credential) => {
-        if (form.qualifications.trim().length < 10 || form.experience.trim().length < 10) {
-            setFeedback("Enter your qualifications and experience before applying with Google.");
+
+    const continueWithGoogle = useCallback(async (credential) => {
+        if (!credential) {
+            setFeedback("Google sign-up could not be completed. Please try again.");
             return;
         }
         setLoading(true);
         setFeedback("");
         try {
-            await apiRequest("/api/auth/google/apply/teacher", {
+            await apiRequest("/api/auth/google", {
                 method: "POST",
-                body: JSON.stringify({
-                    credential,
-                    qualifications: form.qualifications,
-                    experience: form.experience,
-                    teachingCategories: [form.teachingCategories],
-                }),
-            });
-            setSuccess(true);
-        }
-        catch (err) {
-            setFeedback(err instanceof Error ? err.message : "Google application failed.");
-        }
-        finally {
-            setLoading(false);
-        }
-    }, [form]);
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setFeedback("");
-        try {
-            await apiRequest("/api/auth/apply/teacher", {
-                method: "POST",
-                body: JSON.stringify({
-                    fullName: form.fullName,
-                    email: form.email,
-                    password: form.password,
-                    qualifications: form.qualifications,
-                    experience: form.experience,
-                    teachingCategories: [form.teachingCategories],
-                }),
-            });
-            setSuccess(true);
-        }
-        catch (err) {
-            setFeedback(err.message || "Application failed to submit. Please try again.");
-        }
-        finally {
-            setLoading(false);
-        }
-    };
-    if (success) {
-        return (<AuthShell title="Application Received" subtitle="Your educator application was submitted successfully">
-        <div className="space-y-4 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 text-3xl text-emerald-600 shadow-sm">
-            ✓
-          </div>
-          <p className="text-sm text-slate-700 leading-relaxed font-medium">
-            Your application is currently under administrative evaluation by the Hub Admin team. Once approved and verified, you will receive activation notification to manage your assigned classes.
-          </p>
-          <div className="pt-4">
-            <Link to="/sign-in" className="inline-block rounded-2xl bg-slate-950 px-6 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-blue-600 transition-colors shadow-md">
-              Return to Sign In
-            </Link>
-          </div>
-        </div>
-      </AuthShell>);
-    }
-    return (<AuthShell title={t("teacherApply")} subtitle="Submit your academic credentials and experience for administrative review">
-      {feedback ? (<div className="mb-4 rounded-2xl bg-rose-50 p-3.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
-          {feedback}
-        </div>) : null}
-
-      <GoogleAuthButton text="signup_with" onCredential={handleGoogleApplication}/>
-      <p className="-mt-3 mb-5 text-center text-xs text-slate-500">
-        Apply with Google after entering your qualifications and experience. Admin approval is still required.
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("fullName")}</label>
-          <input required type="text" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" placeholder="e.g. Almaz Kebede"/>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("email")}</label>
-          <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" placeholder="almaz@example.com"/>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("password")}</label>
-          <input required type="password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600" placeholder="Minimum 8 characters"/>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("teachingCategories")}</label>
-          <select value={form.teachingCategories} onChange={(e) => setForm({ ...form, teachingCategories: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-3 py-3 text-xs font-semibold outline-none bg-white">
-            <option value="Web Development">Web Development</option>
-            <option value="Programming">Programming</option>
-            <option value="Languages">Languages</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="Digital Marketing">Digital Marketing</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("qualifications")}</label>
-          <textarea required rows={2} value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none" placeholder="e.g. M.Sc. in Computer Science, Certified AWS Architect"/>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("experience")}</label>
-          <textarea required rows={2} value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none" placeholder="Summary of teaching and industry experience"/>
-        </div>
-
-        <button disabled={loading} type="submit" className="w-full rounded-2xl bg-teal-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-teal-500/20 hover:bg-teal-700 disabled:opacity-50 transition-all hover:scale-101">
-          {loading ? t("loading") : t("teacherApply")}
-        </button>
-      </form>
-    </AuthShell>);
-}
-export function AdminSetupPage() {
-    const { t } = useTranslation();
-    const { refreshUser } = useAuth();
-    const navigate = useNavigate();
-    const [form, setForm] = useState({
-        fullName: "",
-        email: "",
-        password: "",
-        setupKey: "learnhub-setup-key",
-    });
-    const [loading, setLoading] = useState(false);
-    const [feedback, setFeedback] = useState("");
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setFeedback("");
-        try {
-            await apiRequest("/api/auth/provision-admin", {
-                method: "POST",
-                body: JSON.stringify(form),
+                body: JSON.stringify({ credential, role }),
             });
             await refreshUser();
-            navigate("/dashboard");
+            await navigate("/dashboard");
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
+            setLoading(false);
         }
-        catch (err) {
-            setFeedback(err.message || "Admin provisioning failed.");
-        }
-        finally {
+    }, [navigate, refreshUser, role]);
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        setFeedback("");
+        try {
+            const response = await apiRequest("/api/auth/signup", {
+                method: "POST",
+                body: JSON.stringify({ name, email, password, role }),
+            });
+            sessionStorage.setItem("learnhub_pending_email", response.email);
+            sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
+            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose } });
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
             setLoading(false);
         }
     };
-    return (<AuthShell title={t("adminSetup")} subtitle="Initial provisioning for Hub Administrator master account">
-      {feedback ? (<div className="mb-4 rounded-2xl bg-rose-50 p-3.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
-          {feedback}
-        </div>) : null}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("fullName")}</label>
-          <input required type="text" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none" placeholder="Hub Admin"/>
-        </div>
+    return (
+        <AuthShell title="Create your account" subtitle="Create your account to start learning or teaching">
+            <Feedback>{feedback}</Feedback>
+            <GoogleSignIn onCredential={continueWithGoogle} disabled={loading} />
+            <div className="mb-5 flex items-center gap-3 text-xs font-semibold text-slate-400">
+                <span className="h-px flex-1 bg-slate-200" />OR SIGN UP WITH EMAIL<span className="h-px flex-1 bg-slate-200" />
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    {t("fullName")}
+                    <input required minLength={2} maxLength={100} autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your name" />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    {t("email")}
+                    <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="name@example.com" />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    {t("password")}
+                    <input required minLength={8} maxLength={128} autoComplete="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="At least 8 characters" />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    I want to join as
+                    <select value={role} onChange={(event) => setRole(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                    </select>
+                </label>
+                {role === "teacher" && <p className="rounded-2xl border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">Teacher accounts need admin approval after email verification.</p>}
+                <button disabled={loading} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50">
+                    {loading ? t("loading") : "Create account"}
+                </button>
+            </form>
+            <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-600">
+                Already have an account? <Link to="/sign-in" className="font-bold text-blue-600 hover:underline">Sign in</Link>
+            </p>
+        </AuthShell>
+    );
+}
 
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("email")}</label>
-          <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none" placeholder="name@example.com"/>
-        </div>
+export function VerifyCodePage() {
+    const { t } = useTranslation();
+    const { refreshUser } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const [email, setEmail] = useState(location.state?.email || sessionStorage.getItem("learnhub_pending_email") || "");
+    const [purpose] = useState(location.state?.purpose || sessionStorage.getItem("learnhub_pending_purpose") || "signup");
+    const [code, setCode] = useState("");
+    const [secondsLeft, setSecondsLeft] = useState(60);
+    const [loading, setLoading] = useState(false);
+    const [feedback, setFeedback] = useState("");
 
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("password")}</label>
-          <input required type="password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none" placeholder="••••••••"/>
-        </div>
+    useEffect(() => {
+        if (secondsLeft <= 0) return undefined;
+        const timer = window.setTimeout(() => setSecondsLeft((seconds) => seconds - 1), 1000);
+        return () => window.clearTimeout(timer);
+    }, [secondsLeft]);
 
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">{t("setupKey")}</label>
-          <input required type="text" value={form.setupKey} onChange={(e) => setForm({ ...form, setupKey: e.target.value })} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none"/>
-        </div>
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        setFeedback("");
+        try {
+            await apiRequest("/api/auth/verify-code", {
+                method: "POST",
+                body: JSON.stringify({ email, code }),
+            });
+            sessionStorage.removeItem("learnhub_pending_email");
+            sessionStorage.removeItem("learnhub_pending_purpose");
+            await refreshUser();
+            navigate("/dashboard");
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        <button disabled={loading} type="submit" className="w-full rounded-2xl bg-slate-950 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md hover:bg-slate-800 disabled:opacity-50 transition-all hover:scale-101">
-          {loading ? t("loading") : "Provision Master Admin"}
-        </button>
-      </form>
-    </AuthShell>);
+    const handleResend = async () => {
+        setLoading(true);
+        setFeedback("");
+        try {
+            await apiRequest("/api/auth/resend-code", {
+                method: "POST",
+                body: JSON.stringify({ email, purpose }),
+            });
+            setSecondsLeft(60);
+            setFeedback("A new code has been sent if the account is eligible.");
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AuthShell title="Verify your email" subtitle="Enter the 6-digit code sent to your inbox">
+            <Feedback>{feedback}</Feedback>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    {t("email")}
+                    <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Verification code
+                    <input required minLength={6} maxLength={6} pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-4 text-center font-mono text-2xl font-black tracking-[0.5em] outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="000000" aria-label="6-digit verification code" />
+                </label>
+                <button disabled={loading || code.length !== 6} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50">
+                    {loading ? t("loading") : "Verify and continue"}
+                </button>
+            </form>
+            <div className="mt-5 flex flex-col items-center gap-3 text-sm text-slate-600">
+                <button type="button" disabled={loading || secondsLeft > 0 || !email} onClick={handleResend} className="font-bold text-blue-600 hover:underline disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline">
+                    {secondsLeft > 0 ? `Resend code in ${secondsLeft}s` : "Resend code"}
+                </button>
+                <Link to="/sign-in" className="font-semibold text-slate-500 hover:text-slate-800">Back to sign in</Link>
+            </div>
+        </AuthShell>
+    );
+}
+
+export function StudentRegistrationPage() {
+    return <SignupPage initialRole="student" />;
+}
+
+export function TeacherApplicationPage() {
+    return <SignupPage initialRole="teacher" />;
 }

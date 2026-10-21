@@ -8,41 +8,37 @@ const HERO_SLIDES = [
         id: 1,
         src: "/hero-1.jpg",
         tagEn: "Collaborative Tech & Coding Studio",
-        tagAm: "የቴክኖሎጂ እና የኮዲንግ ላብራቶሪ",
-        badge: "💻 Interactive Lab",
-        highlight: "Addis Ababa Coding Innovation Hub",
+        badge: "HANDS-ON PRACTICE",
+        highlight: "Build through guided projects",
         animClass: "animate-kenburns-1",
     },
     {
         id: 2,
         src: "/hero-2.jpg",
         tagEn: "Expert Teacher-Led Live Classes",
-        tagAm: "የቀጥታ አስተማሪ መስተጋብር",
-        badge: "👨‍🏫 Live Instruction",
-        highlight: "Real-Time Google Meet Sessions & Data",
+        badge: "LIVE INSTRUCTION",
+        highlight: "Learn with expert instructors",
         animClass: "animate-kenburns-2",
     },
     {
         id: 3,
         src: "/hero-3.jpg",
         tagEn: "Verified Progress & Mastery",
-        tagAm: "የተረጋገጠ የተማሪ እድገት",
-        badge: "🎓 Verified Outcomes",
-        highlight: "Accredited Cohorts & Placement",
+        badge: "VISIBLE PROGRESS",
+        highlight: "See the progress you make",
         animClass: "animate-kenburns-3",
     },
     {
         id: 4,
         src: "/hero-4.jpg",
         tagEn: "Connected Education Network",
-        tagAm: "የተቀናጀ የዲጂታል ትምህርት መረብ",
-        badge: "🌐 Modern Platform",
-        highlight: "State-of-the-Art Digital Campus",
+        badge: "LEARNING COMMUNITY",
+        highlight: "Move forward together",
         animClass: "animate-kenburns-4",
     },
 ];
 export function HomePage() {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const [data, setData] = useState(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
@@ -95,8 +91,8 @@ export function HomePage() {
             <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
           </div>
           <div className="text-left text-xs">
-            <p className="font-bold text-white">🔴 Live Cohorts in Session</p>
-            <p className="text-emerald-400 font-semibold">{data?.stats?.activeClasses || 12} Classes Active Today</p>
+            <p className="font-bold text-white">Learn with a live cohort</p>
+            <p className="text-emerald-400 font-semibold">{data?.stats?.activeClasses ?? 0} active cohorts</p>
           </div>
         </div>
 
@@ -105,8 +101,8 @@ export function HomePage() {
             ✓
           </div>
           <div className="text-left text-xs">
-            <p className="font-bold text-white">Verified Outcomes</p>
-            <p className="text-cyan-300 font-semibold">98.4% Course Completion Rate</p>
+            <p className="font-bold text-white">Practice with purpose</p>
+            <p className="text-cyan-300 font-semibold">Projects, feedback, and steady progress</p>
           </div>
         </div>
 
@@ -119,9 +115,7 @@ export function HomePage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
               </span>
-              <span className="font-bold text-white">
-                {i18n.language === "am" ? activeSlide.tagAm : activeSlide.tagEn}
-              </span>
+              <span className="font-bold text-white">{activeSlide.tagEn}</span>
               <span className="rounded-md bg-cyan-950/90 px-2 py-0.5 text-[10px] font-bold text-cyan-300 border border-cyan-500/40">
                 {activeSlide.badge}
               </span>
@@ -202,16 +196,16 @@ export function HomePage() {
       {/* 2. Platform Real-Time Statistics */}
       {data?.stats ? (<section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-16 relative z-20">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard label={t("students")} value={data.stats.activeStudents} subtext="Verified enrolled learners" icon="🎓" trend="+14% this month"/>
-            <MetricCard label={t("teachers")} value={data.stats.activeTeachers} subtext="Approved & certified educators" icon="👨‍🏫" trend="100% credential verified"/>
-            <MetricCard label={t("classes")} value={data.stats.activeClasses} subtext="Active learning cohorts" icon="📚" trend="Daily Google Meet live sync"/>
-            <MetricCard label={t("pendingApplications")} value={data.stats.pendingTeacherApplications} subtext="Under administrative review" icon="📝" trend="Rigorous quality vetting"/>
+            <MetricCard label={t("students")} value={data.stats.activeStudents} subtext="Learners building new skills" icon="🎓"/>
+            <MetricCard label={t("teachers")} value={data.stats.activeTeachers} subtext="Instructors guiding learners" icon="👨‍🏫"/>
+            <MetricCard label={t("classes")} value={data.stats.activeClasses} subtext="Learning together in cohorts" icon="📚"/>
+            <MetricCard label={t("pendingApplications")} value={data.stats.pendingTeacherApplications} subtext="Being reviewed by our team" icon="📝"/>
           </div>
         </section>) : null}
 
       {/* 3. Modern Bento Grid: Architectural Pillars */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading badge="ARCHITECTURE" title="Engineered for Measurable Educational Excellence" subtitle="LearnHUB solves the high dropout rate of online learning by blending personalized human placement with live synchronous classrooms and objective assessment." centered/>
+        <SectionHeading badge="THE LEARNHUB DIFFERENCE" title="A more human way to build real-world skills" subtitle="LearnHUB combines expert instruction, hands-on practice, and steady support to help you keep moving forward." centered/>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Bento Card 1: Placement */}
@@ -226,7 +220,7 @@ export function HomePage() {
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-bold text-blue-600">
-              <span>Rule 2: Admin-Controlled Placement</span>
+              <span>Find a cohort that fits your goals</span>
               <span>✓</span>
             </div>
           </div>
@@ -243,7 +237,7 @@ export function HomePage() {
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-bold text-cyan-600">
-              <span>Verified Google Meet Links & Schedules</span>
+              <span>Join your instructor and cohort live</span>
               <span>✓</span>
             </div>
           </div>
@@ -260,7 +254,7 @@ export function HomePage() {
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-bold text-emerald-600">
-              <span>Persistent MongoDB Grade Records</span>
+              <span>Understand what you have mastered</span>
               <span>✓</span>
             </div>
           </div>
@@ -269,11 +263,11 @@ export function HomePage() {
           <div className="md:col-span-2 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-8 sm:p-10 text-white shadow-md flex flex-col justify-between">
             <div className="max-w-2xl">
               <span className="rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-400/30">
-                EDUCATOR QUALITY GUARANTEE
+                LEARN WITH CONFIDENCE
               </span>
               <h3 className="mt-4 text-2xl sm:text-3xl font-black">{t("bentoVettedTitle")}</h3>
               <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-                {t("bentoVettedDesc")} Hub Admins approve applications with documented reasoning, manage cohort limits, and audit all classroom activities to maintain top pedagogical standards.
+                {t("bentoVettedDesc")} We bring structure, care, and accountability to every learning experience.
               </p>
             </div>
             <div className="mt-8 flex flex-wrap gap-4">
@@ -292,13 +286,13 @@ export function HomePage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 text-2xl">
                 🛡️
               </div>
-              <h3 className="mt-5 text-xl font-bold text-slate-900">Server-Enforced RBAC</h3>
+              <h3 className="mt-5 text-xl font-bold text-slate-900">A focused learning space</h3>
               <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                Strict security: Teachers only access assigned classes. Students only access authorized enrolled cohorts. Audited at every single API endpoint.
+                Keep your classes, resources, assignments, and progress together in one secure workspace.
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-600">
-              <span>Rule 5: Zero-Trust Backend</span>
+              <span>Your learning, organized in one place</span>
               <span>✓</span>
             </div>
           </div>

@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { BrandLogo } from "./BrandLogo";
+
+const currentYear = new Date().getFullYear();
+
 export function Footer() {
     const { t } = useTranslation();
     return (<footer className="border-t border-slate-200 bg-slate-950 text-slate-400">
@@ -14,12 +17,12 @@ export function Footer() {
             <p className="text-xs text-slate-400 leading-relaxed">
               {t("brandTagline")}
             </p>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3 py-1 text-[11px] font-semibold text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>All Systems Operational • 2026</span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-950/40 px-3 py-1 text-[11px] font-semibold text-blue-300">
+              <span className="h-2 w-2 rounded-full bg-blue-400"></span>
+              <span>Learn with purpose. Grow with support.</span>
             </div>
             <p className="text-[11px] text-slate-400">
-              © 2026 LearnHUB Inc. All rights reserved.
+              © {currentYear} LearnHUB. All rights reserved.
             </p>
           </div>
 
@@ -42,11 +45,6 @@ export function Footer() {
               <li>
                 <Link to="/apply/teacher" className="hover:text-cyan-400 transition-colors">
                   {t("teacherApply")}
-                </Link>
-              </li>
-              <li>
-                <Link to="/setup/admin" className="hover:text-cyan-400 transition-colors">
-                  {t("adminSetup")}
                 </Link>
               </li>
             </ul>
@@ -73,9 +71,7 @@ export function Footer() {
                   {t("contact")}
                 </Link>
               </li>
-              <li>
-                <span className="text-slate-400">Addis Ababa, Ethiopia</span>
-              </li>
+              <li><Link to="/contact" className="hover:text-cyan-400 transition-colors">Talk with our team</Link></li>
             </ul>
           </div>
 

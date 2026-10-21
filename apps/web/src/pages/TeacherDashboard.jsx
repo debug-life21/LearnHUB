@@ -112,7 +112,7 @@ export function TeacherDashboard({ user }) {
                 method: "POST",
                 body: JSON.stringify({ records }),
             });
-            setFeedback("የመገኘት መረጃ በስኬት ተመዝግቧል! / Attendance recorded.");
+            setFeedback("Attendance saved.");
         }
         catch (err) {
             setFeedback(err.message);
@@ -134,7 +134,7 @@ export function TeacherDashboard({ user }) {
                 }),
             });
             setCreateAssignModal(false);
-            setFeedback("አዲስ የተግባር ስራ ተፈጥሯል! / Assignment created.");
+            setFeedback("Assignment created.");
             void loadTeacherData();
         }
         catch (err) {
@@ -165,7 +165,7 @@ export function TeacherDashboard({ user }) {
                     feedback: gradingState.feedback,
                 }),
             });
-            setFeedback("ውጤት ተመዝግቧል! / Grade saved.");
+            setFeedback("Grade saved.");
             setGradingState({ subId: "", score: 0, feedback: "" });
             if (submissionsModal.assignment) {
                 openSubmissions(submissionsModal.assignment);
@@ -200,7 +200,7 @@ export function TeacherDashboard({ user }) {
                 }),
             });
             setCreateQuizModal(false);
-            setFeedback("አዲስ ፈተና ተዘጋጅቷል! / Assessment created.");
+            setFeedback("Assessment created.");
             void loadTeacherData();
         }
         catch (err) {
@@ -225,7 +225,7 @@ export function TeacherDashboard({ user }) {
                 }),
             });
             setUploadModal(false);
-            setFeedback("የትምህርት ፋይል ተጭኗል! / Resource uploaded.");
+            setFeedback("Learning resource uploaded.");
             void loadTeacherData();
         }
         catch (err) {
@@ -264,13 +264,13 @@ export function TeacherDashboard({ user }) {
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         {[
-            { id: "overview", label: "አጠቃላይ / Overview", icon: "📊" },
-            { id: "classes", label: `የእኔ ክፍሎች / Classes (${classes.length})`, icon: "🏫" },
-            { id: "schedule", label: `የቀጥታ ትምህርት / Live Lessons (${upcomingLessons.length})`, icon: "📹" },
-            { id: "attendance", label: "መገኘት / Attendance Tracker", icon: "📝" },
-            { id: "assignments", label: `ስራዎች / Assignments (${assignments.length})`, icon: "📚" },
-            { id: "assessments", label: `ፈተናዎች / Quizzes (${assessments.length})`, icon: "⏱️" },
-            { id: "resources", label: `ፋይሎች / Resources (${resources.length})`, icon: "📁" },
+            { id: "overview", label: "Overview", icon: "📊" },
+            { id: "classes", label: `My cohorts (${classes.length})`, icon: "🏫" },
+            { id: "schedule", label: `Live sessions (${upcomingLessons.length})`, icon: "📹" },
+            { id: "attendance", label: "Attendance", icon: "📝" },
+            { id: "assignments", label: `Assignments (${assignments.length})`, icon: "📚" },
+            { id: "assessments", label: `Assessments (${assessments.length})`, icon: "⏱️" },
+            { id: "resources", label: `Resources (${resources.length})`, icon: "📁" },
         ].map((tab) => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
                 ? "bg-slate-900 text-white shadow-sm"
                 : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
@@ -282,16 +282,16 @@ export function TeacherDashboard({ user }) {
       {/* 1. OVERVIEW */}
       {activeTab === "overview" ? (<div className="space-y-8">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard label="የተመደቡ ክፍሎች / Assigned Classes" value={classes.length} icon="🏫"/>
-            <MetricCard label="የቀጣይ ክፍለ ጊዜዎች / Upcoming" value={upcomingLessons.length} icon="📹"/>
-            <MetricCard label="ጠቅላላ ተማሪዎች / Students" value={classes.reduce((acc, c) => acc + (c.students?.length || 0), 0)} icon="🎓"/>
-            <MetricCard label="የተሰሩ ስራዎች / Assignments Posted" value={assignments.length} icon="📚"/>
+            <MetricCard label="Assigned cohorts" value={classes.length} icon="🏫"/>
+            <MetricCard label="Upcoming sessions" value={upcomingLessons.length} icon="📹"/>
+            <MetricCard label="Learners" value={classes.reduce((acc, c) => acc + (c.students?.length || 0), 0)} icon="🎓"/>
+            <MetricCard label="Assignments posted" value={assignments.length} icon="📚"/>
           </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
-            <DashboardCard title="የቀጣይ ክፍለ ጊዜዎች / Next Live Lessons">
+            <DashboardCard title="Upcoming live sessions">
               <div className="space-y-4">
-                {upcomingLessons.length === 0 ? (<EmptyState title="ምንም የታቀደ ክፍለ ጊዜ የለም"/>) : (upcomingLessons.map((session) => (<div key={session._id} className="rounded-2xl border border-slate-200 p-4 space-y-2">
+                {upcomingLessons.length === 0 ? (<EmptyState title="No sessions scheduled yet."/>) : (upcomingLessons.map((session) => (<div key={session._id} className="rounded-2xl border border-slate-200 p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="font-bold text-slate-900">{session.title}</h4>
                         <Badge variant="cyan">{new Date(session.startsAt).toLocaleTimeString()}</Badge>
@@ -309,9 +309,9 @@ export function TeacherDashboard({ user }) {
               </div>
             </DashboardCard>
 
-            <DashboardCard title="የቅርብ ጊዜ ማሳወቂያዎች / Recent Notifications">
+            <DashboardCard title="Recent notifications">
               <div className="space-y-3">
-                {notifications.length === 0 ? (<EmptyState title="ምንም ማሳወቂያ የለም"/>) : (notifications.map((n) => (<div key={n._id} className="rounded-xl bg-slate-50 p-3 text-xs">
+                {notifications.length === 0 ? (<EmptyState title="No notifications yet."/>) : (notifications.map((n) => (<div key={n._id} className="rounded-xl bg-slate-50 p-3 text-xs">
                       <p className="font-bold text-slate-900">{n.title}</p>
                       <p className="mt-1 text-slate-600">{n.message}</p>
                       <span className="mt-1 block text-[10px] text-slate-400">
@@ -331,10 +331,10 @@ export function TeacherDashboard({ user }) {
                   <h4 className="text-lg font-bold text-slate-900">{cls.title}</h4>
                   <Badge variant="emerald">{cls.status}</Badge>
                 </div>
-                <p className="text-xs text-slate-600"><strong>ኮርስ:</strong> {cls.course?.title || "General"}</p>
+                <p className="text-xs text-slate-600"><strong>Program:</strong> {cls.course?.title || "General"}</p>
                 <div className="border-t border-slate-100 pt-3">
                   <h5 className="text-xs font-bold text-slate-700 mb-2">
-                    የተመደቡ ተማሪዎች ({cls.students?.length || 0}):
+                    Assigned learners ({cls.students?.length || 0}):
                   </h5>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {cls.students?.map((s) => (<div key={s._id} className="rounded-lg bg-slate-50 p-2 text-xs flex justify-between">
@@ -349,7 +349,7 @@ export function TeacherDashboard({ user }) {
 
       {/* 3. SCHEDULE */}
       {activeTab === "schedule" ? (<div className="space-y-6">
-          <DashboardCard title="የቀጥታ ትምህርት መርሃ ግብር (Google Meet)">
+          <DashboardCard title="Live session schedule">
             <div className="space-y-4">
               {upcomingLessons.map((session) => (<div key={session._id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 p-5">
                   <div>
@@ -371,10 +371,10 @@ export function TeacherDashboard({ user }) {
 
       {/* 4. ATTENDANCE TRACKER */}
       {activeTab === "attendance" ? (<div className="space-y-6">
-          <DashboardCard title="የክፍለ ጊዜ መገኘት መዝገብ (Attendance Tracker)" subtitle="የክፍለ ጊዜ ተማሪዎችን መገኘት Present, Absent, Late ወይም Excused በማለት መዝግቡ">
+          <DashboardCard title="Attendance tracker" subtitle="Record learner attendance as present, absent, late, or excused.">
             <div className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ክፍለ ጊዜ ይምረጡ / Session</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select a session</label>
                 <select value={selectedSessionId} onChange={(e) => setSelectedSessionId(e.target.value)} className="w-full sm:w-96 rounded-xl border border-slate-200 p-2.5 text-xs outline-none bg-white">
                   {upcomingLessons.map((s) => (<option key={s._id} value={s._id}>
                       {s.title} ({new Date(s.startsAt).toLocaleDateString()})
@@ -405,7 +405,7 @@ export function TeacherDashboard({ user }) {
                         </div>
                       </div>);
                 })}
-                </div>) : (<EmptyState title="ምንም ተማሪዎች በዚህ ክፍል ውስጥ የሉም"/>)}
+                </div>) : (<EmptyState title="No learners are assigned to this cohort yet."/>)}
 
               <button onClick={saveAttendance} className="rounded-xl bg-slate-900 px-6 py-2.5 text-xs font-bold text-white hover:bg-slate-800">
                 {t("markAttendance")}
@@ -417,7 +417,7 @@ export function TeacherDashboard({ user }) {
       {/* 5. ASSIGNMENTS */}
       {activeTab === "assignments" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">የተሰጡ ስራዎች (Assignments)</h3>
+            <h3 className="text-xl font-bold text-slate-900">Assignments</h3>
             <button onClick={() => setCreateAssignModal(true)} className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
               + {t("createAssignment")}
             </button>
@@ -431,13 +431,13 @@ export function TeacherDashboard({ user }) {
                 </div>
                 <p className="text-xs text-slate-600 line-clamp-2">{asgn.instructions}</p>
                 <div className="flex justify-between items-center text-xs text-slate-500 border-t border-slate-100 pt-3">
-                  <span>ማስረከቢያ: {new Date(asgn.dueDate).toLocaleDateString()}</span>
+                  <span>Due: {new Date(asgn.dueDate).toLocaleDateString()}</span>
                   <span className="font-bold text-blue-600">
-                    {asgn.submissionCount || 0} ገብቷል ({asgn.gradedCount || 0} ታርሟል)
+                    {asgn.submissionCount || 0} submitted ({asgn.gradedCount || 0} graded)
                   </span>
                 </div>
                 <button onClick={() => openSubmissions(asgn)} className="w-full rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200">
-                  የተማሪ ስራዎችን ተመልከት / Submissions
+                  View submissions
                 </button>
               </div>))}
           </div>
@@ -446,7 +446,7 @@ export function TeacherDashboard({ user }) {
       {/* 6. ASSESSMENTS / QUIZZES */}
       {activeTab === "assessments" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">ፈተናዎች እና ጥያቄዎች (Quizzes)</h3>
+            <h3 className="text-xl font-bold text-slate-900">Assessments</h3>
             <button onClick={() => setCreateQuizModal(true)} className="rounded-xl bg-cyan-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-cyan-700">
               + {t("createAssessment")}
             </button>
@@ -456,12 +456,12 @@ export function TeacherDashboard({ user }) {
             {assessments.map((qz) => (<div key={qz._id} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-slate-900">{qz.title}</h4>
-                  <Badge variant="cyan">{qz.timeLimitMinutes} ደቂቃ</Badge>
+                  <Badge variant="cyan">{qz.timeLimitMinutes} min</Badge>
                 </div>
                 <p className="text-xs text-slate-600">{qz.description}</p>
                 <div className="text-xs text-slate-500 border-t border-slate-100 pt-2 flex justify-between">
-                  <span>የጥያቄዎች ብዛት: {qz.questions?.length || 0}</span>
-                  <span>ማለፊያ: {qz.passingScorePercentage}%</span>
+                  <span>Questions: {qz.questions?.length || 0}</span>
+                  <span>Passing score: {qz.passingScorePercentage}%</span>
                 </div>
               </div>))}
           </div>
@@ -470,7 +470,7 @@ export function TeacherDashboard({ user }) {
       {/* 7. RESOURCES */}
       {activeTab === "resources" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">የትምህርት ፋይሎች እና ሰነዶች</h3>
+            <h3 className="text-xl font-bold text-slate-900">Learning resources</h3>
             <button onClick={() => setUploadModal(true)} className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
               + {t("uploadResource")}
             </button>
@@ -494,22 +494,22 @@ export function TeacherDashboard({ user }) {
         </div>) : null}
 
       {/* MODAL: View Submissions & Grade */}
-      <Modal title={`የተማሪ ስራዎች: ${submissionsModal.assignment?.title || ""}`} isOpen={submissionsModal.open} onClose={() => setSubmissionsModal({ open: false, assignment: null, list: [] })}>
+      <Modal title={`Learner submissions: ${submissionsModal.assignment?.title || ""}`} isOpen={submissionsModal.open} onClose={() => setSubmissionsModal({ open: false, assignment: null, list: [] })}>
         <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-          {submissionsModal.list.length === 0 ? (<EmptyState title="እስካሁን ምንም የተላከ ስራ የለም"/>) : (submissionsModal.list.map((sub) => (<div key={sub._id} className="rounded-xl border border-slate-200 p-4 space-y-2">
+          {submissionsModal.list.length === 0 ? (<EmptyState title="No submissions yet."/>) : (submissionsModal.list.map((sub) => (<div key={sub._id} className="rounded-xl border border-slate-200 p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900">{sub.student?.fullName}</span>
                   <Badge variant={sub.status === "graded" ? "emerald" : "amber"}>
                     {sub.status === "graded" ? `${sub.score} pts` : "Submitted"}
                   </Badge>
                 </div>
-                <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg">{sub.textResponse || "ፋይል ተያይዟል"}</p>
-                {sub.feedback ? <p className="text-xs text-blue-700">አስተያየት: {sub.feedback}</p> : null}
+                <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg">{sub.textResponse || "File attached"}</p>
+                {sub.feedback ? <p className="text-xs text-blue-700">Feedback: {sub.feedback}</p> : null}
 
                 {/* Inline Grading Form */}
                 <div className="pt-2 border-t border-slate-100 flex gap-2">
-                  <input type="number" max={submissionsModal.assignment?.maxScore || 100} placeholder="ውጤት" className="w-20 rounded-lg border border-slate-200 p-1 text-xs" onChange={(e) => setGradingState({ ...gradingState, subId: sub._id, score: Number(e.target.value) })}/>
-                  <input type="text" placeholder="አስተያየት / Feedback" className="flex-1 rounded-lg border border-slate-200 p-1 text-xs" onChange={(e) => setGradingState({ ...gradingState, subId: sub._id, feedback: e.target.value })}/>
+                  <input type="number" max={submissionsModal.assignment?.maxScore || 100} placeholder="Score" className="w-20 rounded-lg border border-slate-200 p-1 text-xs" onChange={(e) => setGradingState({ ...gradingState, subId: sub._id, score: Number(e.target.value) })}/>
+                  <input type="text" placeholder="Feedback" className="flex-1 rounded-lg border border-slate-200 p-1 text-xs" onChange={(e) => setGradingState({ ...gradingState, subId: sub._id, feedback: e.target.value })}/>
                   <button onClick={handleGradeSubmission} className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white hover:bg-blue-700">
                     {t("saveGrade")}
                   </button>
@@ -522,7 +522,7 @@ export function TeacherDashboard({ user }) {
       <Modal title={t("createAssignment")} isOpen={createAssignModal} onClose={() => setCreateAssignModal(false)}>
         <form onSubmit={handleCreateAssignment} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700">ክፍል / Classroom</label>
+            <label className="block text-xs font-bold text-slate-700">Cohort</label>
             <select value={assignForm.classroomId} onChange={(e) => setAssignForm({ ...assignForm, classroomId: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
               {classes.map((c) => (<option key={c._id} value={c._id}>{c.title}</option>))}
             </select>
@@ -532,7 +532,7 @@ export function TeacherDashboard({ user }) {
             <input required type="text" value={assignForm.title} onChange={(e) => setAssignForm({ ...assignForm, title: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700">መመሪያዎች / Instructions</label>
+            <label className="block text-xs font-bold text-slate-700">Instructions</label>
             <textarea required rows={3} value={assignForm.instructions} onChange={(e) => setAssignForm({ ...assignForm, instructions: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -541,7 +541,7 @@ export function TeacherDashboard({ user }) {
               <input required type="date" value={assignForm.dueDate} onChange={(e) => setAssignForm({ ...assignForm, dueDate: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700">ከፍተኛ ነጥብ / Max Score</label>
+              <label className="block text-xs font-bold text-slate-700">Maximum score</label>
               <input required type="number" value={assignForm.maxScore} onChange={(e) => setAssignForm({ ...assignForm, maxScore: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
             </div>
           </div>
@@ -559,22 +559,22 @@ export function TeacherDashboard({ user }) {
             <input required type="text" value={quizForm.title} onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700">ጥያቄ (Question Prompt)</label>
-            <input required type="text" value={quizForm.prompt} onChange={(e) => setQuizForm({ ...quizForm, prompt: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="ለምሳሌ፡ React Hook ምንድን ነው?"/>
+            <label className="block text-xs font-bold text-slate-700">Question</label>
+            <input required type="text" value={quizForm.prompt} onChange={(e) => setQuizForm({ ...quizForm, prompt: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="Example: What is a React Hook?"/>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input required type="text" placeholder="ምርጫ 1 (Option A)" value={quizForm.opt0} onChange={(e) => setQuizForm({ ...quizForm, opt0: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
-            <input required type="text" placeholder="ምርጫ 2 (Option B)" value={quizForm.opt1} onChange={(e) => setQuizForm({ ...quizForm, opt1: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
-            <input type="text" placeholder="ምርጫ 3 (Option C)" value={quizForm.opt2} onChange={(e) => setQuizForm({ ...quizForm, opt2: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
-            <input type="text" placeholder="ምርጫ 4 (Option D)" value={quizForm.opt3} onChange={(e) => setQuizForm({ ...quizForm, opt3: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
+            <input required type="text" placeholder="Option A" value={quizForm.opt0} onChange={(e) => setQuizForm({ ...quizForm, opt0: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
+            <input required type="text" placeholder="Option B" value={quizForm.opt1} onChange={(e) => setQuizForm({ ...quizForm, opt1: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
+            <input type="text" placeholder="Option C" value={quizForm.opt2} onChange={(e) => setQuizForm({ ...quizForm, opt2: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
+            <input type="text" placeholder="Option D" value={quizForm.opt3} onChange={(e) => setQuizForm({ ...quizForm, opt3: e.target.value })} className="rounded-xl border border-slate-200 p-2 text-xs outline-none"/>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700">ትክክለኛ ምርጫ / Correct Option</label>
+            <label className="block text-xs font-bold text-slate-700">Correct answer</label>
             <select value={quizForm.correctIdx} onChange={(e) => setQuizForm({ ...quizForm, correctIdx: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
-              <option value={0}>ምርጫ 1 (Option A)</option>
-              <option value={1}>ምርጫ 2 (Option B)</option>
-              <option value={2}>ምርጫ 3 (Option C)</option>
-              <option value={3}>ምርጫ 4 (Option D)</option>
+              <option value={0}>Option A</option>
+              <option value={1}>Option B</option>
+              <option value={2}>Option C</option>
+              <option value={3}>Option D</option>
             </select>
           </div>
           <button type="submit" className="w-full rounded-xl bg-cyan-600 py-2.5 text-xs font-bold text-white">
@@ -595,7 +595,7 @@ export function TeacherDashboard({ user }) {
             <textarea rows={2} value={uploadForm.description} onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700">ፋይል ይምረጡ / Choose File</label>
+            <label className="block text-xs font-bold text-slate-700">Choose a file</label>
             <input type="file" onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) {

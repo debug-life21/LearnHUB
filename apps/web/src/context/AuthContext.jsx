@@ -16,6 +16,12 @@ export function AuthProvider({ children }) {
             setLoading(false);
         }
     }, []);
+    const login = useCallback(async (credentials) => {
+        return apiRequest("/api/auth/login", {
+            method: "POST",
+            body: JSON.stringify(credentials),
+        });
+    }, []);
     async function logout() {
         await apiRequest("/api/auth/logout", {
             method: "POST",
@@ -28,9 +34,10 @@ export function AuthProvider({ children }) {
     const value = useMemo(() => ({
         user,
         loading,
+        login,
         refreshUser,
         logout,
-    }), [loading, refreshUser, user]);
+    }), [loading, login, refreshUser, user]);
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 export function useAuth() {

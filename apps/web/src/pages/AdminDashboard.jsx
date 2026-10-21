@@ -119,7 +119,7 @@ export function AdminDashboard({ user }) {
                 method: "PATCH",
                 body: JSON.stringify({ status: "approved" }),
             });
-            setFeedback("አስተማሪው በተሳካ ሁኔታ ጸድቋል! / Teacher approved.");
+            setFeedback("Instructor approved.");
             void loadAll();
         }
         catch (err) {
@@ -133,7 +133,7 @@ export function AdminDashboard({ user }) {
                 body: JSON.stringify({ status: "rejected", rejectionReason: rejectionModal.reason }),
             });
             setRejectionModal({ open: false, appId: "", reason: "" });
-            setFeedback("ማመልከቻው አልተፈቀደም። / Application rejected.");
+            setFeedback("Application declined.");
             void loadAll();
         }
         catch (err) {
@@ -148,7 +148,7 @@ export function AdminDashboard({ user }) {
                 method: "PATCH",
                 body: JSON.stringify({ status: nextStatus }),
             });
-            setFeedback(`የአስተማሪ ሁኔታ ተቀይሯል: ${nextStatus}`);
+            setFeedback(`Instructor status updated: ${nextStatus}`);
             void loadAll();
         }
         catch (err) {
@@ -165,7 +165,7 @@ export function AdminDashboard({ user }) {
                 body: JSON.stringify({ studentId: placementModal.studentId }),
             });
             setPlacementModal({ open: false, studentId: "", studentName: "", classId: "" });
-            setFeedback("ተማሪው በተሳካ ሁኔታ ወደ ክፍል ተመድቧል! / Student placed.");
+            setFeedback("Learner placed in the cohort.");
             void loadAll();
         }
         catch (err) {
@@ -182,7 +182,7 @@ export function AdminDashboard({ user }) {
                 body: JSON.stringify({ teacherId: teacherAssignmentModal.teacherId }),
             });
             setTeacherAssignmentModal({ open: false, classId: "", classTitle: "", teacherId: "" });
-            setFeedback("አስተማሪው ተመድቧል። / Teacher assigned.");
+            setFeedback("Instructor assigned.");
             void loadAll();
         }
         catch (err) {
@@ -206,7 +206,7 @@ export function AdminDashboard({ user }) {
             });
             setCreateCourseModal(false);
             setCourseForm({ title: "", description: "", categoryId: "", skillLevel: "Beginner", objectives: "" });
-            setFeedback("አዲስ ኮርስ ተፈጥሯል! / Course created.");
+            setFeedback("Program created.");
             void loadAll();
         }
         catch (err) {
@@ -223,7 +223,7 @@ export function AdminDashboard({ user }) {
             });
             setCreateCategoryModal(false);
             setCategoryForm({ name: "", description: "" });
-            setFeedback("አዲስ ምድብ ተፈጥሯል! / Category created.");
+            setFeedback("Category created.");
             void loadAll();
         }
         catch (err) {
@@ -248,7 +248,7 @@ export function AdminDashboard({ user }) {
             });
             setCreateClassModal(false);
             setClassForm({ title: "", courseId: "", teacherId: "", capacity: 20, timeZone: "Africa/Addis_Ababa", description: "" });
-            setFeedback("አዲስ ክፍል ተፈጥሯል! / Class created.");
+            setFeedback("Cohort created.");
             void loadAll();
         }
         catch (err) {
@@ -279,7 +279,7 @@ export function AdminDashboard({ user }) {
                 endsAt: "",
                 meetingUrl: "",
             });
-            setFeedback("ክፍለ ጊዜ በተሳካ ሁኔታ ተመድቧል! / Session scheduled.");
+            setFeedback("Session scheduled.");
             void loadAll();
         }
         catch (err) {
@@ -296,7 +296,7 @@ export function AdminDashboard({ user }) {
             });
             setCreateAnnouncementModal(false);
             setAnnouncementForm({ title: "", content: "", target: "all_students", priority: "normal" });
-            setFeedback("ማስታወቂያ ተሰራጭቷል! / Announcement broadcast.");
+            setFeedback("Announcement sent.");
             void loadAll();
         }
         catch (err) {
@@ -374,13 +374,13 @@ export function AdminDashboard({ user }) {
       {/* Tabs Bar */}
       <div role="tablist" aria-label="Admin dashboard sections" className="flex gap-2 overflow-x-auto border-b border-slate-200 pb-3">
         {[
-            { id: "overview", label: "አጠቃላይ / Overview", icon: "📊" },
-            { id: "teachers", label: `አስተማሪዎች / Teachers (${teachers.length})`, icon: "👨‍🏫" },
-            { id: "students", label: `ተማሪዎች / Students (${students.length})`, icon: "🎓" },
-            { id: "courses", label: `ኮርሶች / Courses (${courses.length})`, icon: "📚" },
-            { id: "classes", label: `ክፍሎች / Classes (${classes.length})`, icon: "🏫" },
-            { id: "announcements", label: `ማስታወቂያዎች / Announcements (${announcements.length})`, icon: "📢" },
-            { id: "reports", label: "ሪፖርቶች / Reports & Audit", icon: "📑" },
+            { id: "overview", label: "Overview", icon: "📊" },
+            { id: "teachers", label: `Instructors (${teachers.length})`, icon: "👨‍🏫" },
+            { id: "students", label: `Learners (${students.length})`, icon: "🎓" },
+            { id: "courses", label: `Programs (${courses.length})`, icon: "📚" },
+            { id: "classes", label: `Cohorts (${classes.length})`, icon: "🏫" },
+            { id: "announcements", label: `Announcements (${announcements.length})`, icon: "📢" },
+            { id: "reports", label: "Reports & activity", icon: "📑" },
         ].map((tab) => (<button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
                 ? "bg-slate-900 text-white shadow-sm"
                 : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
@@ -392,16 +392,16 @@ export function AdminDashboard({ user }) {
       {/* 1. OVERVIEW TAB */}
       {activeTab === "overview" ? (<div className="space-y-8">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard label="ጠቅላላ ተማሪዎች / Students" value={metrics.totalStudents ?? 0} icon="🎓"/>
-            <MetricCard label="ንቁ አስተማሪዎች / Teachers" value={metrics.activeTeachers ?? 0} icon="👨‍🏫"/>
-            <MetricCard label="ክፍሎች / Classes" value={metrics.activeClasses ?? 0} icon="🏫"/>
-            <MetricCard label="ያልተመደቡ ተማሪዎች / Pending Placement" value={metrics.pendingStudentPlacement ?? 0} icon="⏳"/>
+            <MetricCard label="Learners" value={metrics.totalStudents ?? 0} icon="🎓"/>
+            <MetricCard label="Active instructors" value={metrics.activeTeachers ?? 0} icon="👨‍🏫"/>
+            <MetricCard label="Cohorts" value={metrics.activeClasses ?? 0} icon="🏫"/>
+            <MetricCard label="Awaiting placement" value={metrics.pendingStudentPlacement ?? 0} icon="⏳"/>
           </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
-            <DashboardCard title="በመጠባበቅ ላይ ያሉ የአስተማሪ ማመልከቻዎች" subtitle="Pending Teacher Applications">
+            <DashboardCard title="Instructor applications awaiting review" subtitle="Pending Teacher Applications">
               <div className="space-y-4">
-                {applications.filter((a) => a.status === "pending").length === 0 ? (<EmptyState title="ምንም በመጠባበቅ ላይ ያለ ማመልከቻ የለም"/>) : (applications
+                {applications.filter((a) => a.status === "pending").length === 0 ? (<EmptyState title="No applications are waiting for review."/>) : (applications
                 .filter((a) => a.status === "pending")
                 .map((app) => (<div key={app._id} className="rounded-2xl border border-slate-200 p-4 space-y-3">
                         <div className="flex items-center justify-between">
@@ -411,8 +411,8 @@ export function AdminDashboard({ user }) {
                           </div>
                           <Badge variant="amber">Pending</Badge>
                         </div>
-                        <p className="text-xs text-slate-600 line-clamp-2"><strong>ብቃት:</strong> {app.qualifications}</p>
-                        <p className="text-xs text-slate-600 line-clamp-2"><strong>ልምድ:</strong> {app.experience}</p>
+                        <p className="text-xs text-slate-600 line-clamp-2"><strong>Qualifications:</strong> {app.qualifications}</p>
+                        <p className="text-xs text-slate-600 line-clamp-2"><strong>Experience:</strong> {app.experience}</p>
                         <div className="flex gap-2 pt-2 border-t border-slate-100">
                           <button onClick={() => handleTeacherApprove(app._id)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700">
                             ✓ {t("approve")}
@@ -425,16 +425,16 @@ export function AdminDashboard({ user }) {
               </div>
             </DashboardCard>
 
-            <DashboardCard title="ምደባ የሚጠባበቁ ተማሪዎች" subtitle="Students Awaiting Placement">
+            <DashboardCard title="Learners awaiting placement" subtitle="Students Awaiting Placement">
               <div className="space-y-4">
-                {students.filter((s) => s.studentProfile?.placementStatus === "pending").length === 0 ? (<EmptyState title="ሁሉም ተማሪዎች ተመድበዋል"/>) : (students
+                {students.filter((s) => s.studentProfile?.placementStatus === "pending").length === 0 ? (<EmptyState title="All learners have been placed."/>) : (students
                 .filter((s) => s.studentProfile?.placementStatus === "pending")
                 .map((stud) => (<div key={stud._id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
                         <div>
                           <h4 className="font-bold text-slate-900">{stud.fullName}</h4>
                           <p className="text-xs text-slate-500">{stud.email}</p>
                           <p className="mt-1 text-xs text-slate-600">
-                            ፍላጎት: {stud.studentProfile?.learningInterests?.join(", ") || "General"}
+                            Interests: {stud.studentProfile?.learningInterests?.join(", ") || "General"}
                           </p>
                         </div>
                         <button
@@ -446,7 +446,7 @@ export function AdminDashboard({ user }) {
                           className="rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                           title={getPlacementClasses(stud._id).length === 0 ? "Create a class with available capacity first." : undefined}
                         >
-                          ክፍል መድብ / Assign
+                          Assign cohort
                         </button>
                       </div>)))}
               </div>
@@ -457,7 +457,7 @@ export function AdminDashboard({ user }) {
       {/* 2. TEACHERS TAB */}
       {activeTab === "teachers" ? (<div className="space-y-6">
           <DashboardCard
-            title="የአስተማሪዎች ሙሉ ዝርዝር"
+            title="All instructors"
             subtitle="All Registered Teachers"
             action={<input value={teacherSearch} onChange={(event) => setTeacherSearch(event.target.value)} aria-label="Search teachers" placeholder="Search name or email" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:w-56" />}
           >
@@ -467,7 +467,7 @@ export function AdminDashboard({ user }) {
                     <h4 className="font-bold text-slate-900">{teach.fullName}</h4>
                     <p className="text-xs text-slate-500">{teach.email}</p>
                     <p className="mt-1 text-xs text-slate-600">
-                      የሙያ ዘርፍ: {teach.teacherProfile?.expertise?.join(", ") || "General"}
+                      Expertise: {teach.teacherProfile?.expertise?.join(", ") || "General"}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -477,7 +477,7 @@ export function AdminDashboard({ user }) {
                     <button onClick={() => handleToggleTeacherStatus(teach._id, teach.accountStatus)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${teach.accountStatus === "active"
                     ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
                     : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}>
-                      {teach.accountStatus === "active" ? "አግድ (Suspend)" : "አንቃ (Activate)"}
+                      {teach.accountStatus === "active" ? "Suspend" : "Activate"}
                     </button>
                   </div>
                 </div>))}
@@ -489,7 +489,7 @@ export function AdminDashboard({ user }) {
       {/* 3. STUDENTS TAB */}
       {activeTab === "students" ? (<div className="space-y-6">
           <DashboardCard
-            title="የተማሪዎች ሙሉ ዝርዝር"
+            title="All learners"
             subtitle="All Registered Students"
             action={<input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} aria-label="Search students" placeholder="Search name or email" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:w-56" />}
           >
@@ -504,7 +504,7 @@ export function AdminDashboard({ user }) {
                     </div>
                     <p className="text-xs text-slate-500">{stud.email}</p>
                     <p className="mt-1 text-xs text-slate-600">
-                      ግቦች: {stud.studentProfile?.learningGoals || "None specified"} | ደረጃ: {stud.studentProfile?.currentSkillLevel || "Beginner"}
+                      Goals: {stud.studentProfile?.learningGoals || "None specified"} | Level: {stud.studentProfile?.currentSkillLevel || "Beginner"}
                     </p>
                   </div>
                   <div>
@@ -529,7 +529,7 @@ export function AdminDashboard({ user }) {
       {/* 4. COURSES TAB */}
       {activeTab === "courses" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">ኮርሶች እና ምድቦች</h3>
+            <h3 className="text-xl font-bold text-slate-900">Programs and categories</h3>
             <div className="flex gap-2">
               <button onClick={() => setCreateCategoryModal(true)} className="rounded-xl bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
                 + {t("createCategory")}
@@ -549,7 +549,7 @@ export function AdminDashboard({ user }) {
                 <h4 className="text-base font-bold text-slate-900">{course.title}</h4>
                 <p className="text-xs text-slate-600 line-clamp-3">{course.description}</p>
                 <div className="border-t border-slate-100 pt-3">
-                  <p className="text-[11px] font-bold text-slate-500">ዓላማዎች / Objectives:</p>
+                  <p className="text-[11px] font-bold text-slate-500">Objectives:</p>
                   <ul className="mt-1 space-y-1 text-xs text-slate-600">
                     {course.learningObjectives?.slice(0, 2).map((o, idx) => (<li key={idx} className="flex gap-1"><span>•</span><span>{o}</span></li>))}
                   </ul>
@@ -562,7 +562,7 @@ export function AdminDashboard({ user }) {
       {/* 5. CLASSES TAB */}
       {activeTab === "classes" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">የተከፈቱ ክፍሎች (Classes)</h3>
+            <h3 className="text-xl font-bold text-slate-900">Active cohorts</h3>
             <button onClick={() => setCreateClassModal(true)} className="rounded-xl bg-cyan-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-cyan-700">
               + {t("createClass")}
             </button>
@@ -575,10 +575,10 @@ export function AdminDashboard({ user }) {
                   <Badge variant={cls.status === "active" ? "emerald" : "slate"}>{cls.status}</Badge>
                 </div>
                 <div className="space-y-1.5 text-xs text-slate-600">
-                  <p><strong>ኮርስ:</strong> {cls.course?.title || "Unassigned"}</p>
-                  <p><strong>አስተማሪ:</strong> {cls.teacher?.fullName || "ያልተመደበ"}</p>
-                  <p><strong>ተማሪዎች:</strong> {cls.students?.length || 0} / {cls.capacity} (አቅም)</p>
-                  <p><strong>የሰዓት ቀጣና:</strong> {cls.timeZone}</p>
+                  <p><strong>Program:</strong> {cls.course?.title || "Unassigned"}</p>
+                  <p><strong>Instructor:</strong> {cls.teacher?.fullName || "Unassigned"}</p>
+                  <p><strong>Learners:</strong> {cls.students?.length || 0} / {cls.capacity} (capacity)</p>
+                  <p><strong>Time zone:</strong> {cls.timeZone}</p>
                 </div>
                 <button
                   type="button"
@@ -600,14 +600,14 @@ export function AdminDashboard({ user }) {
       {/* 6. ANNOUNCEMENTS TAB */}
       {activeTab === "announcements" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">አጠቃላይ ማስታወቂያዎች</h3>
+            <h3 className="text-xl font-bold text-slate-900">Announcements</h3>
             <button onClick={() => setCreateAnnouncementModal(true)} className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
-              + አዲስ ማስታወቂያ
+              + New announcement
             </button>
           </div>
 
           <div className="space-y-4">
-            {announcements.length === 0 ? (<EmptyState title="ምንም የተለቀቀ ማስታወቂያ የለም"/>) : (announcements.map((ann) => (<div key={ann._id} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            {announcements.length === 0 ? (<EmptyState title="No announcements yet."/>) : (announcements.map((ann) => (<div key={ann._id} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-slate-900">{ann.title}</h4>
                     <Badge variant={ann.priority === "urgent" ? "rose" : ann.priority === "high" ? "amber" : "slate"}>
@@ -616,9 +616,9 @@ export function AdminDashboard({ user }) {
                   </div>
                   <p className="mt-2 text-sm text-slate-700 leading-relaxed">{ann.content}</p>
                   <div className="mt-4 flex items-center gap-4 text-xs text-slate-400">
-                    <span>ዒላማ: {ann.target}</span>
+                    <span>Audience: {ann.target}</span>
                     <span>•</span>
-                    <span>ቀን: {new Date(ann.createdAt).toLocaleDateString()}</span>
+                    <span>Date: {new Date(ann.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>)))}
           </div>
@@ -626,43 +626,43 @@ export function AdminDashboard({ user }) {
 
       {/* 7. REPORTS & AUDIT LOGS TAB */}
       {activeTab === "reports" ? (<div className="space-y-8">
-          <DashboardCard title="የስርዓት ሪፖርት (System Overview & Workloads)">
+          <DashboardCard title="System overview and workloads">
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">የክፍል ምደባ እና አቅም / Class Capacity</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Cohort placement and capacity</h4>
                 <div className="space-y-2">
                   {reportsData?.classes?.map((c) => (<div key={c._id} className="rounded-xl border border-slate-200 p-3 text-xs flex justify-between">
                       <div>
                         <span className="font-bold text-slate-900">{c.title}</span>
-                        <p className="text-slate-500">አስተማሪ: {c.teacher}</p>
+                        <p className="text-slate-500">Instructor: {c.teacher}</p>
                       </div>
                       <div className="text-right">
                         <span className="font-extrabold text-blue-600">{c.enrolledCount} / {c.capacity}</span>
-                        <p className="text-[10px] text-slate-400">{Math.round((c.enrolledCount / c.capacity) * 100)}% ተሞልቷል</p>
+                        <p className="text-[10px] text-slate-400">{Math.round((c.enrolledCount / c.capacity) * 100)}% filled</p>
                       </div>
                     </div>))}
                 </div>
               </div>
 
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">የመገኘት አጠቃላይ ሁኔታ / Attendance Status</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Attendance overview</h4>
                 <div className="space-y-2">
                   {reportsData?.attendanceStats?.map((s) => (<div key={s._id} className="rounded-xl bg-slate-50 p-3 text-xs flex justify-between">
                       <span className="font-bold capitalize text-slate-800">{s._id}:</span>
-                      <span className="font-extrabold text-slate-900">{s.count} ጊዜ</span>
+                      <span className="font-extrabold text-slate-900">{s.count} sessions</span>
                     </div>))}
                 </div>
               </div>
             </div>
           </DashboardCard>
 
-          <DashboardCard title="የቅርብ ጊዜ ክንውኖች (Audit Logs)">
+          <DashboardCard title="Recent activity">
             <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
               {auditLogs.map((log) => (<div key={log._id} className="py-3 text-xs flex justify-between items-center">
                   <div>
                     <span className="font-bold text-slate-900">{log.action}</span>
                     <span className="text-slate-500 ml-2">({log.targetType})</span>
-                    <p className="text-slate-400">አድራጊ: {log.actor?.fullName || "System"}</p>
+                    <p className="text-slate-400">By: {log.actor?.fullName || "System"}</p>
                   </div>
                   <span className="text-slate-400 text-[11px]">{new Date(log.createdAt).toLocaleString()}</span>
                 </div>))}
@@ -673,28 +673,28 @@ export function AdminDashboard({ user }) {
       {/* MODAL: Reject Teacher */}
       <Modal title={t("reject")} isOpen={rejectionModal.open} onClose={() => setRejectionModal({ open: false, appId: "", reason: "" })}>
         <div className="space-y-4">
-          <p className="text-xs text-slate-600">እባክዎ ማመልከቻው ያልተፈቀደበትን ምክንያት ያስገቡ፡</p>
-          <textarea required minLength={5} rows={3} value={rejectionModal.reason} onChange={(e) => setRejectionModal({ ...rejectionModal, reason: e.target.value })} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none" placeholder="ምክንያት..."/>
+          <p className="text-xs text-slate-600">Please tell us why this application is being declined.</p>
+          <textarea required minLength={5} rows={3} value={rejectionModal.reason} onChange={(e) => setRejectionModal({ ...rejectionModal, reason: e.target.value })} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none" placeholder="Add a reason…"/>
           <div className="flex justify-end gap-2">
             <button onClick={() => setRejectionModal({ open: false, appId: "", reason: "" })} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600">
-              ሰርዝ
+              Cancel
             </button>
             <button onClick={handleTeacherReject} disabled={rejectionModal.reason.trim().length < 5} className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-              አትፍቀድ (Reject)
+              Decline application
             </button>
           </div>
         </div>
       </Modal>
 
       {/* MODAL: Place Student */}
-      <Modal title="ተማሪ ወደ ክፍል መድብ / Assign Student" isOpen={placementModal.open} onClose={() => setPlacementModal({ open: false, studentId: "", studentName: "", classId: "" })}>
+      <Modal title="Place learner in a cohort" isOpen={placementModal.open} onClose={() => setPlacementModal({ open: false, studentId: "", studentName: "", classId: "" })}>
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-slate-900">ተማሪ: {placementModal.studentName}</p>
+          <p className="text-sm font-semibold text-slate-900">Learner: {placementModal.studentName}</p>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">ክፍል ይምረጡ / Select Classroom</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Select a cohort</label>
             <select value={placementModal.classId} onChange={(e) => setPlacementModal({ ...placementModal, classId: e.target.value })} className="w-full rounded-xl border border-slate-200 p-3 text-xs outline-none bg-white">
               {placementClasses.map((c) => (<option key={c._id} value={c._id}>
-                  {c.title} — ({c.students?.length || 0}/{c.capacity} ተማሪዎች)
+                  {c.title} — ({c.students?.length || 0}/{c.capacity} learners)
                 </option>))}
             </select>
             {placementClasses.length === 0 && (
@@ -703,10 +703,10 @@ export function AdminDashboard({ user }) {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={() => setPlacementModal({ open: false, studentId: "", studentName: "", classId: "" })} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600">
-              ሰርዝ
+              Cancel
             </button>
             <button onClick={handlePlaceStudent} disabled={!placementModal.classId || placementClasses.length === 0} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">
-              አረጋግጥ እና መድብ (Confirm Assignment)
+              Confirm placement
             </button>
           </div>
         </div>
@@ -783,7 +783,7 @@ export function AdminDashboard({ user }) {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700">ዓላማዎች / Objectives (አንድ በአንድ መስመር)</label>
+            <label className="block text-xs font-bold text-slate-700">Objectives (one per line)</label>
             <textarea rows={2} value={courseForm.objectives} onChange={(e) => setCourseForm({ ...courseForm, objectives: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <button type="submit" disabled={categories.length === 0} className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
@@ -810,12 +810,12 @@ export function AdminDashboard({ user }) {
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("teacher")}</label>
             <select value={classForm.teacherId} onChange={(e) => setClassForm({ ...classForm, teacherId: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
-              <option value="">-- አስተማሪ ምረጥ / Select Teacher --</option>
+              <option value="">-- Select an instructor --</option>
               {teachers.filter((t) => t.accountStatus === "active").map((tch) => (<option key={tch._id} value={tch._id}>{tch.fullName} ({tch.email})</option>))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700">የተማሪ አቅም (Capacity)</label>
+            <label className="block text-xs font-bold text-slate-700">Cohort capacity</label>
             <input type="number" min={1} max={100} value={classForm.capacity} onChange={(e) => setClassForm({ ...classForm, capacity: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <button type="submit" disabled={courses.length === 0} className="w-full rounded-xl bg-cyan-600 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
@@ -828,11 +828,11 @@ export function AdminDashboard({ user }) {
       <Modal title={t("createCategory")} isOpen={createCategoryModal} onClose={() => setCreateCategoryModal(false)}>
         <form onSubmit={handleCreateCategory} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700">የምድብ ስም</label>
+            <label className="block text-xs font-bold text-slate-700">Category name</label>
             <input required minLength={2} type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700">መግለጫ</label>
+            <label className="block text-xs font-bold text-slate-700">Description</label>
             <textarea rows={2} value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <button type="submit" className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white">
@@ -845,7 +845,7 @@ export function AdminDashboard({ user }) {
       <Modal title={t("scheduleSession")} isOpen={createSessionModal} onClose={() => setCreateSessionModal(false)}>
         <form onSubmit={handleScheduleSession} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700">{t("course")} / ክፍል</label>
+            <label className="block text-xs font-bold text-slate-700">{t("course")} / cohort</label>
             <select value={sessionForm.classId} onChange={(e) => setSessionForm({ ...sessionForm, classId: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
               <option value="">Select a class with a teacher</option>
               {schedulableClasses.map((c) => (<option key={c._id} value={c._id}>{c.title}</option>))}
@@ -854,7 +854,7 @@ export function AdminDashboard({ user }) {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>
-            <input required minLength={3} type="text" value={sessionForm.title} onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="ለምሳሌ፡ Live Class 1 - Intro to React"/>
+            <input required minLength={3} type="text" value={sessionForm.title} onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="Example: Live session 1 — Introduction to React"/>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -871,13 +871,13 @@ export function AdminDashboard({ user }) {
             <input required type="url" value={sessionForm.meetingUrl} onChange={(e) => setSessionForm({ ...sessionForm, meetingUrl: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="https://meet.google.com/..."/>
           </div>
           <button type="submit" disabled={schedulableClasses.length === 0} className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-            መርምር እና መዝግብ / Schedule
+            Schedule session
           </button>
         </form>
       </Modal>
 
       {/* MODAL: Create Announcement */}
-      <Modal title="ማስታወቂያ ልቀቅ / Broadcast Announcement" isOpen={createAnnouncementModal} onClose={() => setCreateAnnouncementModal(false)}>
+      <Modal title="Send an announcement" isOpen={createAnnouncementModal} onClose={() => setCreateAnnouncementModal(false)}>
         <form onSubmit={handleCreateAnnouncement} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>
@@ -889,24 +889,24 @@ export function AdminDashboard({ user }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700">ተደራሽ (Target)</label>
+              <label className="block text-xs font-bold text-slate-700">Audience</label>
               <select value={announcementForm.target} onChange={(e) => setAnnouncementForm({ ...announcementForm, target: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
-                <option value="all_students">ሁሉንም ተማሪዎች / All Students</option>
-                <option value="all_teachers">ሁሉንም አስተማሪዎች / All Teachers</option>
-                <option value="all">ሁሉንም ተጠቃሚዎች / All Users</option>
+                <option value="all_students">All learners</option>
+                <option value="all_teachers">All instructors</option>
+                <option value="all">All users</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700">ቅድሚያ (Priority)</label>
+              <label className="block text-xs font-bold text-slate-700">Priority</label>
               <select value={announcementForm.priority} onChange={(e) => setAnnouncementForm({ ...announcementForm, priority: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
-                <option value="normal">መደበኛ / Normal</option>
-                <option value="high">ከፍተኛ / High</option>
-                <option value="urgent">አስቸኳይ / Urgent</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
               </select>
             </div>
           </div>
           <button type="submit" className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white">
-            አሰራጭ / Broadcast
+            Send announcement
           </button>
         </form>
       </Modal>

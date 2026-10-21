@@ -19,6 +19,53 @@ import { AttendanceRecordModel } from "../models/AttendanceRecord.js";
 import { slugify } from "../utils.js";
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("hub_admin"));
+adminRouter.get("/teachers/pending", asyncHandler(async (_req, res) => {
+    const teachers = await UserModel.find({ role: "teacher", teacherStatus: "pending", isVerified: { $ne: false } })
+        .select("-password -passwordHash -verificationCode")
+        .sort({ createdAt: 1 })
+        .lean();
+    res.json({ teachers });
+}));
+async function updateTeacherReview(req, res, status) {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+        throw new ApiError(400, "Invalid teacher ID.");
+    }
+    const teacher = await UserModel.findOne({ _id: req.params.id, role: "teacher" });
+    if (!teacher) {
+        throw new ApiError(404, "Teacher not found.");
+    }
+    if (!teacher.isVerified) {
+        throw new ApiError(409, "The teacher must verify their email before approval.");
+    }
+    if (teacher.teacherStatus !== "pending") {
+        throw new ApiError(409, "This teacher application has already been reviewed.");
+    }
+    teacher.teacherStatus = status;
+    teacher.accountStatus = status === "approved" ? "active" : "suspended";
+    await teacher.save();
+    await TeacherApplicationModel.findOneAndUpdate(
+        { user: teacher._id },
+        { status, reviewedBy: new mongoose.Types.ObjectId(req.user.id), reviewedAt: new Date() },
+    );
+    await NotificationModel.create({
+        user: teacher._id,
+        title: status === "approved" ? "Teacher application approved" : "Teacher application update",
+        message: status === "approved"
+            ? "Your teacher account has been approved. You can now sign in."
+            : "Your teacher application was rejected.",
+        kind: "teacher_application",
+        link: "/dashboard",
+    });
+    await writeAudit(req.user.id, `teacher_application_${status}`, "User", teacher._id.toString());
+    res.json({ message: `Teacher application ${status}.` });
+}
+adminRouter.patch("/teachers/:id/approve", asyncHandler(async (req, res) => {
+    const data = z.object({ status: z.enum(["approved", "rejected"]).default("approved") }).parse(req.body);
+    await updateTeacherReview(req, res, data.status);
+}));
+adminRouter.patch("/teachers/:id/reject", asyncHandler(async (req, res) => {
+    await updateTeacherReview(req, res, "rejected");
+}));
 async function writeAudit(actorId, action, targetType, targetId, details = {}) {
     await AuditLogModel.create({
         actor: actorId,
@@ -59,10 +106,10 @@ adminRouter.get("/dashboard", asyncHandler(async (_req, res) => {
 }));
 adminRouter.get("/teacher-applications", asyncHandler(async (_req, res) => {
     const applications = await TeacherApplicationModel.find()
-        .populate("user", "fullName email accountStatus languagePreference")
+        .populate("user", "fullName email accountStatus languagePreference isVerified")
         .sort({ createdAt: -1 })
         .lean();
-    res.json({ applications });
+    res.json({ applications: applications.filter((application) => application.user?.isVerified !== false) });
 }));
 adminRouter.patch("/teacher-applications/:applicationId", asyncHandler(async (req, res) => {
     const data = z.object({
@@ -80,12 +127,16 @@ adminRouter.patch("/teacher-applications/:applicationId", asyncHandler(async (re
     if (!teacher) {
         throw new ApiError(404, "Teacher account not found.");
     }
+    if (!teacher.isVerified) {
+        throw new ApiError(409, "The teacher must verify their email before approval.");
+    }
     application.status = data.status;
     application.rejectionReason = data.status === "rejected" ? data.rejectionReason : "";
     application.reviewedBy = new mongoose.Types.ObjectId(req.user.id);
     application.reviewedAt = new Date();
     await application.save();
     teacher.accountStatus = data.status === "approved" ? "active" : "suspended";
+    teacher.teacherStatus = data.status;
     await teacher.save();
     await NotificationModel.create({
         user: teacher._id,

@@ -38,25 +38,25 @@ async function seed() {
     const faqs = [
         {
             question: "How do students register and get placed in a cohort?",
-            answer: "Students complete their profile with their goals, background, and schedule preferences. The Hub Admin evaluates the application and assigns the learner to the optimal course, cohort size, and certified teacher. (ተማሪዎች ፍላጎታቸውንና ደረጃቸውን በመሙላት ይመዘገባሉ። የአስተዳዳሪው ቡድን መረጃውን መርምሮ ተገቢውን ኮርስ፣ ክፍል እና አስተማሪ ይመድብላቸዋል።)",
+            answer: "Create an account, share what you want to learn, and tell us when you are available. Our team reviews your goals and helps connect you with a suitable cohort and instructor.",
             sortOrder: 1,
             isPublished: true,
         },
         {
             question: "How do educators apply and get approved to teach?",
-            answer: "Educators apply through the teacher portal with their academic qualifications and experience. Administrative privileges and classroom assignments are activated only after rigorous Hub Admin verification and credential review. (አስተማሪዎች የትምህርት ዝግጅታቸውን እና የልምድ መረጃቸውን ሞልተው ያመለክታሉ። ማመልከቻው በHub Admin ታይቶ ተቀባይነት ሲያገኝ ብቻ ማስተማር ይፈቀድላቸዋል።)",
+            answer: "Create an instructor account and verify your email. Your application remains under review until an administrator approves it. Once approved, you can access instructor tools and assigned cohorts.",
             sortOrder: 2,
             isPublished: true,
         },
         {
             question: "How do live Google Meet lessons work?",
-            answer: "Every scheduled session is generated with a secure, verified Google Meet URL. Teachers and enrolled students can join with one click directly from their respective dashboards. (ሁሉም የክፍለ ጊዜ መርሃ ግብሮች የተረጋገጡ የGoogle Meet አገናኞችን ይይዛሉ። ክፍለ ጊዜው ሲደርስ ተማሪዎች እና አስተማሪዎች በአንድ ቁልፍ በቀጥታ መግባት ይችላሉ።)",
+            answer: "When a session is scheduled, its meeting link and time appear in your dashboard. Open the session and select Join live session to meet with your instructor and cohort.",
             sortOrder: 3,
             isPublished: true,
         },
         {
             question: "How is student progress and grade calculated?",
-            answer: "Progress is computed transparently using a weighted formula: 40% Session Attendance + 40% Practical Assignments + 20% Scored Quizzes, permanently recorded in MongoDB. (የተማሪ እድገት በእውነተኛ መረጃ: 40% መገኘት + 40% ስራዎች + 20% ፈተናዎች ተሰልቶ በዳሽቦርዱ ላይ ይታያል።)",
+            answer: "Your dashboard brings together attendance, completed assignments, and assessment results so you can follow your progress and see what to focus on next.",
             sortOrder: 4,
             isPublished: true,
         },
@@ -71,21 +71,7 @@ async function seed() {
     }
     console.log("Seeding default accounts...");
     const defaultPasswordHash = await hashPassword("LearnHub2026!");
-    // 1. Hub Admin
-    let admin = await UserModel.findOne({ role: "hub_admin" });
-    if (!admin) {
-        admin = await UserModel.create({
-            fullName: "Hub Admin",
-            email: "admin@learnhub.et",
-            passwordHash: defaultPasswordHash,
-            role: "hub_admin",
-            languagePreference: "am",
-            accountStatus: "active",
-            emailVerified: true,
-        });
-        console.log("Created Hub Admin: admin@learnhub.et / LearnHub2026!");
-    }
-    // 2. Sample Teacher
+    // 1. Sample Teacher
     let teacher = await UserModel.findOne({ email: "teacher@learnhub.et" });
     if (!teacher) {
         teacher = await UserModel.create({

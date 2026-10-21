@@ -21,7 +21,7 @@ export function FAQPage() {
     const filtered = faqs.filter((f) => f.question.toLowerCase().includes(query.toLowerCase()) ||
         f.answer.toLowerCase().includes(query.toLowerCase()));
     return (<div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
-      <SectionHeading badge="HELP & FAQ" title="Frequently Asked Questions" subtitle="Quick answers regarding student placement, teacher approval, live Google Meet sessions, and verified progress tracking." centered/>
+      <SectionHeading badge="HELP CENTER" title="Good questions. Clear answers." subtitle="Find out how LearnHUB works for learners and instructors, from getting started to joining your first live session." centered/>
 
       {/* Search Input */}
       <div className="relative">
@@ -51,7 +51,7 @@ export function FAQPage() {
       <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-8 text-center text-blue-950 shadow-xs">
         <h4 className="text-lg font-black">{t("faqNeedHelp")}</h4>
         <p className="mt-2 text-xs sm:text-sm text-blue-800 max-w-md mx-auto leading-relaxed">
-          Our administrative support team is available Mon-Sat to assist with admissions, curriculum, and account access.
+          From choosing a learning path to finding your way around your account, our team is ready to help.
         </p>
         <Link to="/contact" className="mt-5 inline-block rounded-2xl bg-blue-600 px-6 py-3 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20">
           {t("faqContactTeam")}

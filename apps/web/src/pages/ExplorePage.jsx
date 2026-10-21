@@ -33,7 +33,7 @@ export function ExplorePage() {
       {/* Header and Search */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-slate-200 pb-8">
         <div>
-          <SectionHeading badge="CATALOG 2026" title={t("categoriesTitle")} subtitle={t("categoriesSubtitle")}/>
+          <SectionHeading badge="EXPLORE LEARNHUB" title={t("categoriesTitle")} subtitle={t("categoriesSubtitle")}/>
         </div>
 
         {/* Search Input */}
@@ -64,11 +64,11 @@ export function ExplorePage() {
             {t("allCourses")} ({filteredCourses.length})
           </h3>
           <span className="text-xs font-semibold text-slate-500">
-            Guided Cohort Classes with Live Google Meet
+            Practical programs. Live guidance. A cohort to grow with.
           </span>
         </div>
 
-        {filteredCourses.length === 0 ? (<EmptyState title="No courses found in this selection" description="Try choosing another category or clearing your search filter."/>) : (<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filteredCourses.length === 0 ? (<EmptyState title="No programs match that search" description="Try another keyword or topic. Your next learning path may be just one search away."/>) : (<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredCourses.map((course) => (<div key={course._id} className="group flex flex-col justify-between rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-200/90 hover:shadow-xl hover:ring-blue-500/40 transition-all duration-300">
                 <div>
                   <div className="flex items-center justify-between">

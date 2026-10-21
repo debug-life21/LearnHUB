@@ -1,14 +1,18 @@
 import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { env, isProduction } from "./config.js";
 import { ApiError } from "./lib/http.js";
 import { UserModel, roles } from "./models/User.js";
 const cookieName = "learnhub_token";
 export async function hashPassword(password) {
-    return argon2.hash(password);
+    return bcrypt.hash(password, 12);
 }
 export async function verifyPassword(hash, password) {
-    return argon2.verify(hash, password);
+    if (hash?.startsWith("$argon2")) {
+        return argon2.verify(hash, password);
+    }
+    return bcrypt.compare(password, hash);
 }
 export function signToken(payload) {
     return jwt.sign(payload, env.JWT_SECRET, {
@@ -20,14 +24,15 @@ export function setAuthCookie(res, token) {
         httpOnly: true,
         sameSite: "lax",
         secure: isProduction,
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 }
 export function clearAuthCookie(res) {
-    res.clearCookie(cookieName);
+    res.clearCookie(cookieName, { httpOnly: true, sameSite: "lax", secure: isProduction, path: "/" });
 }
 export function requireAuth(req, _res, next) {
-    const token = req.cookies[cookieName];
+    const token = req.cookies?.[cookieName];
     if (!token) {
         return next(new ApiError(401, "Authentication required."));
     }
@@ -45,7 +50,10 @@ export function requireRole(...allowedRoles) {
         if (!req.user || !roles.includes(req.user.role)) {
             return next(new ApiError(401, "Authentication required."));
         }
-        if (!allowedRoles.includes(req.user.role)) {
+        const isAdminRole = (role) => role === "admin" || role === "hub_admin";
+        const roleIsAllowed = allowedRoles.includes(req.user.role)
+            || (isAdminRole(req.user.role) && allowedRoles.some(isAdminRole));
+        if (!roleIsAllowed) {
             return next(new ApiError(403, "You do not have permission for this action."));
         }
         const user = await UserModel.findById(req.user.id).lean();
@@ -55,3 +63,5 @@ export function requireRole(...allowedRoles) {
         return next();
     };
 }
+export const protect = requireAuth;
+export const authorizeRoles = requireRole;
