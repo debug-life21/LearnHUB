@@ -16,7 +16,14 @@ import { resourceRouter } from "./routes/resourceRoutes.js";
 export const app = express();
 app.use(helmet());
 app.use(cors({
-    origin: env.CLIENT_URL,
+    origin(origin, callback) {
+        const allowedOrigins = [env.CLIENT_URL, env.ADMIN_CLIENT_URL];
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+            return;
+        }
+        callback(new Error("Origin is not allowed by CORS."));
+    },
     credentials: true,
 }));
 app.use(express.json({ limit: "25mb" }));

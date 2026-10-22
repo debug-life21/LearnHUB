@@ -76,13 +76,22 @@ Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` in `apps/server
 npm run seed:admin
 ```
 Use a unique administrator password of at least 12 characters.
-Admin accounts cannot be created from the public signup flow. Student and teacher email/password accounts must verify their 6-digit code before a session is created. Teacher accounts remain pending approval after verification.
+Admin accounts cannot be created from the public signup flow. Administrators sign in with their seeded email and password without email verification; SMTP is not required for admin login. Student and teacher email/password accounts must verify their 6-digit code before a session is created. Teacher accounts remain pending approval after verification.
 
 ### 3. Database Seeding
-Seed initial categories (Languages, Web Development, Programming, CS, Digital Marketing, etc.) and FAQs. Demo accounts are not created:
+Seed the learning categories and starter catalog of 119 courses, including English and Amharic, Grades 1–12, university foundations, web development, programming, data and AI, cybersecurity, design, and business topics. The catalog command is safe to rerun: existing course records are not overwritten, and it does not create demo accounts:
+```bash
+npm run seed:catalog
+```
+
+To also seed FAQs or explicitly enabled demo data:
 ```bash
 npm run seed --workspace server
 ```
+
+The starter courses are catalog entries with summaries and learning objectives, not a complete national curriculum or ready-made lesson materials. Add and review the curriculum content for your learners before teaching from a course.
+
+Administrators can search and filter the catalog by category in the dashboard. The teacher and learner lists also support account deletion; this anonymizes the account, removes it from active class rosters, and retains historical learning records.
 
 Run the admin seed command above to provision an administrator. Students and teachers can register from the sign-in page; teachers are approved through the admin portal.
 
@@ -92,9 +101,12 @@ Run both backend API and frontend Vite dev servers concurrently:
 npm run dev
 ```
 - **Web App**: [http://localhost:5173](http://localhost:5173)
+- **Admin App**: [http://localhost:5174](http://localhost:5174) (administrator-only sign in)
 - **Backend API**: [http://localhost:4000](http://localhost:4000)
 
 Check that the API is running at [http://localhost:4000/api/health](http://localhost:4000/api/health). If the browser reports a network error, start both servers with `npm run dev` and confirm MongoDB is running.
+
+The admin interface is a separate frontend with no public sign-up. Sign in with the administrator provisioned by `npm run seed:admin`; both frontends use the same API session cookie, while admin API routes still verify the administrator role server-side. For hosted deployments, set `ADMIN_CLIENT_URL` in `apps/server/.env` and configure `VITE_API_URL` and `VITE_PUBLIC_URL` in the admin app environment.
 
 ### 5. Production Build & Linting
 ```bash

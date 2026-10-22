@@ -95,8 +95,22 @@ export async function login(req, res) {
     if (!user || !validPassword) {
         throw new ApiError(401, "Invalid email or password.");
     }
+    if (user.isDeleted) {
+        throw new ApiError(403, "This account is no longer available.");
+    }
     if (user.teacherStatus === "rejected" || user.accountStatus === "suspended") {
         throw new ApiError(403, "This account is not available.");
+    }
+    if (user.role === "admin" || user.role === "hub_admin") {
+        if (user.accountStatus !== "active") {
+            throw new ApiError(403, "This account is not available.");
+        }
+        setSessionCookie(res, user);
+        res.json({
+            message: "Signed in successfully.",
+            user: userResponse(user),
+        });
+        return;
     }
     const purpose = user.isVerified ? "login" : "signup";
     await issueCode(user, purpose);
@@ -104,6 +118,31 @@ export async function login(req, res) {
         message: "Verification code sent.",
         email: user.email,
         purpose,
+    });
+}
+
+export async function adminLogin(req, res) {
+    const data = z.object({
+        email: z.string().trim().email(),
+        password: z.string().min(1).max(128),
+    }).parse(req.body);
+    const user = await UserModel.findOne({ email: normalizedEmail(data.email) })
+        .select("+password +passwordHash");
+    const passwordHash = user?.password || user?.passwordHash;
+    const validPassword = passwordHash ? await verifyPassword(passwordHash, data.password) : false;
+    if (!user || !validPassword || user.isDeleted) {
+        throw new ApiError(401, "Invalid administrator email or password.");
+    }
+    if (!["admin", "hub_admin"].includes(user.role)) {
+        throw new ApiError(403, "This sign-in is for administrators only.");
+    }
+    if (user.accountStatus !== "active") {
+        throw new ApiError(403, "This administrator account is not active.");
+    }
+    setSessionCookie(res, user);
+    res.json({
+        message: "Signed in successfully.",
+        user: userResponse(user),
     });
 }
 
@@ -204,6 +243,9 @@ export async function google(req, res) {
     }
     const email = normalizedEmail(payload.email);
     let user = await UserModel.findOne({ $or: [{ email }, { googleId: payload.sub }] });
+    if (user?.isDeleted) {
+        throw new ApiError(403, "This account is no longer available.");
+    }
     if (!user) {
         if (!data.role) {
             throw new ApiError(400, "Choose a role on the sign-up page before continuing with Google.");

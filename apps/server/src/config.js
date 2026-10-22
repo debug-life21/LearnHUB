@@ -7,6 +7,7 @@ const envSchema = z.object({
     MONGO_URI: z.string().optional(),
     MONGODB_URI: z.string().default("mongodb://127.0.0.1:27017/learnhub"),
     CLIENT_URL: z.string().default("http://localhost:5173"),
+    ADMIN_CLIENT_URL: z.string().default("http://localhost:5174"),
     GOOGLE_CLIENT_ID: z.string().default(""),
     SMTP_HOST: z.string().default(""),
     SMTP_PORT: z.coerce.number().default(587),

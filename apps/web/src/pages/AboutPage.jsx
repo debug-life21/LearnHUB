@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 export function AboutPage() {
     const { t } = useTranslation();
-    return (<div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-16">
+    return (<div className="editorial-page mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-16">
       {/* Hero Narrative */}
       <div className="max-w-3xl">
         <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-50 px-3.5 py-1 text-xs font-bold text-blue-700 mb-4 shadow-2xs">
@@ -51,11 +51,11 @@ export function AboutPage() {
       </div>
 
       {/* Unique Central Placement Model Explanation */}
-      <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-8 sm:p-12 text-white shadow-2xl ring-1 ring-white/10">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl pointer-events-none"></div>
+      <div className="relative overflow-hidden rounded-3xl bg-[#25362d] p-8 sm:p-12 text-white shadow-2xl ring-1 ring-white/10">
+        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-emerald-600/20 blur-3xl pointer-events-none"></div>
 
         <div className="relative z-10 max-w-3xl">
-          <span className="rounded-full bg-cyan-400/20 px-3.5 py-1 text-xs font-bold text-cyan-300 border border-cyan-400/30">
+          <span className="rounded-full bg-[#e7d5ad]/15 px-3.5 py-1 text-xs font-bold text-[#e7d5ad] border border-[#e7d5ad]/30">
             SYSTEM ARCHITECTURE & INTEGRITY
           </span>
           <h2 className="mt-4 text-2xl sm:text-3xl font-black tracking-tight">
@@ -65,10 +65,10 @@ export function AboutPage() {
             {t("architectureDesc")}
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
-            <Link to="/register/student" className="rounded-2xl bg-blue-600 px-6 py-3 text-xs font-black text-white hover:bg-blue-500 transition-colors shadow-md shadow-blue-500/20">
+            <Link to="/register/student" className="rounded-2xl bg-[#e7d5ad] px-6 py-3 text-xs font-black text-stone-950 hover:bg-white transition-colors">
               {t("becomeStudent")}
             </Link>
-            <Link to="/apply/teacher" className="rounded-2xl border border-white/20 bg-slate-900 px-6 py-3 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors">
+            <Link to="/apply/teacher" className="rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-xs font-bold text-slate-200 hover:bg-white/10 hover:text-white transition-colors">
               {t("applyToTeach")}
             </Link>
             <Link to="/contact" className="rounded-2xl px-6 py-3 text-xs font-bold text-slate-300 hover:text-white transition-colors">

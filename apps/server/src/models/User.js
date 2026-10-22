@@ -47,6 +47,8 @@ const userSchema = new Schema({
         default: "active",
         index: true,
     },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
     studentProfile: { type: studentProfileSchema, default: undefined },
     teacherProfile: { type: teacherProfileSchema, default: undefined },
 }, { timestamps: true });

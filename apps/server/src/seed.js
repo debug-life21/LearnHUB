@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { connectDatabase } from "./db.js";
 import { hashPassword } from "./auth.js";
 import { UserModel } from "./models/User.js";
-import { LearningCategoryModel } from "./models/LearningCategory.js";
 import { CourseModel } from "./models/Course.js";
 import { ClassroomModel } from "./models/Classroom.js";
 import { ClassSessionModel } from "./models/ClassSession.js";
@@ -11,29 +10,13 @@ import { AssignmentModel } from "./models/Assignment.js";
 import { AssessmentModel } from "./models/Assessment.js";
 import { LearningResourceModel } from "./models/LearningResource.js";
 import { AnnouncementModel } from "./models/Announcement.js";
-import { slugify } from "./utils.js";
+import { seedLearningCatalog } from "./catalog.js";
 import { env } from "./config.js";
 async function seed() {
     console.log("Connecting to database for seeding...");
     await connectDatabase();
-    console.log("Seeding initial categories...");
-    const categoriesData = [
-        { name: "Languages", description: "Learn Amharic, English, and other world languages with native educators.", sortOrder: 1 },
-        { name: "Web Development", description: "Modern full-stack web applications, React, Node, and web standards.", sortOrder: 2 },
-        { name: "Programming", description: "Core programming principles, algorithms, and practical software design.", sortOrder: 3 },
-        { name: "Computer Science", description: "Theoretical computer science, data structures, and computing systems.", sortOrder: 4 },
-        { name: "Digital Marketing", description: "SEO, social media growth, search advertising, and brand strategy.", sortOrder: 5 },
-        { name: "Academic Subjects", description: "Mathematics, science, and scholastic subjects for all grade levels.", sortOrder: 6 },
-        { name: "Business Skills", description: "Entrepreneurship, leadership, financial planning, and management.", sortOrder: 7 },
-        { name: "Professional Development", description: "Workplace communication, resume building, and career growth.", sortOrder: 8 },
-        { name: "Creative Skills", description: "Graphic design, UI/UX, video editing, and creative writing.", sortOrder: 9 },
-        { name: "Other Learning", description: "Diverse educational opportunities and specialized courses.", sortOrder: 10 },
-    ];
-    const categoryDocs = {};
-    for (const cat of categoriesData) {
-        const doc = await LearningCategoryModel.findOneAndUpdate({ name: cat.name }, { ...cat, slug: slugify(cat.name), isActive: true }, { upsert: true, new: true });
-        categoryDocs[cat.name] = doc;
-    }
+    console.log("Seeding learning categories and courses...");
+    const categoryDocs = await seedLearningCatalog();
     console.log("Seeding default FAQs...");
     const faqs = [
         {

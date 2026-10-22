@@ -7,13 +7,13 @@ import { apiRequest } from "../lib/api";
 
 function AuthShell({ title, subtitle, children }) {
     return (
-        <div className="mx-auto max-w-lg px-4 py-12 sm:px-6 sm:py-16">
+        <div className="editorial-page auth-page mx-auto max-w-lg px-4 py-12 sm:px-6 sm:py-16">
             <div className="rounded-3xl bg-white p-7 shadow-xl ring-1 ring-slate-200/90 sm:p-10">
                 <div className="mb-7 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-slate-900 text-lg font-black text-cyan-300 shadow-md shadow-blue-500/20 ring-1 ring-white/20">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#285b45] text-lg font-black text-[#e7d5ad] shadow-md shadow-emerald-950/20 ring-1 ring-white/20">
                         LH
                     </div>
-                    <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
+                    <h1 className="editorial-display mt-4 text-3xl tracking-tight text-stone-900 sm:text-4xl">{title}</h1>
                     <p className="mt-1.5 text-sm font-medium text-slate-500">{subtitle}</p>
                 </div>
                 {children}
@@ -84,6 +84,11 @@ export function SignInPage() {
         setFeedback("");
         try {
             const response = await login({ email, password });
+            if (response.user) {
+                await refreshUser();
+                navigate("/dashboard");
+                return;
+            }
             sessionStorage.setItem("learnhub_pending_email", response.email);
             sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
             navigate("/verify-code", { state: { email: response.email, purpose: response.purpose } });

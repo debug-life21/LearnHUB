@@ -8,6 +8,7 @@
     "build": "node build.js",
     "start": "node dist/index.js",
     "seed": "node src/seed.js",
+    "seed:catalog": "node src/seedCatalog.js",
     "seed:admin": "node src/seedAdmin.js",
     "lint": "node build.js --check"
   },

@@ -30,7 +30,7 @@ export function ContactPage() {
             setFeedback(err.message || "Failed to submit message. Please try again.");
         }
     };
-    return (<div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
+    return (<div className="editorial-page mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
       <SectionHeading badge="WE’RE LISTENING" title={t("contactTitle")} subtitle={t("contactDescription")}/>
 
       <div className="grid gap-10 lg:grid-cols-2">
@@ -75,8 +75,8 @@ export function ContactPage() {
 
         {/* Contact Info & Office Card */}
         <div className="space-y-8">
-          <div className="rounded-3xl bg-slate-950 p-8 sm:p-10 text-white shadow-xl ring-1 ring-white/10">
-            <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-400/30">
+          <div className="rounded-3xl bg-[#25362d] p-8 sm:p-10 text-white shadow-xl ring-1 ring-white/10">
+            <span className="rounded-full bg-[#e7d5ad]/15 px-3 py-1 text-xs font-bold text-[#e7d5ad] border border-[#e7d5ad]/30">
               OFFICIAL SUPPORT
             </span>
             <h3 className="mt-4 text-2xl font-black">{t("supportCenter")}</h3>

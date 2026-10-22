@@ -1,9 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
 function LegalShell({ title, lastUpdated, children, }) {
-    return (<div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-8">
+    return (<div className="editorial-page mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-8">
       {/* Notice Alert */}
-      <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-900 leading-relaxed">
+      <div className="rounded-2xl border border-[#ded9ce] bg-[#eeece3] p-4 text-xs text-stone-700 leading-relaxed">
         <strong>Notice:</strong> This document represents the operational compliance and service agreement framework of the LearnHUB platform. All policies are actively enforced across all student, educator, and administrative interactions.
       </div>
 

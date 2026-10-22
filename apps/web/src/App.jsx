@@ -1,20 +1,23 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
-// Public Pages
-import { HomePage } from "./pages/HomePage";
-import { ExplorePage } from "./pages/ExplorePage";
-import { AboutPage } from "./pages/AboutPage";
-import { ContactPage } from "./pages/ContactPage";
-import { FAQPage } from "./pages/FAQPage";
-import { PrivacyPolicyPage, TermsOfServicePage, CookiePolicyPage, AcceptableUsePage, } from "./pages/LegalPages";
-// Auth Pages
-import { SignInPage, SignupPage, VerifyCodePage } from "./pages/AuthPages";
-// Dashboards
-import { AdminDashboard } from "./pages/AdminDashboard";
-import { TeacherDashboard } from "./pages/TeacherDashboard";
-import { StudentDashboard } from "./pages/StudentDashboard";
+const HomePage = lazy(() => import("./pages/HomePage").then((page) => ({ default: page.HomePage })));
+const ExplorePage = lazy(() => import("./pages/ExplorePage").then((page) => ({ default: page.ExplorePage })));
+const AboutPage = lazy(() => import("./pages/AboutPage").then((page) => ({ default: page.AboutPage })));
+const ContactPage = lazy(() => import("./pages/ContactPage").then((page) => ({ default: page.ContactPage })));
+const FAQPage = lazy(() => import("./pages/FAQPage").then((page) => ({ default: page.FAQPage })));
+const LegalPages = lazy(() => import("./pages/LegalPages").then((page) => ({ default: page.PrivacyPolicyPage })));
+const TermsOfServicePage = lazy(() => import("./pages/LegalPages").then((page) => ({ default: page.TermsOfServicePage })));
+const CookiePolicyPage = lazy(() => import("./pages/LegalPages").then((page) => ({ default: page.CookiePolicyPage })));
+const AcceptableUsePage = lazy(() => import("./pages/LegalPages").then((page) => ({ default: page.AcceptableUsePage })));
+const SignInPage = lazy(() => import("./pages/AuthPages").then((page) => ({ default: page.SignInPage })));
+const SignupPage = lazy(() => import("./pages/AuthPages").then((page) => ({ default: page.SignupPage })));
+const VerifyCodePage = lazy(() => import("./pages/AuthPages").then((page) => ({ default: page.VerifyCodePage })));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard").then((page) => ({ default: page.AdminDashboard })));
+const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard").then((page) => ({ default: page.TeacherDashboard })));
+const StudentDashboard = lazy(() => import("./pages/StudentDashboard").then((page) => ({ default: page.StudentDashboard })));
 function ProtectedRoute({ children, roles }) {
     const { user, loading } = useAuth();
     if (loading) {
@@ -61,9 +64,10 @@ function DashboardDispatcher() {
     return <StudentDashboard user={user}/>;
 }
 export default function App() {
-    return (<div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 font-sans selection:bg-cyan-500 selection:text-white">
+    return (<div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 font-sans selection:bg-emerald-700 selection:text-white">
       <Navbar />
       <main className="flex-1">
+        <Suspense fallback={<div role="status" className="flex min-h-[45vh] items-center justify-center px-4 text-sm font-semibold text-stone-600">Preparing your LearnHUB space…</div>}>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<HomePage />}/>
@@ -73,7 +77,7 @@ export default function App() {
           <Route path="/faq" element={<FAQPage />}/>
 
           {/* Legal pages */}
-          <Route path="/privacy" element={<PrivacyPolicyPage />}/>
+          <Route path="/privacy" element={<LegalPages />}/>
           <Route path="/terms" element={<TermsOfServicePage />}/>
           <Route path="/cookies" element={<CookiePolicyPage />}/>
           <Route path="/acceptable-use" element={<AcceptableUsePage />}/>
@@ -94,6 +98,7 @@ export default function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace/>}/>
         </Routes>
+        </Suspense>
       </main>
       <Footer />
     </div>);

@@ -20,7 +20,7 @@ export function FAQPage() {
     }, []);
     const filtered = faqs.filter((f) => f.question.toLowerCase().includes(query.toLowerCase()) ||
         f.answer.toLowerCase().includes(query.toLowerCase()));
-    return (<div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
+    return (<div className="editorial-page mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
       <SectionHeading badge="HELP CENTER" title="Good questions. Clear answers." subtitle="Find out how LearnHUB works for learners and instructors, from getting started to joining your first live session." centered/>
 
       {/* Search Input */}
@@ -48,12 +48,12 @@ export function FAQPage() {
       </div>
 
       {/* Support Box */}
-      <div className="rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-8 text-center text-blue-950 shadow-xs">
+      <div className="rounded-3xl border border-[#ded9ce] bg-gradient-to-r from-[#eeece3] to-[#e7eddf] p-8 text-center text-stone-950 shadow-xs">
         <h4 className="text-lg font-black">{t("faqNeedHelp")}</h4>
-        <p className="mt-2 text-xs sm:text-sm text-blue-800 max-w-md mx-auto leading-relaxed">
+        <p className="mt-2 text-xs sm:text-sm text-stone-600 max-w-md mx-auto leading-relaxed">
           From choosing a learning path to finding your way around your account, our team is ready to help.
         </p>
-        <Link to="/contact" className="mt-5 inline-block rounded-2xl bg-blue-600 px-6 py-3 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20">
+        <Link to="/contact" className="mt-5 inline-block rounded-2xl bg-emerald-800 px-6 py-3 text-xs font-bold text-white hover:bg-emerald-900 transition-colors shadow-md">
           {t("faqContactTeam")}
         </Link>
       </div>

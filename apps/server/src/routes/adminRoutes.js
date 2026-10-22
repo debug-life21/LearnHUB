@@ -20,7 +20,7 @@ import { slugify } from "../utils.js";
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("hub_admin"));
 adminRouter.get("/teachers/pending", asyncHandler(async (_req, res) => {
-    const teachers = await UserModel.find({ role: "teacher", teacherStatus: "pending", isVerified: { $ne: false } })
+    const teachers = await UserModel.find({ role: "teacher", isDeleted: { $ne: true }, teacherStatus: "pending", isVerified: { $ne: false } })
         .select("-password -passwordHash -verificationCode")
         .sort({ createdAt: 1 })
         .lean();
@@ -30,7 +30,7 @@ async function updateTeacherReview(req, res, status) {
     if (!mongoose.isValidObjectId(req.params.id)) {
         throw new ApiError(400, "Invalid teacher ID.");
     }
-    const teacher = await UserModel.findOne({ _id: req.params.id, role: "teacher" });
+    const teacher = await UserModel.findOne({ _id: req.params.id, role: "teacher", isDeleted: { $ne: true } });
     if (!teacher) {
         throw new ApiError(404, "Teacher not found.");
     }
@@ -78,11 +78,11 @@ async function writeAudit(actorId, action, targetType, targetId, details = {}) {
 adminRouter.get("/dashboard", asyncHandler(async (_req, res) => {
     const now = new Date();
     const [totalStudents, activeStudents, pendingStudentPlacement, totalTeachers, activeTeachers, pendingTeacherApplications, activeCourses, activeClasses, upcomingClasses, pendingSupportInquiries,] = await Promise.all([
-        UserModel.countDocuments({ role: "student" }),
-        UserModel.countDocuments({ role: "student", accountStatus: "active" }),
-        UserModel.countDocuments({ role: "student", "studentProfile.placementStatus": "pending" }),
-        UserModel.countDocuments({ role: "teacher" }),
-        UserModel.countDocuments({ role: "teacher", accountStatus: "active" }),
+        UserModel.countDocuments({ role: "student", isDeleted: { $ne: true } }),
+        UserModel.countDocuments({ role: "student", isDeleted: { $ne: true }, accountStatus: "active" }),
+        UserModel.countDocuments({ role: "student", isDeleted: { $ne: true }, "studentProfile.placementStatus": "pending" }),
+        UserModel.countDocuments({ role: "teacher", isDeleted: { $ne: true } }),
+        UserModel.countDocuments({ role: "teacher", isDeleted: { $ne: true }, accountStatus: "active" }),
         TeacherApplicationModel.countDocuments({ status: "pending" }),
         CourseModel.countDocuments({ status: "published" }),
         ClassroomModel.countDocuments({ status: { $in: ["planned", "active"] } }),
@@ -106,10 +106,10 @@ adminRouter.get("/dashboard", asyncHandler(async (_req, res) => {
 }));
 adminRouter.get("/teacher-applications", asyncHandler(async (_req, res) => {
     const applications = await TeacherApplicationModel.find()
-        .populate("user", "fullName email accountStatus languagePreference isVerified")
+        .populate("user", "fullName email accountStatus languagePreference isVerified isDeleted")
         .sort({ createdAt: -1 })
         .lean();
-    res.json({ applications: applications.filter((application) => application.user?.isVerified !== false) });
+    res.json({ applications: applications.filter((application) => application.user && !application.user.isDeleted && application.user.isVerified !== false) });
 }));
 adminRouter.patch("/teacher-applications/:applicationId", asyncHandler(async (req, res) => {
     const data = z.object({
@@ -153,18 +153,72 @@ adminRouter.patch("/teacher-applications/:applicationId", asyncHandler(async (re
     res.json({ message: "Teacher application updated successfully." });
 }));
 adminRouter.get("/teachers", asyncHandler(async (_req, res) => {
-    const teachers = await UserModel.find({ role: "teacher" })
+    const teachers = await UserModel.find({ role: "teacher", isDeleted: { $ne: true } })
         .select("-passwordHash")
         .sort({ createdAt: -1 })
         .lean();
     res.json({ teachers });
 }));
 adminRouter.get("/students", asyncHandler(async (_req, res) => {
-    const students = await UserModel.find({ role: "student" })
+    const students = await UserModel.find({ role: "student", isDeleted: { $ne: true } })
         .select("-passwordHash")
         .sort({ createdAt: -1 })
         .lean();
     res.json({ students });
+}));
+adminRouter.delete("/users/:userId", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.userId)) {
+        throw new ApiError(400, "Invalid user ID.");
+    }
+    const user = await UserModel.findOne({
+        _id: req.params.userId,
+        role: { $in: ["teacher", "student"] },
+        isDeleted: { $ne: true },
+    });
+    if (!user) {
+        throw new ApiError(404, "Teacher or student account not found.");
+    }
+
+    const userId = user._id;
+    const deletedAt = new Date();
+    await UserModel.updateOne(
+        { _id: userId },
+        {
+            $set: {
+                name: "Removed account",
+                fullName: "Removed account",
+                email: `removed-${userId.toString()}@deleted.invalid`,
+                accountStatus: "suspended",
+                isVerified: false,
+                emailVerified: false,
+                isDeleted: true,
+                deletedAt,
+            },
+            $unset: {
+                password: "",
+                passwordHash: "",
+                googleId: "",
+                verificationCode: "",
+                codeExpiresAt: "",
+                codePurpose: "",
+                codeAttempts: "",
+                codeSentAt: "",
+                studentProfile: "",
+                teacherProfile: "",
+            },
+        },
+    );
+    await Promise.all([
+        ClassroomModel.updateMany({ students: userId }, { $pull: { students: userId } }),
+        ClassroomModel.updateMany({ teacher: userId }, { $set: { teacher: null } }),
+        TeacherApplicationModel.deleteOne({ user: userId }),
+        NotificationModel.deleteMany({ user: userId }),
+    ]);
+    await writeAudit(req.user.id, "user_account_deleted", "User", userId.toString(), {
+        role: user.role,
+        deletedAt: deletedAt.toISOString(),
+    });
+    res.json({ message: `${user.role === "teacher" ? "Teacher" : "Student"} account deleted. Historical learning records were retained.` });
 }));
 adminRouter.post("/categories", asyncHandler(async (req, res) => {
     const data = z.object({
@@ -406,7 +460,7 @@ adminRouter.patch("/teachers/:teacherId/status", asyncHandler(async (req, res) =
     const data = z.object({
         status: z.enum(["active", "suspended"]),
     }).parse(req.body);
-    const teacher = await UserModel.findOne({ _id: req.params.teacherId, role: "teacher" });
+    const teacher = await UserModel.findOne({ _id: req.params.teacherId, role: "teacher", isDeleted: { $ne: true } });
     if (!teacher) {
         throw new ApiError(404, "Teacher account not found.");
     }

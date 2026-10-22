@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "../lib/api";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
@@ -16,11 +16,16 @@ export function AdminDashboard({ user }) {
     const [announcements, setAnnouncements] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
     const [reportsData, setReportsData] = useState(null);
+    const [reportsLoaded, setReportsLoaded] = useState(false);
+    const [isReportsLoading, setIsReportsLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
     const [loadError, setLoadError] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [teacherSearch, setTeacherSearch] = useState("");
     const [studentSearch, setStudentSearch] = useState("");
+    const [courseSearch, setCourseSearch] = useState("");
+    const [courseCategory, setCourseCategory] = useState("");
+    const [coursePage, setCoursePage] = useState(1);
     // Modals
     const [rejectionModal, setRejectionModal] = useState({
         open: false,
@@ -29,6 +34,9 @@ export function AdminDashboard({ user }) {
     });
     const [placementModal, setPlacementModal] = useState({ open: false, studentId: "", studentName: "", classId: "" });
     const [teacherAssignmentModal, setTeacherAssignmentModal] = useState({ open: false, classId: "", classTitle: "", teacherId: "" });
+    const [deleteUserModal, setDeleteUserModal] = useState(null);
+    const [isDeletingUser, setIsDeletingUser] = useState(false);
+    const [deleteUserError, setDeleteUserError] = useState("");
     const [createCourseModal, setCreateCourseModal] = useState(false);
     const [createClassModal, setCreateClassModal] = useState(false);
     const [createCategoryModal, setCreateCategoryModal] = useState(false);
@@ -65,19 +73,59 @@ export function AdminDashboard({ user }) {
         target: "all_students",
         priority: "normal",
     });
-    const availableClasses = classes.filter((classroom) => classroom.students?.length < classroom.capacity);
-    const schedulableClasses = classes.filter((classroom) => classroom.teacher?._id);
-    const activeTeachers = teachers.filter((teacher) => teacher.accountStatus === "active");
-    const getPlacementClasses = (studentId) => availableClasses.filter((classroom) => !classroom.students?.some((student) => String(student?._id ?? student) === studentId));
-    const placementClasses = getPlacementClasses(placementModal.studentId);
-    const visibleTeachers = teachers.filter((teacher) => `${teacher.fullName} ${teacher.email}`.toLowerCase().includes(teacherSearch.trim().toLowerCase()));
-    const visibleStudents = students.filter((student) => `${student.fullName} ${student.email}`.toLowerCase().includes(studentSearch.trim().toLowerCase()));
+    const availableClasses = useMemo(
+        () => classes.filter((classroom) => classroom.students?.length < classroom.capacity),
+        [classes],
+    );
+    const schedulableClasses = useMemo(
+        () => classes.filter((classroom) => classroom.teacher?._id),
+        [classes],
+    );
+    const activeTeachers = useMemo(
+        () => teachers.filter((teacher) => teacher.accountStatus === "active"),
+        [teachers],
+    );
+    const getPlacementClasses = useCallback(
+        (studentId) => availableClasses.filter((classroom) => !classroom.students?.some((student) => String(student?._id ?? student) === studentId)),
+        [availableClasses],
+    );
+    const placementClasses = useMemo(
+        () => getPlacementClasses(placementModal.studentId),
+        [getPlacementClasses, placementModal.studentId],
+    );
+    const visibleTeachers = useMemo(() => {
+        const query = teacherSearch.trim().toLowerCase();
+        return teachers.filter((teacher) => `${teacher.fullName} ${teacher.email}`.toLowerCase().includes(query));
+    }, [teacherSearch, teachers]);
+    const visibleStudents = useMemo(() => {
+        const query = studentSearch.trim().toLowerCase();
+        return students.filter((student) => `${student.fullName} ${student.email}`.toLowerCase().includes(query));
+    }, [studentSearch, students]);
+    const pendingApplications = useMemo(
+        () => applications.filter((application) => application.status === "pending"),
+        [applications],
+    );
+    const pendingStudents = useMemo(
+        () => students.filter((student) => student.studentProfile?.placementStatus === "pending"),
+        [students],
+    );
+    const visibleCourses = useMemo(() => {
+        const query = courseSearch.trim().toLowerCase();
+        return courses.filter((course) => {
+            const matchesCategory = !courseCategory || course.category?._id === courseCategory;
+            const matchesSearch = !query || `${course.title} ${course.description} ${course.category?.name || ""}`.toLowerCase().includes(query);
+            return matchesCategory && matchesSearch;
+        });
+    }, [courseCategory, courseSearch, courses]);
+    const coursesPerPage = 12;
+    const totalCoursePages = Math.ceil(visibleCourses.length / coursesPerPage);
+    const pagedCourses = visibleCourses.slice((coursePage - 1) * coursesPerPage, coursePage * coursesPerPage);
 
     const loadAll = useCallback(async () => {
         setIsLoading(true);
         setLoadError("");
         try {
-            const [dash, appsRes, teachRes, studRes, catRes, courseRes, classRes, annRes, auditRes, repRes,] = await Promise.all([
+            const [dash, appsRes, teachRes, studRes, catRes, courseRes, classRes, annRes] = await Promise.all([
                 apiRequest("/api/admin/dashboard"),
                 apiRequest("/api/admin/teacher-applications"),
                 apiRequest("/api/admin/teachers"),
@@ -86,8 +134,6 @@ export function AdminDashboard({ user }) {
                 apiRequest("/api/admin/courses"),
                 apiRequest("/api/admin/classes"),
                 apiRequest("/api/admin/announcements"),
-                apiRequest("/api/admin/audit-logs"),
-                apiRequest("/api/admin/reports"),
             ]);
             setMetrics(dash.metrics);
             setApplications(appsRes.applications);
@@ -97,8 +143,6 @@ export function AdminDashboard({ user }) {
             setCourses(courseRes.courses);
             setClasses(classRes.classes);
             setAnnouncements(annRes.announcements);
-            setAuditLogs(auditRes.logs);
-            setReportsData(repRes);
             return true;
         }
         catch (err) {
@@ -107,6 +151,23 @@ export function AdminDashboard({ user }) {
         }
         finally {
             setIsLoading(false);
+        }
+    }, []);
+    const loadReports = useCallback(async () => {
+        setIsReportsLoading(true);
+        setLoadError("");
+        try {
+            const [auditRes, reportsRes] = await Promise.all([
+                apiRequest("/api/admin/audit-logs"),
+                apiRequest("/api/admin/reports"),
+            ]);
+            setAuditLogs(auditRes.logs);
+            setReportsData(reportsRes);
+            setReportsLoaded(true);
+        } catch (err) {
+            setLoadError(err instanceof Error ? err.message : "Unable to load reports and activity.");
+        } finally {
+            setIsReportsLoading(false);
         }
     }, []);
     useEffect(() => {
@@ -153,6 +214,21 @@ export function AdminDashboard({ user }) {
         }
         catch (err) {
             setFeedback(err.message);
+        }
+    };
+    const handleDeleteUser = async () => {
+        if (!deleteUserModal || isDeletingUser) return;
+        setIsDeletingUser(true);
+        setDeleteUserError("");
+        try {
+            const response = await apiRequest(`/api/admin/users/${deleteUserModal.id}`, { method: "DELETE" });
+            setDeleteUserModal(null);
+            setFeedback(response.message);
+            await loadAll();
+        } catch (err) {
+            setDeleteUserError(err instanceof Error ? err.message : "Could not delete the account. Please try again.");
+        } finally {
+            setIsDeletingUser(false);
         }
     };
     // Action: Place Student
@@ -303,38 +379,39 @@ export function AdminDashboard({ user }) {
             setFeedback(err.message);
         }
     };
-    return (<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    return (<div className="admin-workspace min-h-screen w-full px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-8">
       {/* Top Welcome Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6 text-white shadow-xl sm:p-8">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="admin-welcome relative overflow-hidden p-6 sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-emerald-900/5 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-6">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-            {t("adminOverview")}
+          <span className="admin-eyebrow text-xs font-bold uppercase tracking-[0.16em]">
+            LearnHUB · {t("adminOverview")}
           </span>
-          <h1 className="mt-2 text-3xl font-black">{user.fullName}</h1>
-          <p className="mt-1 text-sm text-slate-300">{user.email}</p>
+          <h1 className="editorial-display mt-3 text-4xl text-stone-950 sm:text-5xl">Good to see you, {user.fullName?.split(" ")[0]}.</h1>
+          <p className="mt-2 text-sm text-stone-500">Your learning community, at a glance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => void loadAll()}
-            disabled={isLoading}
+            onClick={() => activeTab === "reports" ? void loadReports() : void loadAll()}
+            disabled={isLoading || isReportsLoading}
             type="button"
-            className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-wait disabled:opacity-60"
+            className="rounded-full border border-stone-300 bg-white/70 px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
           >
-            {isLoading ? "Refreshing..." : "↻ Refresh"}
+            {isLoading || isReportsLoading ? "Refreshing..." : "↻ Refresh"}
           </button>
           <button
             onClick={() => setCreateCategoryModal(true)}
             type="button"
-            className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-white/20"
+            className="rounded-full border border-stone-300 bg-white/70 px-4 py-2.5 text-xs font-bold text-stone-700 transition-colors hover:bg-white"
           >
             + {t("createCategory")}
           </button>
-          <button onClick={() => setCreateCourseModal(true)} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold hover:bg-blue-500 transition-colors">
+          <button onClick={() => setCreateCourseModal(true)} className="rounded-full bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-emerald-900">
             + {t("createCourse")}
           </button>
-          <button onClick={() => setCreateClassModal(true)} className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold hover:bg-cyan-500 transition-colors">
+          <button onClick={() => setCreateClassModal(true)} className="rounded-full bg-[#8a6c3e] px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#745a34]">
             + {t("createClass")}
           </button>
           <button
@@ -344,7 +421,7 @@ export function AdminDashboard({ user }) {
             }}
             disabled={schedulableClasses.length === 0}
             title={schedulableClasses.length === 0 ? "Assign an active teacher to a class before scheduling a session." : undefined}
-            className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-stone-300 bg-white/70 px-4 py-2.5 text-xs font-bold text-stone-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             + {t("scheduleSession")}
           </button>
@@ -360,7 +437,7 @@ export function AdminDashboard({ user }) {
       {loadError && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
           <span>Dashboard data could not be loaded: {loadError}</span>
-          <button onClick={() => void loadAll()} type="button" className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-800">
+          <button onClick={() => activeTab === "reports" ? void loadReports() : void loadAll()} type="button" className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-800">
             Retry
           </button>
         </div>
@@ -372,7 +449,7 @@ export function AdminDashboard({ user }) {
         </div>) : null}
 
       {/* Tabs Bar */}
-      <div role="tablist" aria-label="Admin dashboard sections" className="flex gap-2 overflow-x-auto border-b border-slate-200 pb-3">
+      <div role="tablist" aria-label="Admin dashboard sections" className="admin-tabs flex gap-2 overflow-x-auto">
         {[
             { id: "overview", label: "Overview", icon: "📊" },
             { id: "teachers", label: `Instructors (${teachers.length})`, icon: "👨‍🏫" },
@@ -381,7 +458,10 @@ export function AdminDashboard({ user }) {
             { id: "classes", label: `Cohorts (${classes.length})`, icon: "🏫" },
             { id: "announcements", label: `Announcements (${announcements.length})`, icon: "📢" },
             { id: "reports", label: "Reports & activity", icon: "📑" },
-        ].map((tab) => (<button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
+        ].map((tab) => (<button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === "reports" && !reportsLoaded) void loadReports();
+            }} className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
                 ? "bg-slate-900 text-white shadow-sm"
                 : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
             <span>{tab.icon}</span>
@@ -401,8 +481,7 @@ export function AdminDashboard({ user }) {
           <div className="grid gap-8 lg:grid-cols-2">
             <DashboardCard title="Instructor applications awaiting review" subtitle="Pending Teacher Applications">
               <div className="space-y-4">
-                {applications.filter((a) => a.status === "pending").length === 0 ? (<EmptyState title="No applications are waiting for review."/>) : (applications
-                .filter((a) => a.status === "pending")
+                {pendingApplications.length === 0 ? (<EmptyState title="No applications are waiting for review."/>) : (pendingApplications
                 .map((app) => (<div key={app._id} className="rounded-2xl border border-slate-200 p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <div>
@@ -427,8 +506,7 @@ export function AdminDashboard({ user }) {
 
             <DashboardCard title="Learners awaiting placement" subtitle="Students Awaiting Placement">
               <div className="space-y-4">
-                {students.filter((s) => s.studentProfile?.placementStatus === "pending").length === 0 ? (<EmptyState title="All learners have been placed."/>) : (students
-                .filter((s) => s.studentProfile?.placementStatus === "pending")
+                {pendingStudents.length === 0 ? (<EmptyState title="All learners have been placed."/>) : (pendingStudents
                 .map((stud) => (<div key={stud._id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
                         <div>
                           <h4 className="font-bold text-slate-900">{stud.fullName}</h4>
@@ -479,6 +557,16 @@ export function AdminDashboard({ user }) {
                     : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}>
                       {teach.accountStatus === "active" ? "Suspend" : "Activate"}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                          setDeleteUserError("");
+                          setDeleteUserModal({ id: teach._id, name: teach.fullName, role: "teacher" });
+                      }}
+                      className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>))}
               {visibleTeachers.length === 0 && <EmptyState title={teachers.length ? "No teachers match your search" : "No teachers yet"} />}
@@ -519,6 +607,16 @@ export function AdminDashboard({ user }) {
                     >
                       {stud.studentProfile?.placementStatus === "assigned" ? "Add another class" : "Assign to class"}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                          setDeleteUserError("");
+                          setDeleteUserModal({ id: stud._id, name: stud.fullName, role: "student" });
+                      }}
+                      className="ml-2 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>))}
               {visibleStudents.length === 0 && <EmptyState title={students.length ? "No students match your search" : "No students yet"} />}
@@ -540,8 +638,36 @@ export function AdminDashboard({ user }) {
             </div>
           </div>
 
+          <div className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4 sm:flex-row">
+            <input
+              value={courseSearch}
+              onChange={(event) => {
+                  setCourseSearch(event.target.value);
+                  setCoursePage(1);
+              }}
+              aria-label="Search courses"
+              placeholder="Search title, description, or category"
+              className="min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm"
+            />
+            <select
+              value={courseCategory}
+              onChange={(event) => {
+                  setCourseCategory(event.target.value);
+                  setCoursePage(1);
+              }}
+              aria-label="Filter courses by category"
+              className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm"
+            >
+              <option value="">All categories ({courses.length})</option>
+              {categories.map((category) => {
+                  const count = courses.filter((course) => course.category?._id === category._id).length;
+                  return count > 0 ? <option key={category._id} value={category._id}>{category.name} ({count})</option> : null;
+              })}
+            </select>
+          </div>
+
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (<div key={course._id} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-3">
+            {pagedCourses.map((course) => (<div key={course._id} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <Badge variant="cyan">{course.category?.name || "General"}</Badge>
                   <span className="text-xs font-semibold text-slate-500">{course.skillLevel}</span>
@@ -555,8 +681,17 @@ export function AdminDashboard({ user }) {
                   </ul>
                 </div>
               </div>))}
-            {courses.length === 0 && <EmptyState title="No courses yet" description="Create a course after setting up a learning category." />}
+            {visibleCourses.length === 0 && <EmptyState title={courses.length ? "No courses match those filters" : "No courses yet"} description={courses.length ? "Try a different search or category." : "Run the catalog seed or create a course after setting up a learning category."} />}
           </div>
+          {totalCoursePages > 1 && (
+            <div className="flex items-center justify-between rounded-2xl border border-stone-200 bg-white px-4 py-3">
+              <p className="text-xs font-medium text-stone-500">Showing {(coursePage - 1) * coursesPerPage + 1}–{Math.min(coursePage * coursesPerPage, visibleCourses.length)} of {visibleCourses.length}</p>
+              <div className="flex gap-2">
+                <button type="button" disabled={coursePage === 1} onClick={() => setCoursePage((page) => page - 1)} className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 disabled:opacity-40">Previous</button>
+                <button type="button" disabled={coursePage === totalCoursePages} onClick={() => setCoursePage((page) => page + 1)} className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 disabled:opacity-40">Next</button>
+              </div>
+            </div>
+          )}
         </div>) : null}
 
       {/* 5. CLASSES TAB */}
@@ -626,6 +761,7 @@ export function AdminDashboard({ user }) {
 
       {/* 7. REPORTS & AUDIT LOGS TAB */}
       {activeTab === "reports" ? (<div className="space-y-8">
+          {isReportsLoading && <div role="status" className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600">Loading reports and recent activity…</div>}
           <DashboardCard title="System overview and workloads">
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -753,6 +889,32 @@ export function AdminDashboard({ user }) {
             </button>
           </form>
         )}
+      </Modal>
+
+      <Modal
+        title={`Delete ${deleteUserModal?.role === "teacher" ? "instructor" : "learner"} account?`}
+        isOpen={Boolean(deleteUserModal)}
+        onClose={() => {
+            if (!isDeletingUser) setDeleteUserModal(null);
+        }}
+      >
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-slate-700">
+            This will deactivate <strong>{deleteUserModal?.name}</strong>’s sign-in access, anonymize their profile, and remove them from active class rosters. Historical learning records will be retained.
+          </p>
+          <p className="text-xs leading-5 text-rose-700">
+            This cannot be undone. Confirm that you selected the right account.
+          </p>
+          {deleteUserError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">{deleteUserError}</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" disabled={isDeletingUser} onClick={() => setDeleteUserModal(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="button" disabled={isDeletingUser} onClick={() => void handleDeleteUser()} className="rounded-xl bg-rose-700 px-4 py-2 text-xs font-bold text-white hover:bg-rose-800 disabled:cursor-wait disabled:opacity-60">
+              {isDeletingUser ? "Deleting…" : "Delete account"}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* MODAL: Create Course */}
@@ -910,5 +1072,6 @@ export function AdminDashboard({ user }) {
           </button>
         </form>
       </Modal>
+      </div>
     </div>);
 }

@@ -15,7 +15,7 @@ const navigationItems = [
 function navLinkClass({ isActive }) {
     return `rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${
         isActive
-            ? "bg-blue-50 text-blue-700"
+            ? "bg-emerald-50 text-emerald-900"
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
     }`;
 }
@@ -81,7 +81,7 @@ export function Navbar() {
             ? "Teacher"
             : "Student";
     return (
-        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.03] backdrop-blur-xl">
+        <header className="editorial-nav sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.03] backdrop-blur-xl">
             <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 lg:px-8">
                 <Link
                     to="/"
@@ -91,16 +91,16 @@ export function Navbar() {
                     <BrandLogo />
                 </Link>
 
-                <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-2xl bg-slate-50 p-1 md:flex">
+                <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-2xl bg-slate-50 p-1 lg:flex">
                     <NavigationLinks />
                 </nav>
 
                 <div className="flex shrink-0 items-center gap-2">
                     {user ? (
-                        <div className="hidden items-center gap-2 md:flex">
+                        <div className="hidden items-center gap-2 lg:flex">
                             <Link
                                 to="/dashboard"
-                                className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                                className="inline-flex items-center gap-2 rounded-xl bg-[#25362d] px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
                                 <span className="max-w-32 truncate">{user.fullName || t("dashboard")}</span>
                                 <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-100">
@@ -121,7 +121,7 @@ export function Navbar() {
                             </button>
                         </div>
                     ) : (
-                        <div className="hidden items-center gap-1.5 sm:flex">
+                        <div className="hidden items-center gap-1.5 lg:flex">
                             <Link
                                 to="/sign-in"
                                 className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950"
@@ -130,7 +130,7 @@ export function Navbar() {
                             </Link>
                             <Link
                                 to="/register/student"
-                                className="rounded-xl bg-blue-600 px-3.5 py-2.5 text-sm font-bold text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                                className="rounded-xl bg-emerald-800 px-3.5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
                                 {t("studentSignUp")}
                             </Link>
@@ -140,7 +140,7 @@ export function Navbar() {
                     <button
                         onClick={() => setMobileMenuState({ pathname: location.pathname, open: !mobileMenuOpen })}
                         type="button"
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 md:hidden"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 lg:hidden"
                         aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
                         aria-expanded={mobileMenuOpen}
                         aria-controls="mobile-navigation"
@@ -165,7 +165,7 @@ export function Navbar() {
             )}
 
             {mobileMenuOpen && (
-                <div id="mobile-navigation" className="border-t border-slate-200 bg-white px-4 pb-4 pt-3 shadow-lg shadow-slate-900/5 md:hidden">
+                <div id="mobile-navigation" className="border-t border-slate-200 bg-white px-4 pb-4 pt-3 shadow-lg shadow-slate-900/5 lg:hidden">
                     <nav aria-label="Mobile navigation" className="flex flex-col gap-1">
                         <NavigationLinks onNavigate={closeMobileMenu} />
                     </nav>
@@ -185,7 +185,7 @@ export function Navbar() {
                                 <Link
                                     to="/dashboard"
                                     onClick={closeMobileMenu}
-                                    className="rounded-xl bg-slate-950 px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-blue-700"
+                                    className="rounded-xl bg-[#25362d] px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-emerald-900"
                                 >
                                     {t("dashboard")}
                                 </Link>
@@ -200,7 +200,7 @@ export function Navbar() {
                             </div>
                         </div>
                     ) : (
-                        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 sm:hidden">
+                        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 lg:hidden">
                             <Link
                                 to="/sign-in"
                                 onClick={closeMobileMenu}
@@ -211,7 +211,7 @@ export function Navbar() {
                             <Link
                                 to="/register/student"
                                 onClick={closeMobileMenu}
-                                className="rounded-xl bg-blue-600 px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-blue-700"
+                                className="rounded-xl bg-emerald-800 px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-emerald-900"
                             >
                                 {t("studentSignUp")}
                             </Link>

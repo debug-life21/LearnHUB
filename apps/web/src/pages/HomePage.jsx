@@ -57,7 +57,7 @@ export function HomePage() {
         return () => clearInterval(timer);
     }, [isPaused]);
     const activeSlide = HERO_SLIDES[currentSlide];
-    return (<div className="space-y-24 pb-20">
+    return (<div className="editorial-page space-y-24 pb-20">
       {/* 1. Hero Section with Ultra-Clear & Dynamic Multi-Image Carousel */}
       <section onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} className="relative overflow-hidden bg-slate-950 py-24 sm:py-32 text-white min-h-[700px] lg:min-h-[760px] flex items-center select-none">
         {/* Multi-Image Animated Crossfade Layers with Ultra Clarity */}

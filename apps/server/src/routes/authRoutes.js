@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { clearAuthCookie, hashPassword, verifyPassword } from "../auth.js";
-import { login, google, resendCode, signup, verifyCode } from "../controllers/authController.js";
+import { adminLogin, login, google, resendCode, signup, verifyCode } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
 import { UserModel } from "../models/User.js";
@@ -11,6 +11,7 @@ export const authRouter = Router();
 authRouter.post("/signup", asyncHandler(signup));
 authRouter.post("/verify-code", asyncHandler(verifyCode));
 authRouter.post("/login", asyncHandler(login));
+authRouter.post("/admin-login", asyncHandler(adminLogin));
 authRouter.post("/resend-code", asyncHandler(resendCode));
 authRouter.post("/google", asyncHandler(google));
 
@@ -36,7 +37,7 @@ authRouter.get("/me", protect, asyncHandler(async (req, res) => {
     const user = await UserModel.findById(req.user.id)
         .select("-password -passwordHash -verificationCode -codeExpiresAt -codePurpose -codeAttempts -codeSentAt")
         .lean();
-    if (!user) {
+    if (!user || user.isDeleted) {
         throw new ApiError(404, "User not found.");
     }
     res.json({
@@ -65,7 +66,7 @@ authRouter.post("/change-password", protect, asyncHandler(async (req, res) => {
         newPassword: z.string().min(8).max(128),
     }).parse(req.body);
     const user = await UserModel.findById(req.user.id).select("+password +passwordHash");
-    if (!user) {
+    if (!user || user.isDeleted) {
         throw new ApiError(404, "User not found.");
     }
     const valid = user.password
