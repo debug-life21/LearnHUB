@@ -1,0 +1,309 @@
+import mongoose from "mongoose";
+import { Router } from "express";
+import { z } from "zod";
+import { requireAuth, requireRole } from "../auth.js";
+import { asyncHandler, ApiError } from "../lib/http.js";
+import { ClassroomModel } from "../models/Classroom.js";
+import { ClassSessionModel } from "../models/ClassSession.js";
+import { NotificationModel } from "../models/Notification.js";
+import { AssignmentModel } from "../models/Assignment.js";
+import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.js";
+import { AssessmentModel } from "../models/Assessment.js";
+import { AttendanceRecordModel } from "../models/AttendanceRecord.js";
+import { UserModel } from "../models/User.js";
+export const teacherRouter = Router();
+teacherRouter.use(requireAuth, requireRole("teacher"));
+// 1. Teacher Dashboard
+teacherRouter.get("/dashboard", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const now = new Date();
+    const [classes, upcomingLessons, notifications, assignments] = await Promise.all([
+        ClassroomModel.find({ teacher: teacherId })
+            .populate("course")
+            .populate("students", "fullName email")
+            .sort({ createdAt: -1 })
+            .lean(),
+        ClassSessionModel.find({ teacher: teacherId, startsAt: { $gte: now }, status: "scheduled" })
+            .sort({ startsAt: 1 })
+            .limit(10)
+            .lean(),
+        NotificationModel.find({ user: teacherId }).sort({ createdAt: -1 }).limit(10).lean(),
+        AssignmentModel.find({ teacher: teacherId }).select("_id").lean(),
+    ]);
+    const assignmentIds = assignments.map((a) => a._id);
+    const pendingSubmissions = await AssignmentSubmissionModel.countDocuments({
+        assignment: { $in: assignmentIds },
+        status: "submitted",
+    });
+    res.json({
+        overview: {
+            assignedClasses: classes.length,
+            upcomingLessons: upcomingLessons.length,
+            totalAssignedStudents: classes.reduce((total, classroom) => total + (classroom.students?.length ?? 0), 0),
+            pendingSubmissionsToGrade: pendingSubmissions,
+        },
+        classes,
+        upcomingLessons,
+        notifications,
+    });
+}));
+// 2. Classes list
+teacherRouter.get("/classes", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const classes = await ClassroomModel.find({ teacher: teacherId })
+        .populate("course")
+        .populate("students", "fullName email studentProfile")
+        .sort({ createdAt: -1 })
+        .lean();
+    res.json({ classes });
+}));
+// 3. Single class details with sessions & students
+teacherRouter.get("/classes/:classId", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const classroom = await ClassroomModel.findOne({ _id: req.params.classId, teacher: teacherId })
+        .populate("course")
+        .populate("students", "fullName email studentProfile")
+        .lean();
+    if (!classroom) {
+        throw new ApiError(404, "Class not found or not assigned to you.");
+    }
+    const [sessions, assignments, assessments] = await Promise.all([
+        ClassSessionModel.find({ classroom: classroom._id }).sort({ startsAt: -1 }).lean(),
+        AssignmentModel.find({ classroom: classroom._id }).sort({ dueDate: -1 }).lean(),
+        AssessmentModel.find({ classroom: classroom._id }).sort({ createdAt: -1 }).lean(),
+    ]);
+    res.json({
+        classroom,
+        sessions,
+        assignments,
+        assessments,
+    });
+}));
+// 4. Create assignment
+teacherRouter.post("/assignments", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const data = z.object({
+        classroomId: z.string().min(1),
+        title: z.string().min(3),
+        description: z.string().default(""),
+        instructions: z.string().min(5),
+        dueDate: z.string().datetime(),
+        maxScore: z.number().int().min(1).default(100),
+        allowedSubmissionTypes: z.array(z.enum(["text", "file", "both"])).default(["text"]),
+    }).parse(req.body);
+    const classroom = await ClassroomModel.findOne({ _id: data.classroomId, teacher: teacherId });
+    if (!classroom) {
+        throw new ApiError(403, "You can only create assignments for classes assigned to you.");
+    }
+    const assignment = await AssignmentModel.create({
+        title: data.title,
+        description: data.description,
+        instructions: data.instructions,
+        classroom: classroom._id,
+        course: classroom.course,
+        teacher: teacherId,
+        dueDate: new Date(data.dueDate),
+        maxScore: data.maxScore,
+        allowedSubmissionTypes: data.allowedSubmissionTypes,
+    });
+    // Notify all students in this class
+    if (classroom.students.length > 0) {
+        await NotificationModel.insertMany(classroom.students.map((studentId) => ({
+            user: studentId,
+            title: `New Assignment: ${data.title}`,
+            message: `A new assignment was posted in ${classroom.title}. Due date: ${new Date(data.dueDate).toLocaleDateString()}.`,
+            kind: "assignment",
+            link: "/student/assignments",
+        })));
+    }
+    res.status(201).json({ assignment });
+}));
+// 5. List teacher's assignments
+teacherRouter.get("/assignments", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const assignments = await AssignmentModel.find({ teacher: teacherId })
+        .populate("classroom", "title")
+        .sort({ createdAt: -1 })
+        .lean();
+    const assignmentIds = assignments.map((a) => a._id);
+    const submissions = await AssignmentSubmissionModel.aggregate([
+        { $match: { assignment: { $in: assignmentIds } } },
+        {
+            $group: {
+                _id: "$assignment",
+                total: { $sum: 1 },
+                graded: { $sum: { $cond: [{ $eq: ["$status", "graded"] }, 1, 0] } },
+            },
+        },
+    ]);
+    const statsMap = new Map(submissions.map((s) => [s._id.toString(), s]));
+    const enriched = assignments.map((a) => {
+        const stats = statsMap.get(a._id.toString());
+        return {
+            ...a,
+            submissionCount: stats?.total ?? 0,
+            gradedCount: stats?.graded ?? 0,
+        };
+    });
+    res.json({ assignments: enriched });
+}));
+// 6. View submissions for an assignment
+teacherRouter.get("/assignments/:assignmentId/submissions", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const assignment = await AssignmentModel.findOne({ _id: req.params.assignmentId, teacher: teacherId })
+        .populate("classroom", "title students")
+        .lean();
+    if (!assignment) {
+        throw new ApiError(404, "Assignment not found or unauthorized.");
+    }
+    const submissions = await AssignmentSubmissionModel.find({ assignment: assignment._id })
+        .populate("student", "fullName email")
+        .sort({ createdAt: -1 })
+        .lean();
+    res.json({ assignment, submissions });
+}));
+// 7. Grade student submission
+teacherRouter.patch("/submissions/:submissionId/grade", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const data = z.object({
+        score: z.number().min(0),
+        feedback: z.string().default(""),
+    }).parse(req.body);
+    const submission = await AssignmentSubmissionModel.findById(req.params.submissionId)
+        .populate("assignment")
+        .populate("student", "fullName email");
+    if (!submission) {
+        throw new ApiError(404, "Submission not found.");
+    }
+    const assignment = await AssignmentModel.findOne({ _id: submission.assignment, teacher: teacherId });
+    if (!assignment) {
+        throw new ApiError(403, "You can only grade submissions for your assigned classes.");
+    }
+    if (data.score > assignment.maxScore) {
+        throw new ApiError(400, `Score cannot exceed maximum score of ${assignment.maxScore}.`);
+    }
+    submission.score = data.score;
+    submission.feedback = data.feedback;
+    submission.status = "graded";
+    submission.gradedBy = teacherId;
+    submission.gradedAt = new Date();
+    await submission.save();
+    await NotificationModel.create({
+        user: submission.student._id,
+        title: `Assignment Graded: ${assignment.title}`,
+        message: `Your submission for "${assignment.title}" has been graded: ${data.score}/${assignment.maxScore}.`,
+        kind: "grade",
+        link: "/student/assignments",
+    });
+    res.json({ message: "Submission graded successfully.", submission });
+}));
+// 8. Record attendance for a class session
+teacherRouter.post("/sessions/:sessionId/attendance", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const data = z.object({
+        records: z.array(z.object({
+            studentId: z.string().min(1),
+            status: z.enum(["present", "absent", "late", "excused"]),
+            notes: z.string().default(""),
+        })),
+    }).parse(req.body);
+    const session = await ClassSessionModel.findOne({ _id: req.params.sessionId, teacher: teacherId });
+    if (!session) {
+        throw new ApiError(404, "Session not found or not assigned to you.");
+    }
+    const operations = data.records.map((rec) => ({
+        updateOne: {
+            filter: { session: session._id, student: new mongoose.Types.ObjectId(rec.studentId) },
+            update: {
+                $set: {
+                    classroom: session.classroom,
+                    status: rec.status,
+                    notes: rec.notes,
+                    markedBy: new mongoose.Types.ObjectId(teacherId),
+                },
+            },
+            upsert: true,
+        },
+    }));
+    if (operations.length > 0) {
+        await AttendanceRecordModel.bulkWrite(operations);
+    }
+    res.json({ message: "Attendance recorded successfully." });
+}));
+// 9. Mark session as completed
+teacherRouter.patch("/sessions/:sessionId/complete", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const data = z.object({
+        description: z.string().default(""),
+    }).parse(req.body);
+    const session = await ClassSessionModel.findOne({ _id: req.params.sessionId, teacher: teacherId });
+    if (!session) {
+        throw new ApiError(404, "Session not found or not assigned to you.");
+    }
+    session.status = "completed";
+    if (data.description) {
+        session.description = data.description;
+    }
+    await session.save();
+    res.json({ message: "Session marked as completed.", session });
+}));
+// 10. Create assessment / quiz
+teacherRouter.post("/assessments", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const data = z.object({
+        classroomId: z.string().min(1),
+        title: z.string().min(3),
+        description: z.string().default(""),
+        timeLimitMinutes: z.number().int().min(5).max(180).default(30),
+        passingScorePercentage: z.number().min(1).max(100).default(60),
+        questions: z.array(z.object({
+            prompt: z.string().min(3),
+            options: z.array(z.string().min(1)).min(2),
+            correctOptionIndex: z.number().int().min(0),
+            explanation: z.string().default(""),
+            points: z.number().int().min(1).default(1),
+        })).min(1),
+    }).parse(req.body);
+    const classroom = await ClassroomModel.findOne({ _id: data.classroomId, teacher: teacherId });
+    if (!classroom) {
+        throw new ApiError(403, "You can only create assessments for your assigned classes.");
+    }
+    const assessment = await AssessmentModel.create({
+        title: data.title,
+        description: data.description,
+        classroom: classroom._id,
+        teacher: teacherId,
+        timeLimitMinutes: data.timeLimitMinutes,
+        passingScorePercentage: data.passingScorePercentage,
+        questions: data.questions,
+    });
+    if (classroom.students.length > 0) {
+        await NotificationModel.insertMany(classroom.students.map((studentId) => ({
+            user: studentId,
+            title: `New Assessment: ${data.title}`,
+            message: `An assessment has been assigned in ${classroom.title}.`,
+            kind: "assessment",
+            link: "/student/assessments",
+        })));
+    }
+    res.status(201).json({ assessment });
+}));
+// 11. List assessments
+teacherRouter.get("/assessments", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const assessments = await AssessmentModel.find({ teacher: teacherId })
+        .populate("classroom", "title")
+        .sort({ createdAt: -1 })
+        .lean();
+    res.json({ assessments });
+}));
+// 12. View students assigned to teacher
+teacherRouter.get("/students", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const classes = await ClassroomModel.find({ teacher: teacherId }).select("students title").lean();
+    const studentIds = Array.from(new Set(classes.flatMap((c) => c.students.map((s) => s.toString()))));
+    const students = await UserModel.find({ _id: { $in: studentIds } })
+        .select("fullName email studentProfile createdAt")
+        .lean();
+    res.json({ students });
+}));
