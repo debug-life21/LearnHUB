@@ -33,8 +33,28 @@ export function Footer() {
             </h4>
             <ul className="mt-4 space-y-2.5 text-xs font-medium">
               <li>
+                <Link to="/courses" className="hover:text-cyan-400 transition-colors">
+                  Course Catalog
+                </Link>
+              </li>
+              <li>
                 <Link to="/categories" className="hover:text-cyan-400 transition-colors">
                   {t("categoriesTitle")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/how-it-works" className="hover:text-cyan-400 transition-colors">
+                  How LearnHUB Works
+                </Link>
+              </li>
+              <li>
+                <Link to="/pricing" className="hover:text-cyan-400 transition-colors">
+                  Cohort Plans & Pricing
+                </Link>
+              </li>
+              <li>
+                <Link to="/instructors" className="hover:text-cyan-400 transition-colors">
+                  Certified Educators
                 </Link>
               </li>
               <li>
@@ -62,16 +82,25 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link to="/help" className="hover:text-cyan-400 transition-colors">
+                  Help Center
+                </Link>
+              </li>
+              <li>
                 <Link to="/faq" className="hover:text-cyan-400 transition-colors">
                   {t("faq")}
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="hover:text-cyan-400 transition-colors">
-                  {t("contact")}
+                <Link to="/verify-certificate" className="hover:text-cyan-400 transition-colors">
+                  Verify Certificate
                 </Link>
               </li>
-              <li><Link to="/contact" className="hover:text-cyan-400 transition-colors">Talk with our team</Link></li>
+              <li>
+                <Link to="/contact" className="hover:text-cyan-400 transition-colors">
+                  {t("contact")} & Support
+                </Link>
+              </li>
             </ul>
           </div>
 

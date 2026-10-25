@@ -2,6 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "../lib/api";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
+
+function toDateTimeInput(value) {
+    const date = new Date(value);
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return localDate.toISOString().slice(0, 16);
+}
+
 export function AdminDashboard({ user }) {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState("overview");
@@ -10,10 +17,14 @@ export function AdminDashboard({ user }) {
     const [applications, setApplications] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [students, setStudents] = useState([]);
+    const [administrators, setAdministrators] = useState([]);
     const [categories, setCategories] = useState([]);
     const [courses, setCourses] = useState([]);
     const [classes, setClasses] = useState([]);
+    const [sessions, setSessions] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
+    const [faqs, setFaqs] = useState([]);
+    const [inquiries, setInquiries] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
     const [reportsData, setReportsData] = useState(null);
     const [reportsLoaded, setReportsLoaded] = useState(false);
@@ -42,6 +53,21 @@ export function AdminDashboard({ user }) {
     const [createCategoryModal, setCreateCategoryModal] = useState(false);
     const [createSessionModal, setCreateSessionModal] = useState(false);
     const [createAnnouncementModal, setCreateAnnouncementModal] = useState(false);
+    const [createAdministratorModal, setCreateAdministratorModal] = useState(false);
+    const [createUserModal, setCreateUserModal] = useState(false);
+    const [createFaqModal, setCreateFaqModal] = useState(false);
+    const [deleteRecord, setDeleteRecord] = useState(null);
+    const [deleteRecordError, setDeleteRecordError] = useState("");
+    const [editingCourseId, setEditingCourseId] = useState("");
+    const [editingCategoryId, setEditingCategoryId] = useState("");
+    const [editingClassId, setEditingClassId] = useState("");
+    const [editingSessionId, setEditingSessionId] = useState("");
+    const [editingAnnouncementId, setEditingAnnouncementId] = useState("");
+    const [editingFaqId, setEditingFaqId] = useState("");
+    const [administratorForm, setAdministratorForm] = useState({ fullName: "", email: "", password: "" });
+    const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", role: "student" });
+    const [faqForm, setFaqForm] = useState({ question: "", answer: "", isPublished: true, sortOrder: 0 });
+    const [inquiryFeedback, setInquiryFeedback] = useState("");
     // Forms
     const [courseForm, setCourseForm] = useState({
         title: "",
@@ -49,6 +75,7 @@ export function AdminDashboard({ user }) {
         categoryId: "",
         skillLevel: "Beginner",
         objectives: "",
+        status: "published",
     });
     const [classForm, setClassForm] = useState({
         title: "",
@@ -57,6 +84,7 @@ export function AdminDashboard({ user }) {
         capacity: 20,
         timeZone: "Africa/Addis_Ababa",
         description: "",
+        status: "active",
     });
     const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
     const [sessionForm, setSessionForm] = useState({
@@ -66,11 +94,13 @@ export function AdminDashboard({ user }) {
         startsAt: "",
         endsAt: "",
         meetingUrl: "",
+        status: "scheduled",
     });
     const [announcementForm, setAnnouncementForm] = useState({
         title: "",
         content: "",
         target: "all_students",
+        classroomId: "",
         priority: "normal",
     });
     const availableClasses = useMemo(
@@ -125,24 +155,31 @@ export function AdminDashboard({ user }) {
         setIsLoading(true);
         setLoadError("");
         try {
-            const [dash, appsRes, teachRes, studRes, catRes, courseRes, classRes, annRes] = await Promise.all([
+            const [dash, appsRes, teachRes, studRes, adminRes, catRes, courseRes, classRes, annRes, faqRes, inquiryRes] = await Promise.all([
                 apiRequest("/api/admin/dashboard"),
                 apiRequest("/api/admin/teacher-applications"),
                 apiRequest("/api/admin/teachers"),
                 apiRequest("/api/admin/students"),
+                apiRequest("/api/admin/administrators"),
                 apiRequest("/api/admin/categories"),
                 apiRequest("/api/admin/courses"),
                 apiRequest("/api/admin/classes"),
                 apiRequest("/api/admin/announcements"),
+                apiRequest("/api/admin/faqs"),
+                apiRequest("/api/admin/contact-inquiries"),
             ]);
             setMetrics(dash.metrics);
             setApplications(appsRes.applications);
             setTeachers(teachRes.teachers);
             setStudents(studRes.students);
+            setAdministrators(adminRes.administrators);
             setCategories(catRes.categories);
             setCourses(courseRes.courses);
             setClasses(classRes.classes);
+            setSessions(classRes.sessions || []);
             setAnnouncements(annRes.announcements);
+            setFaqs(faqRes.faqs);
+            setInquiries(inquiryRes.inquiries);
             return true;
         }
         catch (err) {
@@ -231,6 +268,80 @@ export function AdminDashboard({ user }) {
             setIsDeletingUser(false);
         }
     };
+    const handleDeleteRecord = async () => {
+        if (!deleteRecord) return;
+        setDeleteRecordError("");
+        try {
+            const response = await apiRequest(deleteRecord.endpoint, { method: "DELETE" });
+            setFeedback(response.message || `${deleteRecord.label} deleted.`);
+            setDeleteRecord(null);
+            await loadAll();
+        } catch (err) {
+            setDeleteRecordError(err instanceof Error ? err.message : `Could not delete ${deleteRecord.label.toLowerCase()}.`);
+        }
+    };
+    const handleCreateAdministrator = async (event) => {
+        event.preventDefault();
+        try {
+            await apiRequest("/api/admin/administrators", { method: "POST", body: JSON.stringify(administratorForm) });
+            setCreateAdministratorModal(false);
+            setAdministratorForm({ fullName: "", email: "", password: "" });
+            setFeedback("Administrator created.");
+            await loadAll();
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not create administrator.");
+        }
+    };
+    const handleCreateUser = async (event) => {
+        event.preventDefault();
+        try {
+            await apiRequest("/api/admin/users", { method: "POST", body: JSON.stringify(userForm) });
+            setCreateUserModal(false);
+            setUserForm({ fullName: "", email: "", password: "", role: "student" });
+            setFeedback(`${userForm.role === "student" ? "Student" : "Teacher"} account created.`);
+            await loadAll();
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not create account.");
+        }
+    };
+    const handleToggleUserStatus = async (account) => {
+        const status = account.accountStatus === "active" ? "suspended" : "active";
+        try {
+            const response = await apiRequest(`/api/admin/users/${account._id}/status`, {
+                method: "PATCH",
+                body: JSON.stringify({ status }),
+            });
+            setFeedback(response.message);
+            await loadAll();
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not update account status.");
+        }
+    };
+    const handleToggleAdministratorStatus = async (administrator) => {
+        const status = administrator.accountStatus === "active" ? "suspended" : "active";
+        try {
+            const response = await apiRequest(`/api/admin/administrators/${administrator._id}/status`, {
+                method: "PATCH",
+                body: JSON.stringify({ status }),
+            });
+            setFeedback(response.message);
+            await loadAll();
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not update administrator status.");
+        }
+    };
+    const handleToggleCategory = async (category) => {
+        try {
+            await apiRequest(`/api/admin/categories/${category._id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ isActive: !category.isActive }),
+            });
+            setFeedback(`Category ${category.isActive ? "hidden" : "published"}.`);
+            await loadAll();
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not update category visibility.");
+        }
+    };
     // Action: Place Student
     const handlePlaceStudent = async () => {
         if (!placementModal.classId)
@@ -269,20 +380,21 @@ export function AdminDashboard({ user }) {
     const handleCreateCourse = async (e) => {
         e.preventDefault();
         try {
-            await apiRequest("/api/admin/courses", {
-                method: "POST",
+            await apiRequest(editingCourseId ? `/api/admin/courses/${editingCourseId}` : "/api/admin/courses", {
+                method: editingCourseId ? "PATCH" : "POST",
                 body: JSON.stringify({
                     title: courseForm.title,
                     description: courseForm.description,
                     categoryId: courseForm.categoryId || categories[0]?._id,
                     skillLevel: courseForm.skillLevel,
                     learningObjectives: courseForm.objectives.split("\n").filter((o) => o.trim()),
-                    status: "published",
+                    status: courseForm.status,
                 }),
             });
             setCreateCourseModal(false);
-            setCourseForm({ title: "", description: "", categoryId: "", skillLevel: "Beginner", objectives: "" });
-            setFeedback("Program created.");
+            setEditingCourseId("");
+            setCourseForm({ title: "", description: "", categoryId: "", skillLevel: "Beginner", objectives: "", status: "published" });
+            setFeedback(editingCourseId ? "Program updated." : "Program created.");
             void loadAll();
         }
         catch (err) {
@@ -293,13 +405,14 @@ export function AdminDashboard({ user }) {
     const handleCreateCategory = async (e) => {
         e.preventDefault();
         try {
-            await apiRequest("/api/admin/categories", {
-                method: "POST",
+            await apiRequest(editingCategoryId ? `/api/admin/categories/${editingCategoryId}` : "/api/admin/categories", {
+                method: editingCategoryId ? "PATCH" : "POST",
                 body: JSON.stringify({ name: categoryForm.name, description: categoryForm.description }),
             });
             setCreateCategoryModal(false);
+            setEditingCategoryId("");
             setCategoryForm({ name: "", description: "" });
-            setFeedback("Category created.");
+            setFeedback(editingCategoryId ? "Category updated." : "Category created.");
             void loadAll();
         }
         catch (err) {
@@ -310,21 +423,22 @@ export function AdminDashboard({ user }) {
     const handleCreateClass = async (e) => {
         e.preventDefault();
         try {
-            await apiRequest("/api/admin/classes", {
-                method: "POST",
+            await apiRequest(editingClassId ? `/api/admin/classes/${editingClassId}` : "/api/admin/classes", {
+                method: editingClassId ? "PATCH" : "POST",
                 body: JSON.stringify({
                     title: classForm.title,
                     courseId: classForm.courseId || courses[0]?._id,
-                    teacherId: classForm.teacherId || undefined,
+                    teacherId: classForm.teacherId || (editingClassId ? null : undefined),
                     capacity: Number(classForm.capacity),
                     timeZone: classForm.timeZone,
                     description: classForm.description,
-                    status: "active",
+                    status: classForm.status,
                 }),
             });
             setCreateClassModal(false);
-            setClassForm({ title: "", courseId: "", teacherId: "", capacity: 20, timeZone: "Africa/Addis_Ababa", description: "" });
-            setFeedback("Cohort created.");
+            setEditingClassId("");
+            setClassForm({ title: "", courseId: "", teacherId: "", capacity: 20, timeZone: "Africa/Addis_Ababa", description: "", status: "active" });
+            setFeedback(editingClassId ? "Cohort updated." : "Cohort created.");
             void loadAll();
         }
         catch (err) {
@@ -335,8 +449,8 @@ export function AdminDashboard({ user }) {
     const handleScheduleSession = async (e) => {
         e.preventDefault();
         try {
-            await apiRequest("/api/admin/sessions", {
-                method: "POST",
+            await apiRequest(editingSessionId ? `/api/admin/sessions/${editingSessionId}` : "/api/admin/sessions", {
+                method: editingSessionId ? "PATCH" : "POST",
                 body: JSON.stringify({
                     classId: sessionForm.classId || classes[0]?._id,
                     title: sessionForm.title,
@@ -344,9 +458,11 @@ export function AdminDashboard({ user }) {
                     startsAt: new Date(sessionForm.startsAt).toISOString(),
                     endsAt: new Date(sessionForm.endsAt).toISOString(),
                     meetingUrl: sessionForm.meetingUrl,
+                    ...(editingSessionId ? { status: sessionForm.status } : {}),
                 }),
             });
             setCreateSessionModal(false);
+            setEditingSessionId("");
             setSessionForm({
                 classId: "",
                 title: "",
@@ -354,8 +470,9 @@ export function AdminDashboard({ user }) {
                 startsAt: "",
                 endsAt: "",
                 meetingUrl: "",
+                status: "scheduled",
             });
-            setFeedback("Session scheduled.");
+            setFeedback(editingSessionId ? "Session updated." : "Session scheduled.");
             void loadAll();
         }
         catch (err) {
@@ -366,17 +483,47 @@ export function AdminDashboard({ user }) {
     const handleCreateAnnouncement = async (e) => {
         e.preventDefault();
         try {
-            await apiRequest("/api/admin/announcements", {
-                method: "POST",
+            await apiRequest(editingAnnouncementId ? `/api/admin/announcements/${editingAnnouncementId}` : "/api/admin/announcements", {
+                method: editingAnnouncementId ? "PATCH" : "POST",
                 body: JSON.stringify(announcementForm),
             });
             setCreateAnnouncementModal(false);
-            setAnnouncementForm({ title: "", content: "", target: "all_students", priority: "normal" });
-            setFeedback("Announcement sent.");
+            setEditingAnnouncementId("");
+            setAnnouncementForm({ title: "", content: "", target: "all_students", classroomId: "", priority: "normal" });
+            setFeedback(editingAnnouncementId ? "Announcement updated." : "Announcement sent.");
             void loadAll();
         }
         catch (err) {
             setFeedback(err.message);
+        }
+    };
+    const handleSaveFaq = async (event) => {
+        event.preventDefault();
+        try {
+            await apiRequest(editingFaqId ? `/api/admin/faqs/${editingFaqId}` : "/api/admin/faqs", {
+                method: editingFaqId ? "PATCH" : "POST",
+                body: JSON.stringify({ ...faqForm, sortOrder: Number(faqForm.sortOrder) }),
+            });
+            setCreateFaqModal(false);
+            setEditingFaqId("");
+            setFaqForm({ question: "", answer: "", isPublished: true, sortOrder: 0 });
+            setFeedback(editingFaqId ? "FAQ updated." : "FAQ created.");
+            await loadAll();
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not save FAQ.");
+        }
+    };
+    const handleInquiryStatus = async (inquiry, status) => {
+        setInquiryFeedback("");
+        try {
+            await apiRequest(`/api/admin/contact-inquiries/${inquiry._id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ status }),
+            });
+            setInquiryFeedback("Inquiry status updated.");
+            await loadAll();
+        } catch (err) {
+            setInquiryFeedback(err instanceof Error ? err.message : "Could not update inquiry.");
         }
     };
     return (<div className="admin-workspace min-h-screen w-full px-4 py-8 sm:px-6 lg:px-8">
@@ -454,9 +601,12 @@ export function AdminDashboard({ user }) {
             { id: "overview", label: "Overview", icon: "📊" },
             { id: "teachers", label: `Instructors (${teachers.length})`, icon: "👨‍🏫" },
             { id: "students", label: `Learners (${students.length})`, icon: "🎓" },
+            { id: "administrators", label: `Admins (${administrators.length})`, icon: "🛡️" },
             { id: "courses", label: `Programs (${courses.length})`, icon: "📚" },
             { id: "classes", label: `Cohorts (${classes.length})`, icon: "🏫" },
-            { id: "announcements", label: `Announcements (${announcements.length})`, icon: "📢" },
+            { id: "announcements", label: `Updates (${announcements.length})`, icon: "📢" },
+            { id: "faqs", label: `FAQs (${faqs.length})`, icon: "❓" },
+            { id: "support", label: `Inbox (${inquiries.filter((item) => item.status !== "closed").length})`, icon: "✉️" },
             { id: "reports", label: "Reports & activity", icon: "📑" },
         ].map((tab) => (<button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => {
                 setActiveTab(tab.id);
@@ -471,9 +621,10 @@ export function AdminDashboard({ user }) {
 
       {/* 1. OVERVIEW TAB */}
       {activeTab === "overview" ? (<div className="space-y-8">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <MetricCard label="Learners" value={metrics.totalStudents ?? 0} icon="🎓"/>
             <MetricCard label="Active instructors" value={metrics.activeTeachers ?? 0} icon="👨‍🏫"/>
+            <MetricCard label="Active administrators" value={administrators.filter((item) => item.accountStatus === "active").length} icon="🛡️"/>
             <MetricCard label="Cohorts" value={metrics.activeClasses ?? 0} icon="🏫"/>
             <MetricCard label="Awaiting placement" value={metrics.pendingStudentPlacement ?? 0} icon="⏳"/>
           </div>
@@ -537,7 +688,13 @@ export function AdminDashboard({ user }) {
           <DashboardCard
             title="All instructors"
             subtitle="All Registered Teachers"
-            action={<input value={teacherSearch} onChange={(event) => setTeacherSearch(event.target.value)} aria-label="Search teachers" placeholder="Search name or email" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:w-56" />}
+            action={<div className="flex flex-wrap gap-2">
+              <input value={teacherSearch} onChange={(event) => setTeacherSearch(event.target.value)} aria-label="Search teachers" placeholder="Search name or email" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:w-56" />
+              <button type="button" onClick={() => {
+                setUserForm({ fullName: "", email: "", password: "", role: "teacher" });
+                setCreateUserModal(true);
+              }} className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-bold text-white">+ Add teacher</button>
+            </div>}
           >
             <div className="divide-y divide-slate-100">
               {visibleTeachers.map((teach) => (<div key={teach._id} className="flex flex-wrap items-center justify-between gap-4 py-4">
@@ -579,7 +736,13 @@ export function AdminDashboard({ user }) {
           <DashboardCard
             title="All learners"
             subtitle="All Registered Students"
-            action={<input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} aria-label="Search students" placeholder="Search name or email" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:w-56" />}
+            action={<div className="flex flex-wrap gap-2">
+              <input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} aria-label="Search students" placeholder="Search name or email" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:w-56" />
+              <button type="button" onClick={() => {
+                setUserForm({ fullName: "", email: "", password: "", role: "student" });
+                setCreateUserModal(true);
+              }} className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-bold text-white">+ Add learner</button>
+            </div>}
           >
             <div className="divide-y divide-slate-100">
               {visibleStudents.map((stud) => (<div key={stud._id} className="flex flex-wrap items-center justify-between gap-4 py-4">
@@ -589,6 +752,7 @@ export function AdminDashboard({ user }) {
                       <Badge variant={stud.studentProfile?.placementStatus === "assigned" ? "emerald" : "amber"}>
                         {stud.studentProfile?.placementStatus || "pending"}
                       </Badge>
+                      <Badge variant={stud.accountStatus === "active" ? "cyan" : "rose"}>{stud.accountStatus}</Badge>
                     </div>
                     <p className="text-xs text-slate-500">{stud.email}</p>
                     <p className="mt-1 text-xs text-slate-600">
@@ -596,6 +760,9 @@ export function AdminDashboard({ user }) {
                     </p>
                   </div>
                   <div>
+                    <button type="button" onClick={() => void handleToggleUserStatus(stud)} className={`mb-2 rounded-lg px-3 py-1.5 text-xs font-bold ${stud.accountStatus === "active" ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"}`}>
+                      {stud.accountStatus === "active" ? "Suspend" : "Activate"}
+                    </button>
                     <button
                       onClick={() => {
                           const classesForStudent = getPlacementClasses(stud._id);
@@ -625,6 +792,43 @@ export function AdminDashboard({ user }) {
         </div>) : null}
 
       {/* 4. COURSES TAB */}
+      {activeTab === "administrators" ? (<div className="space-y-6">
+          <DashboardCard
+            title="Administrator access"
+            subtitle="Create and manage trusted administrator accounts"
+            action={<button type="button" onClick={() => setCreateAdministratorModal(true)} className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-900">+ Add administrator</button>}
+          >
+            <div className="divide-y divide-slate-100">
+              {administrators.map((administrator) => {
+                  const isCurrentUser = administrator._id === user.id;
+                  const activeCount = administrators.filter((item) => item.accountStatus === "active").length;
+                  const canDisable = !isCurrentUser && !(administrator.accountStatus === "active" && activeCount <= 1);
+                  return (<div key={administrator._id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-slate-900">{administrator.fullName}</h4>
+                        {isCurrentUser && <Badge variant="cyan">You</Badge>}
+                      </div>
+                      <p className="text-sm text-slate-500">{administrator.email}</p>
+                      <p className="mt-1 text-xs text-slate-400">Added {new Date(administrator.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={administrator.accountStatus === "active" ? "emerald" : "rose"}>{administrator.accountStatus}</Badge>
+                      {!isCurrentUser && <button type="button" disabled={!canDisable} onClick={() => void handleToggleAdministratorStatus(administrator)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
+                        {administrator.accountStatus === "active" ? "Suspend" : "Activate"}
+                      </button>}
+                      {!isCurrentUser && <button type="button" onClick={() => setDeleteUserModal({ id: administrator._id, name: administrator.fullName, role: "admin" })} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>}
+                    </div>
+                  </div>);
+              })}
+              {administrators.length === 0 && <EmptyState title="No administrator accounts found." />}
+            </div>
+            <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900 ring-1 ring-amber-200">
+              For account safety, you cannot suspend or delete yourself, and the last active administrator cannot be removed.
+            </p>
+          </DashboardCard>
+        </div>) : null}
+
       {activeTab === "courses" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold text-slate-900">Programs and categories</h3>
@@ -637,6 +841,28 @@ export function AdminDashboard({ user }) {
               </button>
             </div>
           </div>
+
+          <DashboardCard title="Learning categories" subtitle="Organize the public course catalog">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {categories.map((category) => (<div key={category._id} className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 p-4">
+                <div className="min-w-0">
+                  <h4 className="truncate text-sm font-bold text-slate-900">{category.name}</h4>
+                  <p className="mt-1 line-clamp-2 text-xs text-slate-500">{category.description || "No description"}</p>
+                  <Badge variant={category.isActive ? "emerald" : "slate"}>{category.isActive ? "Active" : "Hidden"}</Badge>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => void handleToggleCategory(category)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">{category.isActive ? "Hide" : "Publish"}</button>
+                  <button type="button" onClick={() => {
+                    setEditingCategoryId(category._id);
+                    setCategoryForm({ name: category.name, description: category.description || "" });
+                    setCreateCategoryModal(true);
+                  }} className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-stone-50">Edit</button>
+                  <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/categories/${category._id}`, label: `Category “${category.name}”` })} className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                </div>
+              </div>))}
+              {categories.length === 0 && <EmptyState title="Create a category to organize courses." />}
+            </div>
+          </DashboardCard>
 
           <div className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4 sm:flex-row">
             <input
@@ -670,15 +896,31 @@ export function AdminDashboard({ user }) {
             {pagedCourses.map((course) => (<div key={course._id} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <Badge variant="cyan">{course.category?.name || "General"}</Badge>
-                  <span className="text-xs font-semibold text-slate-500">{course.skillLevel}</span>
+                  <Badge variant={course.status === "published" ? "emerald" : "slate"}>{course.status}</Badge>
                 </div>
                 <h4 className="text-base font-bold text-slate-900">{course.title}</h4>
+                <p className="text-xs font-semibold text-slate-500">{course.skillLevel}</p>
                 <p className="text-xs text-slate-600 line-clamp-3">{course.description}</p>
                 <div className="border-t border-slate-100 pt-3">
                   <p className="text-[11px] font-bold text-slate-500">Objectives:</p>
                   <ul className="mt-1 space-y-1 text-xs text-slate-600">
                     {course.learningObjectives?.slice(0, 2).map((o, idx) => (<li key={idx} className="flex gap-1"><span>•</span><span>{o}</span></li>))}
                   </ul>
+                </div>
+                <div className="flex gap-2 border-t border-slate-100 pt-3">
+                  <button type="button" onClick={() => {
+                    setEditingCourseId(course._id);
+                    setCourseForm({
+                      title: course.title,
+                      description: course.description,
+                      categoryId: course.category?._id || "",
+                      skillLevel: course.skillLevel || "Beginner",
+                      objectives: (course.learningObjectives || []).join("\n"),
+                      status: course.status || "draft",
+                    });
+                    setCreateCourseModal(true);
+                  }} className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Edit program</button>
+                  <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/courses/${course._id}`, label: `Program “${course.title}”` })} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
                 </div>
               </div>))}
             {visibleCourses.length === 0 && <EmptyState title={courses.length ? "No courses match those filters" : "No courses yet"} description={courses.length ? "Try a different search or category." : "Run the catalog seed or create a course after setting up a learning category."} />}
@@ -727,6 +969,57 @@ export function AdminDashboard({ user }) {
                 >
                   {cls.teacher ? "Change teacher" : "Assign teacher"}
                 </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => {
+                    setEditingClassId(cls._id);
+                    setClassForm({
+                      title: cls.title,
+                      courseId: cls.course?._id || "",
+                      teacherId: cls.teacher?._id || "",
+                      capacity: cls.capacity,
+                      timeZone: cls.timeZone || "Africa/Addis_Ababa",
+                      description: cls.description || "",
+                      status: cls.status,
+                    });
+                    setCreateClassModal(true);
+                  }} className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Edit cohort</button>
+                  <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/classes/${cls._id}`, label: `Cohort “${cls.title}” and its related learning records` })} className="rounded-xl border border-rose-200 px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                </div>
+                <div className="border-t border-slate-100 pt-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h5 className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Sessions</h5>
+                    <button type="button" disabled={!cls.teacher?._id} onClick={() => {
+                      setEditingSessionId("");
+                      setSessionForm({ classId: cls._id, title: "", description: "", startsAt: "", endsAt: "", meetingUrl: "", status: "scheduled" });
+                      setCreateSessionModal(true);
+                    }} className="text-xs font-bold text-emerald-800 hover:underline disabled:cursor-not-allowed disabled:opacity-40">+ Schedule</button>
+                  </div>
+                  <div className="space-y-2">
+                    {sessions.filter((session) => String(session.classroom) === cls._id).map((session) => (<div key={session._id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-stone-50 p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-slate-800">{session.title}</p>
+                        <p className="text-[11px] text-slate-500">{new Date(session.startsAt).toLocaleString()} · {session.status}</p>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button type="button" onClick={() => {
+                          setEditingSessionId(session._id);
+                          setSessionForm({
+                            classId: cls._id,
+                            title: session.title,
+                            description: session.description || "",
+                            startsAt: toDateTimeInput(session.startsAt),
+                            endsAt: toDateTimeInput(session.endsAt),
+                            meetingUrl: session.meetingUrl || "",
+                            status: session.status,
+                          });
+                          setCreateSessionModal(true);
+                        }} className="rounded-md border border-stone-200 px-2 py-1 text-[11px] font-bold text-slate-700">Edit</button>
+                        <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/sessions/${session._id}`, label: `Session “${session.title}” and its attendance` })} className="rounded-md border border-rose-200 px-2 py-1 text-[11px] font-bold text-rose-700">Delete</button>
+                      </div>
+                    </div>))}
+                    {!sessions.some((session) => String(session.classroom) === cls._id) && <p className="text-xs text-slate-400">No sessions scheduled.</p>}
+                  </div>
+                </div>
               </div>))}
             {classes.length === 0 && <EmptyState title="No classes yet" description="Create a class and assign an active teacher to begin scheduling lessons." />}
           </div>
@@ -755,8 +1048,83 @@ export function AdminDashboard({ user }) {
                     <span>•</span>
                     <span>Date: {new Date(ann.createdAt).toLocaleDateString()}</span>
                   </div>
+                  <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
+                    <button type="button" onClick={() => {
+                      setEditingAnnouncementId(ann._id);
+                      setAnnouncementForm({
+                        title: ann.title,
+                        content: ann.content,
+                        target: ann.target,
+                        classroomId: ann.classroom?._id || "",
+                        priority: ann.priority,
+                      });
+                      setCreateAnnouncementModal(true);
+                    }} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Edit</button>
+                    <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/announcements/${ann._id}`, label: `Announcement “${ann.title}”` })} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                  </div>
                 </div>)))}
           </div>
+        </div>) : null}
+
+      {activeTab === "faqs" ? (<div className="space-y-6">
+          <DashboardCard
+            title="Frequently asked questions"
+            subtitle="Manage the answers shown in the public help center"
+            action={<button type="button" onClick={() => {
+              setEditingFaqId("");
+              setFaqForm({ question: "", answer: "", isPublished: true, sortOrder: faqs.length });
+              setCreateFaqModal(true);
+            }} className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-900">+ Add FAQ</button>}
+          >
+            <div className="divide-y divide-slate-100">
+              {faqs.map((faq) => (<div key={faq._id} className="flex flex-wrap items-start justify-between gap-4 py-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-bold text-slate-900">{faq.question}</h4>
+                    <Badge variant={faq.isPublished ? "emerald" : "slate"}>{faq.isPublished ? "Published" : "Draft"}</Badge>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{faq.answer}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => {
+                    setEditingFaqId(faq._id);
+                    setFaqForm({ question: faq.question, answer: faq.answer, isPublished: faq.isPublished, sortOrder: faq.sortOrder || 0 });
+                    setCreateFaqModal(true);
+                  }} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Edit</button>
+                  <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/faqs/${faq._id}`, label: "FAQ" })} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                </div>
+              </div>))}
+              {faqs.length === 0 && <EmptyState title="No FAQs yet." description="Add an answer to help learners and instructors." />}
+            </div>
+          </DashboardCard>
+        </div>) : null}
+
+      {activeTab === "support" ? (<div className="space-y-6">
+          <DashboardCard title="Contact inbox" subtitle={`${inquiries.filter((inquiry) => inquiry.status !== "closed").length} inquiries need follow-up`}>
+            {inquiryFeedback && <p role="status" className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{inquiryFeedback}</p>}
+            <div className="space-y-4">
+              {inquiries.map((inquiry) => (<article key={inquiry._id} className="rounded-2xl border border-slate-200 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-bold text-slate-900">{inquiry.subject}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{inquiry.fullName} · <a className="text-blue-700 hover:underline" href={`mailto:${inquiry.email}`}>{inquiry.email}</a></p>
+                  </div>
+                  <Badge variant={inquiry.status === "closed" ? "slate" : inquiry.status === "in_progress" ? "amber" : "cyan"}>{inquiry.status.replace("_", " ")}</Badge>
+                </div>
+                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">{inquiry.message}</p>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                  <span className="text-xs text-slate-400">{new Date(inquiry.createdAt).toLocaleString()}</span>
+                  <div className="flex gap-2">
+                    {inquiry.status !== "in_progress" && <button type="button" onClick={() => void handleInquiryStatus(inquiry, "in_progress")} className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-50">Mark in progress</button>}
+                    {inquiry.status !== "closed" && <button type="button" onClick={() => void handleInquiryStatus(inquiry, "closed")} className="rounded-lg bg-emerald-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-900">Close inquiry</button>}
+                    {inquiry.status !== "new" && <button type="button" onClick={() => void handleInquiryStatus(inquiry, "new")} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">Reopen</button>}
+                    <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/contact-inquiries/${inquiry._id}`, label: "Contact inquiry" })} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                  </div>
+                </div>
+              </article>))}
+              {inquiries.length === 0 && <EmptyState title="Inbox is clear." description="New contact submissions will appear here." />}
+            </div>
+          </DashboardCard>
         </div>) : null}
 
       {/* 7. REPORTS & AUDIT LOGS TAB */}
@@ -892,7 +1260,7 @@ export function AdminDashboard({ user }) {
       </Modal>
 
       <Modal
-        title={`Delete ${deleteUserModal?.role === "teacher" ? "instructor" : "learner"} account?`}
+        title={`Delete ${deleteUserModal?.role === "teacher" ? "instructor" : deleteUserModal?.role === "admin" || deleteUserModal?.role === "hub_admin" ? "administrator" : "learner"} account?`}
         isOpen={Boolean(deleteUserModal)}
         onClose={() => {
             if (!isDeletingUser) setDeleteUserModal(null);
@@ -903,7 +1271,7 @@ export function AdminDashboard({ user }) {
             This will deactivate <strong>{deleteUserModal?.name}</strong>’s sign-in access, anonymize their profile, and remove them from active class rosters. Historical learning records will be retained.
           </p>
           <p className="text-xs leading-5 text-rose-700">
-            This cannot be undone. Confirm that you selected the right account.
+            This cannot be undone. You cannot delete your own administrator account or the last active administrator.
           </p>
           {deleteUserError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">{deleteUserError}</p>}
           <div className="flex justify-end gap-2">
@@ -917,8 +1285,93 @@ export function AdminDashboard({ user }) {
         </div>
       </Modal>
 
+      <Modal title={`Create ${userForm.role === "student" ? "learner" : "teacher"} account`} isOpen={createUserModal} onClose={() => {
+        setCreateUserModal(false);
+        setUserForm({ fullName: "", email: "", password: "", role: "student" });
+      }}>
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <p className="rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-900 ring-1 ring-blue-200">
+            This account will be email-verified and active. New learners still need placement into a cohort.
+          </p>
+          <label className="block text-xs font-bold text-slate-700">Full name
+            <input required minLength={2} maxLength={100} value={userForm.fullName} onChange={(event) => setUserForm({ ...userForm, fullName: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+          </label>
+          <label className="block text-xs font-bold text-slate-700">Email address
+            <input required type="email" value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+          </label>
+          <label className="block text-xs font-bold text-slate-700">Temporary password
+            <input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+            <span className="mt-1 block text-[11px] font-normal text-slate-500">At least 12 characters. Share it securely with the account owner.</span>
+          </label>
+          <button type="submit" className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900">Create account</button>
+        </form>
+      </Modal>
+
+      <Modal title="Create administrator" isOpen={createAdministratorModal} onClose={() => {
+        setCreateAdministratorModal(false);
+        setAdministratorForm({ fullName: "", email: "", password: "" });
+      }}>
+        <form onSubmit={handleCreateAdministrator} className="space-y-4">
+          <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900 ring-1 ring-amber-200">Administrators can manage users and platform data. Only add people you trust.</p>
+          <label className="block text-xs font-bold text-slate-700">Full name
+            <input required minLength={2} maxLength={100} value={administratorForm.fullName} onChange={(event) => setAdministratorForm({ ...administratorForm, fullName: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+          </label>
+          <label className="block text-xs font-bold text-slate-700">Email address
+            <input required type="email" value={administratorForm.email} onChange={(event) => setAdministratorForm({ ...administratorForm, email: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+          </label>
+          <label className="block text-xs font-bold text-slate-700">Temporary password
+            <input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={administratorForm.password} onChange={(event) => setAdministratorForm({ ...administratorForm, password: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+            <span className="mt-1 block text-[11px] font-normal text-slate-500">At least 12 characters. Share it securely and ask the new administrator to change it.</span>
+          </label>
+          <button type="submit" className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900">Create administrator</button>
+        </form>
+      </Modal>
+
+      <Modal title={editingFaqId ? "Edit FAQ" : "Add FAQ"} isOpen={createFaqModal} onClose={() => {
+        setCreateFaqModal(false);
+        setEditingFaqId("");
+        setFaqForm({ question: "", answer: "", isPublished: true, sortOrder: 0 });
+      }}>
+        <form onSubmit={handleSaveFaq} className="space-y-4">
+          <label className="block text-xs font-bold text-slate-700">Question
+            <input required minLength={5} value={faqForm.question} onChange={(event) => setFaqForm({ ...faqForm, question: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+          </label>
+          <label className="block text-xs font-bold text-slate-700">Answer
+            <textarea required minLength={10} rows={5} value={faqForm.answer} onChange={(event) => setFaqForm({ ...faqForm, answer: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-bold text-slate-700">Sort order
+              <input type="number" value={faqForm.sortOrder} onChange={(event) => setFaqForm({ ...faqForm, sortOrder: Number(event.target.value) })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
+            </label>
+            <label className="flex items-center gap-2 self-end rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-700">
+              <input type="checkbox" checked={faqForm.isPublished} onChange={(event) => setFaqForm({ ...faqForm, isPublished: event.target.checked })}/>
+              Publish publicly
+            </label>
+          </div>
+          <button type="submit" className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900">{editingFaqId ? "Save FAQ" : "Create FAQ"}</button>
+        </form>
+      </Modal>
+
+      <Modal title={`Delete ${deleteRecord?.label || "record"}?`} isOpen={Boolean(deleteRecord)} onClose={() => {
+        setDeleteRecord(null);
+        setDeleteRecordError("");
+      }}>
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-slate-700">This action cannot be undone. Related learning data will be removed only where stated.</p>
+          {deleteRecordError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">{deleteRecordError}</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setDeleteRecord(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700">Cancel</button>
+            <button type="button" onClick={() => void handleDeleteRecord()} className="rounded-xl bg-rose-700 px-4 py-2 text-sm font-bold text-white hover:bg-rose-800">Delete permanently</button>
+          </div>
+        </div>
+      </Modal>
+
       {/* MODAL: Create Course */}
-      <Modal title={t("createCourse")} isOpen={createCourseModal} onClose={() => setCreateCourseModal(false)}>
+      <Modal title={editingCourseId ? "Edit program" : t("createCourse")} isOpen={createCourseModal} onClose={() => {
+        setCreateCourseModal(false);
+        setEditingCourseId("");
+        setCourseForm({ title: "", description: "", categoryId: "", skillLevel: "Beginner", objectives: "", status: "published" });
+      }}>
         <form onSubmit={handleCreateCourse} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>
@@ -948,14 +1401,27 @@ export function AdminDashboard({ user }) {
             <label className="block text-xs font-bold text-slate-700">Objectives (one per line)</label>
             <textarea rows={2} value={courseForm.objectives} onChange={(e) => setCourseForm({ ...courseForm, objectives: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700">Visibility</label>
+            <select value={courseForm.status} onChange={(e) => setCourseForm({ ...courseForm, status: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-sm">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
           <button type="submit" disabled={categories.length === 0} className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-            {t("createCourse")}
+            {editingCourseId ? "Save program" : t("createCourse")}
           </button>
         </form>
       </Modal>
 
       {/* MODAL: Create Class */}
-      <Modal title={t("createClass")} isOpen={createClassModal} onClose={() => setCreateClassModal(false)}>
+      <Modal title={editingClassId ? "Edit cohort" : t("createClass")} isOpen={createClassModal} onClose={() => {
+        setCreateClassModal(false);
+        setEditingClassId("");
+        setClassForm({ title: "", courseId: "", teacherId: "", capacity: 20, timeZone: "Africa/Addis_Ababa", description: "", status: "active" });
+      }}>
         <form onSubmit={handleCreateClass} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>
@@ -980,14 +1446,35 @@ export function AdminDashboard({ user }) {
             <label className="block text-xs font-bold text-slate-700">Cohort capacity</label>
             <input type="number" min={1} max={100} value={classForm.capacity} onChange={(e) => setClassForm({ ...classForm, capacity: Number(e.target.value) })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700">Time zone</label>
+            <input value={classForm.timeZone} onChange={(e) => setClassForm({ ...classForm, timeZone: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700">Description</label>
+            <textarea rows={2} value={classForm.description} onChange={(e) => setClassForm({ ...classForm, description: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700">Status</label>
+            <select value={classForm.status} onChange={(e) => setClassForm({ ...classForm, status: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-sm">
+              <option value="planned">Planned</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
           <button type="submit" disabled={courses.length === 0} className="w-full rounded-xl bg-cyan-600 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-            {t("createClass")}
+            {editingClassId ? "Save cohort" : t("createClass")}
           </button>
         </form>
       </Modal>
 
       {/* MODAL: Create Category */}
-      <Modal title={t("createCategory")} isOpen={createCategoryModal} onClose={() => setCreateCategoryModal(false)}>
+      <Modal title={editingCategoryId ? "Edit category" : t("createCategory")} isOpen={createCategoryModal} onClose={() => {
+        setCreateCategoryModal(false);
+        setEditingCategoryId("");
+        setCategoryForm({ name: "", description: "" });
+      }}>
         <form onSubmit={handleCreateCategory} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">Category name</label>
@@ -998,13 +1485,17 @@ export function AdminDashboard({ user }) {
             <textarea rows={2} value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
           </div>
           <button type="submit" className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white">
-            {t("createCategory")}
+            {editingCategoryId ? "Save category" : t("createCategory")}
           </button>
         </form>
       </Modal>
 
       {/* MODAL: Schedule Session */}
-      <Modal title={t("scheduleSession")} isOpen={createSessionModal} onClose={() => setCreateSessionModal(false)}>
+      <Modal title={editingSessionId ? "Edit session" : t("scheduleSession")} isOpen={createSessionModal} onClose={() => {
+        setCreateSessionModal(false);
+        setEditingSessionId("");
+        setSessionForm({ classId: "", title: "", description: "", startsAt: "", endsAt: "", meetingUrl: "", status: "scheduled" });
+      }}>
         <form onSubmit={handleScheduleSession} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("course")} / cohort</label>
@@ -1018,6 +1509,10 @@ export function AdminDashboard({ user }) {
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>
             <input required minLength={3} type="text" value={sessionForm.title} onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="Example: Live session 1 — Introduction to React"/>
           </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700">{t("description")}</label>
+            <textarea rows={2} value={sessionForm.description} onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700">{t("startTime")}</label>
@@ -1030,16 +1525,28 @@ export function AdminDashboard({ user }) {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("meetingUrl")}</label>
-            <input required type="url" value={sessionForm.meetingUrl} onChange={(e) => setSessionForm({ ...sessionForm, meetingUrl: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="https://meet.google.com/..."/>
+            <input type="url" value={sessionForm.meetingUrl} onChange={(e) => setSessionForm({ ...sessionForm, meetingUrl: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="https://meet.google.com/..."/>
           </div>
+          {editingSessionId && <div>
+            <label className="block text-xs font-bold text-slate-700">Session status</label>
+            <select value={sessionForm.status} onChange={(e) => setSessionForm({ ...sessionForm, status: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-sm">
+              <option value="scheduled">Scheduled</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>}
           <button type="submit" disabled={schedulableClasses.length === 0} className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-            Schedule session
+            {editingSessionId ? "Save session" : "Schedule session"}
           </button>
         </form>
       </Modal>
 
       {/* MODAL: Create Announcement */}
-      <Modal title="Send an announcement" isOpen={createAnnouncementModal} onClose={() => setCreateAnnouncementModal(false)}>
+      <Modal title={editingAnnouncementId ? "Edit announcement" : "Send an announcement"} isOpen={createAnnouncementModal} onClose={() => {
+        setCreateAnnouncementModal(false);
+        setEditingAnnouncementId("");
+        setAnnouncementForm({ title: "", content: "", target: "all_students", classroomId: "", priority: "normal" });
+      }}>
         <form onSubmit={handleCreateAnnouncement} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>
@@ -1056,6 +1563,7 @@ export function AdminDashboard({ user }) {
                 <option value="all_students">All learners</option>
                 <option value="all_teachers">All instructors</option>
                 <option value="all">All users</option>
+                <option value="classroom">Specific cohort</option>
               </select>
             </div>
             <div>
@@ -1067,8 +1575,15 @@ export function AdminDashboard({ user }) {
               </select>
             </div>
           </div>
+          {announcementForm.target === "classroom" && <div>
+            <label className="block text-xs font-bold text-slate-700">Cohort</label>
+            <select required value={announcementForm.classroomId} onChange={(e) => setAnnouncementForm({ ...announcementForm, classroomId: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-xs">
+              <option value="">Select a cohort</option>
+              {classes.map((classroom) => <option key={classroom._id} value={classroom._id}>{classroom.title}</option>)}
+            </select>
+          </div>}
           <button type="submit" className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white">
-            Send announcement
+            {editingAnnouncementId ? "Save announcement" : "Send announcement"}
           </button>
         </form>
       </Modal>

@@ -5,17 +5,20 @@ import { useAuth } from "../context/AuthContext";
 import { BrandLogo } from "./BrandLogo";
 
 const navigationItems = [
-    { to: "/", label: "home", end: true },
-    { to: "/categories", label: "explore" },
-    { to: "/about", label: "about" },
-    { to: "/faq", label: "faq" },
-    { to: "/contact", label: "contact" },
+    { to: "/", label: "Home", i18nKey: "home", end: true },
+    { to: "/courses", label: "Courses", i18nKey: "courses" },
+    { to: "/categories", label: "Categories", i18nKey: "explore" },
+    { to: "/how-it-works", label: "How It Works", i18nKey: "howItWorks" },
+    { to: "/pricing", label: "Plans", i18nKey: "pricing" },
+    { to: "/instructors", label: "Educators", i18nKey: "teachers" },
+    { to: "/help", label: "Help", i18nKey: "help" },
+    { to: "/about", label: "About", i18nKey: "about" },
 ];
 
 function navLinkClass({ isActive }) {
-    return `rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${
+    return `rounded-xl px-3 py-1.5 text-xs font-bold transition-colors whitespace-nowrap ${
         isActive
-            ? "bg-emerald-50 text-emerald-900"
+            ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
     }`;
 }
@@ -23,17 +26,21 @@ function navLinkClass({ isActive }) {
 function NavigationLinks({ onNavigate }) {
     const { t } = useTranslation();
 
-    return navigationItems.map(({ to, label, end }) => (
-        <NavLink
-            key={to}
-            to={to}
-            end={end}
-            onClick={onNavigate}
-            className={navLinkClass}
-        >
-            {t(label)}
-        </NavLink>
-    ));
+    return navigationItems.map(({ to, label, i18nKey, end }) => {
+        const translated = i18nKey ? t(i18nKey) : label;
+        const displayText = translated && translated !== i18nKey ? translated : label;
+        return (
+            <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={onNavigate}
+                className={navLinkClass}
+            >
+                {displayText}
+            </NavLink>
+        );
+    });
 }
 
 export function Navbar() {

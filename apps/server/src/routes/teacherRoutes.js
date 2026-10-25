@@ -11,6 +11,7 @@ import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.js";
 import { AssessmentModel } from "../models/Assessment.js";
 import { AttendanceRecordModel } from "../models/AttendanceRecord.js";
 import { UserModel } from "../models/User.js";
+import { DiscussionModel } from "../models/Discussion.js";
 export const teacherRouter = Router();
 teacherRouter.use(requireAuth, requireRole("teacher"));
 // 1. Teacher Dashboard
@@ -55,7 +56,11 @@ teacherRouter.get("/classes", asyncHandler(async (req, res) => {
         .populate("students", "fullName email studentProfile")
         .sort({ createdAt: -1 })
         .lean();
-    res.json({ classes });
+    const classIds = classes.map((classroom) => classroom._id);
+    const sessions = await ClassSessionModel.find({ classroom: { $in: classIds } })
+        .sort({ startsAt: 1 })
+        .lean();
+    res.json({ classes, sessions });
 }));
 // 3. Single class details with sessions & students
 teacherRouter.get("/classes/:classId", asyncHandler(async (req, res) => {
@@ -306,4 +311,84 @@ teacherRouter.get("/students", asyncHandler(async (req, res) => {
         .select("fullName email studentProfile createdAt")
         .lean();
     res.json({ students });
+}));
+
+// 13. Classroom Discussions
+teacherRouter.get("/classes/:classId/discussions", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const isTeacher = await ClassroomModel.exists({ _id: req.params.classId, teacher: teacherId });
+    if (!isTeacher) {
+        throw new ApiError(403, "You can only view discussions for classes assigned to you.");
+    }
+    const discussions = await DiscussionModel.find({ classroom: req.params.classId })
+        .populate("author", "fullName name email avatarUrl role")
+        .populate("replies.author", "fullName name email avatarUrl role")
+        .sort({ isPinned: -1, createdAt: -1 })
+        .lean();
+    res.json({ discussions });
+}));
+
+teacherRouter.post("/classes/:classId/discussions", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const isTeacher = await ClassroomModel.exists({ _id: req.params.classId, teacher: teacherId });
+    if (!isTeacher) {
+        throw new ApiError(403, "You can only post discussions in classes assigned to you.");
+    }
+    const data = z.object({
+        title: z.string().trim().min(3).max(150),
+        content: z.string().trim().min(5).max(3000),
+        category: z.enum(["general", "assignment", "lesson", "question", "announcement"]).default("general"),
+        isPinned: z.boolean().default(false),
+    }).parse(req.body);
+
+    const discussion = await DiscussionModel.create({
+        classroom: req.params.classId,
+        author: teacherId,
+        title: data.title,
+        content: data.content,
+        category: data.category,
+        isPinned: data.isPinned,
+    });
+
+    const populated = await DiscussionModel.findById(discussion._id)
+        .populate("author", "fullName name email avatarUrl role")
+        .lean();
+
+    res.status(201).json({ message: "Discussion topic created.", discussion: populated });
+}));
+
+teacherRouter.post("/classes/:classId/discussions/:discussionId/reply", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const isTeacher = await ClassroomModel.exists({ _id: req.params.classId, teacher: teacherId });
+    if (!isTeacher) {
+        throw new ApiError(403, "You can only reply to discussions in classes assigned to you.");
+    }
+    const data = z.object({
+        content: z.string().trim().min(2).max(2000),
+    }).parse(req.body);
+
+    const discussion = await DiscussionModel.findOne({ _id: req.params.discussionId, classroom: req.params.classId });
+    if (!discussion) {
+        throw new ApiError(404, "Discussion not found.");
+    }
+
+    discussion.replies.push({
+        author: teacherId,
+        content: data.content,
+        createdAt: new Date(),
+    });
+    await discussion.save();
+
+    const updated = await DiscussionModel.findById(discussion._id)
+        .populate("author", "fullName name email avatarUrl role")
+        .populate("replies.author", "fullName name email avatarUrl role")
+        .lean();
+
+    res.status(201).json({ message: "Reply added.", discussion: updated });
+}));
+
+// 14. Notifications
+teacherRouter.patch("/notifications/read-all", asyncHandler(async (req, res) => {
+    await NotificationModel.updateMany({ user: req.user.id, isRead: false }, { isRead: true });
+    res.json({ message: "All notifications marked as read." });
 }));

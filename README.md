@@ -1,4 +1,4 @@
-# LearnHUB — Complete Online Learning & Education Management Platform
+# LearnHUB — Universal Online Learning & Education Management Platform
 
 LearnHUB is a modern, responsive, and secure full-stack education management platform built using the **MERN** stack (MongoDB, Express.js, React.js, Node.js) with JavaScript throughout.
 
@@ -7,12 +7,13 @@ LearnHUB is a modern, responsive, and secure full-stack education management pla
 ## 🌟 Key Highlights & Architectural Features
 
 ### 1. Non-Negotiable Business Rules (Server-Enforced)
-- **Hub Admin Controls Teacher Hiring**: Teachers cannot approve themselves or hire other teachers. All teacher applicants remain pending until reviewed and approved or rejected with stated reasons by the Hub Admin.
-- **Hub Admin Controls Student Placement**: Students submit learning interests, skill levels, and schedule preferences upon registration. The Hub Admin reviews student profiles and assigns each student to an appropriate course, class, and teacher. Students cannot self-assign.
-- **Teachers Teach Assigned Classes**: Strict server-side RBAC ensures teachers can only view and manage classes and students assigned directly to them.
+- **Hub Admin Controls Teacher Hiring**: Teachers cannot approve themselves or hire other teachers. All teacher applicants remain pending until reviewed and approved or rejected by the Hub Admin.
+- **Hub Admin Controls Student Placement**: Students submit learning interests, skill levels, and schedule preferences upon registration. The Hub Admin assigns each student to an appropriate course, class, and teacher. Students cannot self-assign.
+- **Teachers Teach Assigned Classes**: Strict server-side RBAC ensures teachers can only view and manage classes assigned directly to them.
 - **Students Access Assigned Learning Only**: Students have verified access exclusively to their enrolled courses, authorized Google Meet links, class materials, assignments, and quizzes.
-- **Server-Side Authorization on Every Protected Endpoint**: Authorization is enforced using cryptographic JWT sessions in HttpOnly SameSite cookies and verified in middleware, preventing unauthorized ID tampering.
-- **Real Data & Functionality**: All users, courses, classes, sessions, attendance, assignments, submissions, quizzes, notifications, and audit logs are stored in MongoDB.
+- **Server-Side Authorization on Every Protected Endpoint**: Authorization uses cryptographic JWT sessions in HttpOnly SameSite cookies, verified in middleware.
+- **Admin Management Workspace**: Administrators can create, activate, suspend, and remove accounts; manage categories, courses, cohorts, sessions, announcements, FAQs, and contact inquiries; and review changes recorded in the audit log. Deleting a cohort removes its associated learning records, while account deletion anonymizes the account and retains historical learning records.
+- **Real Data & Functionality**: All users, courses, classes, sessions, attendance, assignments, submissions, quizzes, notifications, and certificates are stored in MongoDB.
 
 ### 2. Dual Language Support (አማርኛ / English)
 - **Primary Language**: Amharic (አማርኛ) as the default interface language.
@@ -25,21 +26,44 @@ LearnHUB is a modern, responsive, and secure full-stack education management pla
 - Teacher schedule conflict prevention prevents double-booking teachers for overlapping sessions.
 
 ### 4. Continuous Evaluation & Progress Modeling
-- Real progress formula considering weighted session attendance (40%), completed assignments (40%), and passed assessments (20%).
-- Real-time scoring for multiple-choice quizzes with answers evaluated server-side.
+- Weighted progress formula: `(attendance × 40%) + (assignments × 40%) + (quizzes × 20%)`.
+- 70%+ overall score required to claim a verifiable digital certificate.
+- Real-time scoring for multiple-choice quizzes with server-side answer evaluation.
 - Teachers grade assignments with numeric scores and personalized feedback.
 - Session attendance tracking (`Present`, `Absent`, `Late`, `Excused`).
 
-### 5. Secure File & Resource Management
+### 5. Verifiable Digital Certificates
+- Students who meet the 70%+ weighted threshold can claim a unique `LH-YYYY-XXXX` certificate.
+- Public verification endpoint: `/verify-certificate` and `/api/public/certificates/:certNumber`.
+
+### 6. Public Course Catalog
+- 119 seeded courses across 11 categories: Languages, Primary Grades 1–4, Middle School Grades 5–8, Secondary School Grades 9–12, University, Web Development, Programming, AI/Data, IT, Design, Business.
+- Full-text search, category filter, skill level filter, and pagination at `GET /api/public/courses`.
+- Individual course pages with syllabus, outcomes, and cohort call-to-action.
+
+### 7. Learning Workspace
+- In-browser video player with playback speed controls and localStorage progress saving.
+- PDF/document viewer for class resources.
+- Lesson syllabus checklist per cohort.
+- Cohort discussion board with threaded replies (student & teacher).
+- One-click Google Meet launcher with live session countdown.
+
+### 8. Password Reset & Account Security
+- Secure forgot-password flow: 6-digit code + token link, bcrypt-hashed at rest, 15-minute expiry.
+- Security alert emails for password changes.
+- In-dashboard password change with current-password verification.
+- Verification and password-reset emails report delivery failures instead of pretending they were sent.
+
+### 9. Secure File & Resource Management
 - Educational file upload with MIME type and extension validation.
-- Role-based download authorization ensuring private educational materials are accessible only to enrolled participants.
+- Role-based download authorization ensuring private materials are accessible only to enrolled participants.
 
 ---
 
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
-- **Node.js** (v18+)
+- **Node.js** (v20.19+ or v22.12+; required by Vite 8)
 - **MongoDB Community Server** installed locally and listening on port 27017
 
 ### 1. Installation
@@ -48,73 +72,137 @@ Clone the repository and install all workspace dependencies:
 npm install
 ```
 
-### 2. Configure and Start Local MongoDB
+### 2. Configure Environment
+
 Copy the example environment files:
 ```bash
 cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-Start MongoDB from the repository root (keep this terminal open):
+Edit `apps/server/.env` with your actual values:
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGO_URI` | ✅ | MongoDB connection string |
+| `JWT_SECRET` | ✅ | At least 32-character secret |
+| `GOOGLE_CLIENT_ID` | Optional | Google OAuth Web Client ID |
+| `SMTP_HOST` | Optional | SMTP host for email (e.g. smtp.gmail.com) |
+| `SMTP_USER` | Optional | SMTP email **address** (e.g. yourname@gmail.com) |
+| `SMTP_PASS` | Optional | SMTP app password |
+| `ADMIN_EMAIL` | ✅ (seed) | Bootstrap admin email |
+| `ADMIN_PASSWORD` | ✅ (seed) | Bootstrap admin password |
+
+> **Email Note:** Configure valid SMTP credentials to deliver verification codes and password-reset links. If SMTP is missing in development, codes and reset links are logged to the server console; if a configured SMTP server rejects a message, the request returns an error and details are logged by the server.
+
+### 3. Start MongoDB
 ```bash
+# One-time: start with a local data directory
 mkdir -p .data/db
 mongod --dbpath .data/db --bind_ip 127.0.0.1 --port 27017
+# Or if installed as a service:
+sudo systemctl start mongod
 ```
 
-The server connects to `mongodb://127.0.0.1:27017/learnhub` by default. The web app sends API requests to `http://localhost:4000`; these addresses can be changed in the respective `.env` files.
-
-To enable Google sign-in and sign-up:
-1. Open **Google Cloud Console → APIs & Services → Credentials** and create an **OAuth client ID** of type **Web application**.
-2. Under **Authorized JavaScript origins**, add `http://localhost:5173`.
-3. Copy the client ID into `GOOGLE_CLIENT_ID` in `apps/server/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`.
-4. Restart both development servers after changing environment variables.
-
-Google sign-in verifies the credential on the API. New Google users choose a student or teacher role on the sign-up form; teacher accounts still require administrator approval.
-
-Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` in `apps/server/.env` to send email verification codes. Create an administrator account using `ADMIN_EMAIL` and `ADMIN_PASSWORD`, then run:
+### 4. Seed the Database
 ```bash
+# Seed 11 categories + 119 catalog courses
+npm run seed:catalog
+
+# Provision the initial Hub Admin account (from ADMIN_EMAIL / ADMIN_PASSWORD in .env)
 npm run seed:admin
 ```
-Use a unique administrator password of at least 12 characters.
-Admin accounts cannot be created from the public signup flow. Administrators sign in with their seeded email and password without email verification; SMTP is not required for admin login. Student and teacher email/password accounts must verify their 6-digit code before a session is created. Teacher accounts remain pending approval after verification.
 
-### 3. Database Seeding
-Seed the learning categories and starter catalog of 119 courses, including English and Amharic, Grades 1–12, university foundations, web development, programming, data and AI, cybersecurity, design, and business topics. The catalog command is safe to rerun: existing course records are not overwritten, and it does not create demo accounts:
-```bash
-npm run seed:catalog
-```
-
-To also seed FAQs or explicitly enabled demo data:
-```bash
-npm run seed --workspace server
-```
-
-The starter courses are catalog entries with summaries and learning objectives, not a complete national curriculum or ready-made lesson materials. Add and review the curriculum content for your learners before teaching from a course.
-
-Administrators can search and filter the catalog by category in the dashboard. The teacher and learner lists also support account deletion; this anonymizes the account, removes it from active class rosters, and retains historical learning records.
-
-Run the admin seed command above to provision an administrator. Students and teachers can register from the sign-in page; teachers are approved through the admin portal.
-
-### 4. Development Mode
-Run both backend API and frontend Vite dev servers concurrently:
+### 5. Development Mode
 ```bash
 npm run dev
 ```
-- **Web App**: [http://localhost:5173](http://localhost:5173)
-- **Admin App**: [http://localhost:5174](http://localhost:5174) (administrator-only sign in)
-- **Backend API**: [http://localhost:4000](http://localhost:4000)
+| App | URL |
+|---|---|
+| Web App (Public + Student + Teacher) | http://localhost:5173 |
+| Admin Portal | http://localhost:5174 |
+| Backend API | http://localhost:4000 |
 
-Check that the API is running at [http://localhost:4000/api/health](http://localhost:4000/api/health). If the browser reports a network error, start both servers with `npm run dev` and confirm MongoDB is running.
+Check API health: http://localhost:4000/api/health
 
-The admin interface is a separate frontend with no public sign-up. Sign in with the administrator provisioned by `npm run seed:admin`; both frontends use the same API session cookie, while admin API routes still verify the administrator role server-side. For hosted deployments, set `ADMIN_CLIENT_URL` in `apps/server/.env` and configure `VITE_API_URL` and `VITE_PUBLIC_URL` in the admin app environment.
+### 6. Google OAuth Setup
+1. Open **Google Cloud Console → APIs & Services → Credentials → Create Web Application OAuth Client ID**
+2. Add `http://localhost:5173` to **Authorized JavaScript origins**
+3. Set `GOOGLE_CLIENT_ID` in `apps/server/.env` and `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env`
+4. Restart both development servers
 
-### 5. Production Build & Linting
+### 7. Production Build & Tests
 ```bash
+# Full production bundle (server + web + admin)
 npm run build
+
+# Linting across all workspaces
 npm run lint
+
+# Automated integration tests (requires MongoDB)
+npm test
 ```
 
 ---
+
+## 🌐 Public Routes
+
+| Path | Description |
+|---|---|
+| `/` | Homepage with hero carousel and featured courses |
+| `/courses` | Public course catalog with search & filter |
+| `/courses/:slug` | Individual course detail + syllabus |
+| `/categories` | Browse by learning category |
+| `/how-it-works` | 5-step learner journey + teacher recruitment process |
+| `/pricing` | Cohort plans & pricing |
+| `/instructors` | Certified educator directory |
+| `/help` | Searchable help center & inquiry form |
+| `/about` | About LearnHUB |
+| `/faq` | Frequently asked questions |
+| `/contact` | Contact & support |
+| `/verify-certificate` | Public certificate credential lookup |
+| `/sign-in` | Sign in page |
+| `/register/student` | Student registration |
+| `/apply/teacher` | Teacher application |
+| `/forgot-password` | Password reset request |
+| `/reset-password` | Password reset confirmation |
+
+## 🔐 Authenticated Routes
+
+| Path | Roles | Description |
+|---|---|---|
+| `/app` | Student, Teacher | Dashboard (role-dispatched) |
+| `/workspace/:classroomId` | Student, Teacher | Learning workspace with video + discussions |
+
+---
+
+## 📡 Key API Endpoints
+
+### Public
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/public/courses` | Search & paginated course catalog |
+| `GET` | `/api/public/courses/:slugOrId` | Course detail with syllabus |
+| `GET` | `/api/public/instructors` | Approved educator directory |
+| `GET` | `/api/public/certificates/:certNumber` | Certificate verification |
+| `GET` | `/api/public/home` | Home stats & featured courses |
+| `GET` | `/api/public/categories` | Learning categories |
+| `GET` | `/api/public/faqs` | Published FAQs |
+| `POST` | `/api/public/contact` | Contact form submission |
+
+### Auth
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/auth/signup` | Register student or teacher |
+| `POST` | `/api/auth/verify-code` | Confirm 6-digit verification code |
+| `POST` | `/api/auth/login` | Local email/password sign in |
+| `POST` | `/api/auth/google` | Google OAuth sign in / sign up |
+| `POST` | `/api/auth/forgot-password` | Request password reset (code + link) |
+| `POST` | `/api/auth/reset-password` | Confirm reset with code or token |
+| `POST` | `/api/auth/change-password` | Change password (authenticated) |
+| `PATCH` | `/api/auth/profile` | Update profile (authenticated) |
+| `GET` | `/api/auth/me` | Current session user |
+| `POST` | `/api/auth/logout` | Clear session cookie |
 
 ---
 
@@ -123,30 +211,117 @@ npm run lint
 ```
 LearnHUB/
 ├── apps/
-│   ├── server/                   # Express.js + Mongoose + JavaScript Backend
+│   ├── server/                         # Express.js + Mongoose Backend
 │   │   ├── src/
-│   │   │   ├── models/           # Mongoose schemas (User, Classroom, Course, Assignment, etc.)
-│   │   │   ├── routes/           # REST endpoints (auth, admin, teacher, student, resources, public)
-│   │   │   ├── lib/              # Storage helpers, HTTP error wrappers
-│   │   │   ├── controllers/      # Authentication request handlers
-│   │   │   ├── middleware/       # Authentication and role authorization
-│   │   │   ├── utils/            # SMTP verification email delivery
-│   │   │   ├── auth.js           # Password hashing, JWT cookies, RBAC helpers
-│   │   │   ├── seed.js           # Platform data seeding
-│   │   │   ├── seedAdmin.js      # Environment-driven administrator seeding
-│   │   │   ├── app.js            # Express setup with Helmet, CORS, Rate Limiting
-│   │   │   └── index.js          # Server entry point
+│   │   │   ├── models/                 # Mongoose schemas
+│   │   │   │   ├── User.js             # Users with roles, verification, reset tokens
+│   │   │   │   ├── Course.js           # Courses with syllabus modules & lessons
+│   │   │   │   ├── Classroom.js        # Live cohorts
+│   │   │   │   ├── Certificate.js      # Verifiable digital certificates
+│   │   │   │   ├── Discussion.js       # Classroom discussion threads
+│   │   │   │   └── ...                 # Assignment, Quiz, Attendance, etc.
+│   │   │   ├── routes/                 # REST endpoints
+│   │   │   │   ├── authRoutes.js       # Auth, forgot/reset password, profile
+│   │   │   │   ├── publicRoutes.js     # Catalog, instructors, certificates
+│   │   │   │   ├── studentRoutes.js    # Student dashboard, certificates, discussions
+│   │   │   │   ├── teacherRoutes.js    # Teacher dashboard, discussions
+│   │   │   │   ├── adminRoutes.js      # Admin: users, approvals, classes
+│   │   │   │   └── resourceRoutes.js   # File upload/download
+│   │   │   ├── controllers/            # Auth handlers (incl. forgotPassword, resetPassword)
+│   │   │   ├── middleware/             # JWT protect + RBAC
+│   │   │   ├── utils/email.js          # Branded HTML email with dev-safe fallback
+│   │   │   ├── auth.js                 # Password hashing, JWT cookies
+│   │   │   ├── seedCatalog.js          # 11 categories + 119 courses
+│   │   │   ├── seedAdmin.js            # Admin bootstrap from env
+│   │   │   ├── app.js                  # Express + Helmet + CORS + Rate Limiting
+│   │   │   └── index.js                # Server entry point
+│   │   ├── test/
+│   │   │   └── system.test.js          # 14 automated integration tests (node:test)
 │   │   └── package.json
-│   └── web/                      # React 19 + Vite + Tailwind CSS + JavaScript Frontend
-│       ├── src/
-│       │   ├── components/       # Navbar, Footer, MetricCard, DashboardCard, Modal, Badge
-│       │   ├── pages/            # Public, Auth, Admin, Teacher, and Student Dashboards
-│       │   ├── context/          # AuthContext with session refresh
-│       │   ├── i18n.js           # Bilingual translations (Amharic & English)
-│       │   ├── App.jsx           # Route definitions & portal dispatching
-│       │   └── index.css         # Tailwind tokens & Ethiopic typography
-│       └── package.json
-├── PROJECT_ LearnH (2).pdf       # Project requirement specification
-├── README.md
-└── package.json
+│   ├── web/                            # React 19 + Vite Frontend
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   │   ├── Navbar.jsx          # Full navigation with new routes
+│   │   │   │   ├── Footer.jsx          # Expanded footer with all public links
+│   │   │   │   └── ...                 # UIComponents, BrandLogo, etc.
+│   │   │   ├── pages/
+│   │   │   │   ├── HomePage.jsx        # Hero carousel (PRESERVED as-is)
+│   │   │   │   ├── CourseCatalogPage.jsx
+│   │   │   │   ├── CourseDetailsPage.jsx
+│   │   │   │   ├── HowItWorksPage.jsx
+│   │   │   │   ├── PricingPage.jsx
+│   │   │   │   ├── InstructorsPage.jsx
+│   │   │   │   ├── HelpCenterPage.jsx
+│   │   │   │   ├── VerifyCertificatePage.jsx
+│   │   │   │   ├── LearningWorkspace.jsx
+│   │   │   │   ├── AuthPages.jsx       # ForgotPasswordPage, ResetPasswordPage added
+│   │   │   │   ├── StudentDashboard.jsx # Certificates tab + Account Security tab
+│   │   │   │   └── TeacherDashboard.jsx # Workspace button + Account Security tab
+│   │   │   ├── context/AuthContext.jsx
+│   │   │   ├── i18n.js
+│   │   │   ├── App.jsx                 # All routes registered
+│   │   │   └── index.css
+│   │   ├── public/
+│   │   │   ├── robots.txt
+│   │   │   └── sitemap.xml
+│   │   └── index.html                  # OpenGraph + Twitter Card meta tags
+│   └── admin/                          # Admin Portal (React + Vite)
+├── package.json                        # Root workspace with test + build scripts
+└── README.md
+```
+
+---
+
+## 🧪 Test Results
+
+Run: `npm test`
+
+```
+✔ Public Course Catalog: pagination
+✔ Public Course Catalog: search filter
+✔ Public Course Catalog: individual course detail
+✔ Public Instructors Directory
+✔ Auth Registration: rejects invalid email
+✔ Auth Registration: creates account with hashed verification code
+✔ Auth Registration: rejects duplicate email with 409
+✔ Auth Registration: rejects wrong verification code
+✔ Auth Password Reset: forgot-password issues reset code
+✔ RBAC: admin endpoint requires authentication
+✔ RBAC: teacher endpoint requires authentication
+✔ RBAC: student endpoint requires authentication
+✔ Certificate Verification: valid certificate lookup
+✔ Certificate Verification: returns 404 for unknown credential
+
+tests 14 | pass 14 | fail 0
+```
+
+---
+
+## 🔧 Environment Variables Reference
+
+### `apps/server/.env`
+
+```env
+NODE_ENV=development
+PORT=4000
+MONGO_URI=mongodb://127.0.0.1:27017/learnhub
+CLIENT_URL=http://localhost:5173
+ADMIN_CLIENT_URL=http://localhost:5174
+JWT_SECRET=your-secure-32-char-secret
+JWT_EXPIRES_IN=7d
+GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=youraddress@gmail.com        # Note: must be email address, NOT hostname
+SMTP_PASS=your-gmail-app-password
+ADMIN_EMAIL=admin@learnhub.et
+ADMIN_PASSWORD=your-secure-admin-password
+SEED_DEMO_DATA=false
+```
+
+### `apps/web/.env`
+
+```env
+VITE_API_URL=http://localhost:4000
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 ```

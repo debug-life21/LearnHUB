@@ -12,6 +12,9 @@ import { AssessmentModel } from "../models/Assessment.js";
 import { AssessmentAttemptModel } from "../models/AssessmentAttempt.js";
 import { AttendanceRecordModel } from "../models/AttendanceRecord.js";
 import { AnnouncementModel } from "../models/Announcement.js";
+import { CertificateModel } from "../models/Certificate.js";
+import { DiscussionModel } from "../models/Discussion.js";
+import { randomBytes } from "node:crypto";
 export const studentRouter = Router();
 studentRouter.use(requireAuth, requireRole("student"));
 // 1. Student Dashboard
@@ -339,4 +342,173 @@ studentRouter.get("/announcements", asyncHandler(async (req, res) => {
         .sort({ createdAt: -1 })
         .lean();
     res.json({ announcements });
+}));
+
+// 12. Classroom Discussions
+studentRouter.get("/classes/:classId/discussions", asyncHandler(async (req, res) => {
+    const studentId = req.user.id;
+    const isEnrolled = await ClassroomModel.exists({ _id: req.params.classId, students: studentId });
+    if (!isEnrolled) {
+        throw new ApiError(403, "You can only view discussions for your assigned classes.");
+    }
+    const discussions = await DiscussionModel.find({ classroom: req.params.classId })
+        .populate("author", "fullName name email avatarUrl role")
+        .populate("replies.author", "fullName name email avatarUrl role")
+        .sort({ isPinned: -1, createdAt: -1 })
+        .lean();
+    res.json({ discussions });
+}));
+
+studentRouter.post("/classes/:classId/discussions", asyncHandler(async (req, res) => {
+    const studentId = req.user.id;
+    const isEnrolled = await ClassroomModel.exists({ _id: req.params.classId, students: studentId });
+    if (!isEnrolled) {
+        throw new ApiError(403, "You can only post discussions in your assigned classes.");
+    }
+    const data = z.object({
+        title: z.string().trim().min(3).max(150),
+        content: z.string().trim().min(5).max(3000),
+        category: z.enum(["general", "assignment", "lesson", "question", "announcement"]).default("general"),
+    }).parse(req.body);
+
+    const discussion = await DiscussionModel.create({
+        classroom: req.params.classId,
+        author: studentId,
+        title: data.title,
+        content: data.content,
+        category: data.category,
+    });
+
+    const populated = await DiscussionModel.findById(discussion._id)
+        .populate("author", "fullName name email avatarUrl role")
+        .lean();
+
+    res.status(201).json({ message: "Discussion topic created.", discussion: populated });
+}));
+
+studentRouter.post("/classes/:classId/discussions/:discussionId/reply", asyncHandler(async (req, res) => {
+    const studentId = req.user.id;
+    const isEnrolled = await ClassroomModel.exists({ _id: req.params.classId, students: studentId });
+    if (!isEnrolled) {
+        throw new ApiError(403, "You can only reply to discussions in your assigned classes.");
+    }
+    const data = z.object({
+        content: z.string().trim().min(2).max(2000),
+    }).parse(req.body);
+
+    const discussion = await DiscussionModel.findOne({ _id: req.params.discussionId, classroom: req.params.classId });
+    if (!discussion) {
+        throw new ApiError(404, "Discussion not found.");
+    }
+
+    discussion.replies.push({
+        author: studentId,
+        content: data.content,
+        createdAt: new Date(),
+    });
+    await discussion.save();
+
+    const updated = await DiscussionModel.findById(discussion._id)
+        .populate("author", "fullName name email avatarUrl role")
+        .populate("replies.author", "fullName name email avatarUrl role")
+        .lean();
+
+    res.status(201).json({ message: "Reply added.", discussion: updated });
+}));
+
+// 13. Student Certificates
+studentRouter.get("/certificates", asyncHandler(async (req, res) => {
+    const studentId = req.user.id;
+    const certificates = await CertificateModel.find({ student: studentId, status: "valid" })
+        .populate("course", "title slug thumbnailUrl")
+        .populate("classroom", "title")
+        .sort({ issueDate: -1 })
+        .lean();
+    res.json({ certificates });
+}));
+
+// 14. Claim Certificate upon completing criteria
+studentRouter.post("/classes/:classId/claim-certificate", asyncHandler(async (req, res) => {
+    const studentId = req.user.id;
+    const classroom = await ClassroomModel.findOne({ _id: req.params.classId, students: studentId })
+        .populate("course")
+        .populate("teacher", "fullName name")
+        .lean();
+
+    if (!classroom) {
+        throw new ApiError(403, "Class not found or you are not enrolled.");
+    }
+
+    // Check if certificate already issued
+    const existing = await CertificateModel.findOne({ student: studentId, classroom: classroom._id });
+    if (existing) {
+        res.json({ message: "Certificate already issued.", certificate: existing });
+        return;
+    }
+
+    // Verify course completion criteria per PDF section 14:
+    // "Implement certificates only when the configured completion criteria have been satisfied.
+    // Do not issue a certificate solely because a student opened a course page."
+    const [sessions, attendanceRecords, assignments, submissions, attempts, studentUser] = await Promise.all([
+        ClassSessionModel.find({ classroom: classroom._id }).lean(),
+        AttendanceRecordModel.find({ classroom: classroom._id, student: studentId }).lean(),
+        AssignmentModel.find({ classroom: classroom._id }).lean(),
+        AssignmentSubmissionModel.find({ classroom: classroom._id, student: studentId }).lean(),
+        AssessmentAttemptModel.find({ classroom: classroom._id, student: studentId }).lean(),
+        UserModel.findById(studentId).lean(),
+    ]);
+
+    const totalSessions = sessions.length;
+    const attendedSessions = attendanceRecords.filter((r) => r.status === "present" || r.status === "late").length;
+    const attendancePercentage = totalSessions > 0 ? Math.round((attendedSessions / totalSessions) * 100) : 100;
+
+    const totalAssignments = assignments.length;
+    const submittedCount = submissions.length;
+    const assignmentPercentage = totalAssignments > 0 ? Math.round((submittedCount / totalAssignments) * 100) : 100;
+
+    const passedAssessments = attempts.filter((a) => a.passed).length;
+    const totalAttempts = attempts.length;
+    const quizPercentage = totalAttempts > 0 ? Math.round((passedAssessments / totalAttempts) * 100) : 100;
+
+    const overallProgress = Math.round((attendancePercentage * 0.4) + (assignmentPercentage * 0.4) + (quizPercentage * 0.2));
+
+    if (overallProgress < 70) {
+        throw new ApiError(400, `You must attain at least 70% overall completion score to earn a certificate. Current score: ${overallProgress}%.`);
+    }
+
+    const certSuffix = randomBytes(4).toString("hex").toUpperCase();
+    const certificateNumber = `LH-${new Date().getFullYear()}-${certSuffix}`;
+
+    const cert = await CertificateModel.create({
+        student: studentId,
+        classroom: classroom._id,
+        course: classroom.course._id,
+        certificateNumber,
+        studentName: studentUser?.fullName || studentUser?.name || "LearnHUB Scholar",
+        courseTitle: classroom.course?.title || classroom.title,
+        instructorName: classroom.teacher?.fullName || classroom.teacher?.name || "LearnHUB Faculty",
+        issueDate: new Date(),
+        overallScore: Math.min(100, overallProgress),
+        status: "valid",
+        verificationUrl: `/verify-certificate/${certificateNumber}`,
+    });
+
+    await NotificationModel.create({
+        user: studentId,
+        title: "Certificate of Completion Awarded!",
+        message: `Congratulations! You have completed "${classroom.course?.title || classroom.title}" and received your certificate ${certificateNumber}.`,
+        kind: "certificate",
+        link: "/dashboard",
+    });
+
+    res.status(201).json({
+        message: "Congratulations! Your certificate of completion has been issued.",
+        certificate: cert,
+    });
+}));
+
+// 15. Notification management
+studentRouter.patch("/notifications/read-all", asyncHandler(async (req, res) => {
+    await NotificationModel.updateMany({ user: req.user.id, isRead: false }, { isRead: true });
+    res.json({ message: "All notifications marked as read." });
 }));

@@ -1,13 +1,13 @@
 import bcrypt from "bcryptjs";
-import { randomInt } from "node:crypto";
+import { randomInt, randomBytes } from "node:crypto";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import { env } from "../config.js";
-import { setAuthCookie, signToken, verifyPassword } from "../auth.js";
+import { setAuthCookie, signToken, verifyPassword, hashPassword } from "../auth.js";
 import { ApiError } from "../lib/http.js";
 import { TeacherApplicationModel } from "../models/TeacherApplication.js";
 import { UserModel } from "../models/User.js";
-import { sendVerificationCode } from "../utils/email.js";
+import { sendVerificationCode, sendPasswordResetEmail, sendSecurityAlertEmail } from "../utils/email.js";
 
 const googleAuthClient = new OAuth2Client();
 const codeLifetimeMs = 10 * 60 * 1000;
@@ -285,4 +285,171 @@ export async function google(req, res) {
     }
     setSessionCookie(res, user);
     res.json({ message: "Signed in successfully with Google.", user: userResponse(user) });
+}
+
+export async function forgotPassword(req, res) {
+    const data = z.object({
+        email: z.string().trim().email(),
+    }).parse(req.body);
+    const email = normalizedEmail(data.email);
+    const user = await UserModel.findOne({ email }).select("+resetPasswordToken +resetPasswordExpires +codeSentAt");
+
+    // To prevent user enumeration attacks, always respond with standard success message
+    if (!user || user.isDeleted || user.accountStatus === "suspended") {
+        res.json({ message: "If an account matches that email, a password reset link and code have been sent." });
+        return;
+    }
+
+    // Cooldown check (60 seconds)
+    const cooldownRemaining = user.codeSentAt
+        ? resendCooldownMs - (Date.now() - user.codeSentAt.getTime())
+        : 0;
+    if (cooldownRemaining > 0) {
+        throw new ApiError(429, `Please wait ${Math.ceil(cooldownRemaining / 1000)} seconds before requesting another reset code.`);
+    }
+
+    const resetToken = randomBytes(24).toString("hex");
+    const numericCode = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    user.resetPasswordToken = await bcrypt.hash(resetToken, 10);
+    user.verificationCode = await bcrypt.hash(numericCode, 10);
+    user.codeExpiresAt = expiresAt;
+    user.resetPasswordExpires = expiresAt;
+    user.codePurpose = "reset_password";
+    user.codeAttempts = 0;
+    user.codeSentAt = new Date();
+    await user.save();
+
+    const clientBaseUrl = env.CLIENT_URL || "http://localhost:5173";
+    const resetUrl = `${clientBaseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+    await sendPasswordResetEmail({
+        email: user.email,
+        name: user.name || user.fullName,
+        resetUrl,
+        code: numericCode,
+    });
+
+    res.json({
+        message: "If an account matches that email, a password reset link and code have been sent.",
+        email,
+    });
+}
+
+export async function resetPassword(req, res) {
+    const data = z.object({
+        email: z.string().trim().email(),
+        tokenOrCode: z.string().trim().min(6),
+        newPassword: z.string().min(8).max(128),
+    }).parse(req.body);
+
+    const email = normalizedEmail(data.email);
+    const user = await UserModel.findOne({ email })
+        .select("+password +passwordHash +resetPasswordToken +resetPasswordExpires +verificationCode +codeExpiresAt +codeAttempts");
+
+    if (!user || user.isDeleted) {
+        throw new ApiError(400, "Invalid or expired password reset request.");
+    }
+
+    const isCodeExpired = (user.resetPasswordExpires && user.resetPasswordExpires.getTime() <= Date.now())
+        || (user.codeExpiresAt && user.codeExpiresAt.getTime() <= Date.now());
+
+    if (isCodeExpired) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        user.verificationCode = undefined;
+        user.codeExpiresAt = undefined;
+        await user.save();
+        throw new ApiError(400, "Your reset link or code has expired. Please request a new one.");
+    }
+
+    let isMatch = false;
+    // Check against 6-digit verification code
+    if (user.verificationCode) {
+        isMatch = await bcrypt.compare(data.tokenOrCode, user.verificationCode);
+    }
+    // If not matched, check against URL token
+    if (!isMatch && user.resetPasswordToken) {
+        isMatch = await bcrypt.compare(data.tokenOrCode, user.resetPasswordToken);
+    }
+
+    if (!isMatch) {
+        user.codeAttempts = (user.codeAttempts || 0) + 1;
+        if (user.codeAttempts >= 5) {
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpires = undefined;
+            user.verificationCode = undefined;
+            user.codeExpiresAt = undefined;
+            user.codeAttempts = 0;
+            await user.save();
+            throw new ApiError(429, "Too many failed attempts. Request a new password reset link.");
+        }
+        await user.save();
+        throw new ApiError(400, "Invalid verification code or reset token.");
+    }
+
+    user.password = await hashPassword(data.newPassword);
+    user.passwordHash = undefined;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    user.verificationCode = undefined;
+    user.codeExpiresAt = undefined;
+    user.codeAttempts = 0;
+    await user.save();
+
+    await sendSecurityAlertEmail({
+        email: user.email,
+        name: user.name || user.fullName,
+        action: "Your password was successfully reset.",
+    });
+
+    res.json({ message: "Your password has been reset successfully. You can now sign in." });
+}
+
+export async function updateProfile(req, res) {
+    const data = z.object({
+        fullName: z.string().trim().min(2).max(100).optional(),
+        phone: z.string().trim().max(30).optional(),
+        bio: z.string().trim().max(500).optional(),
+        languagePreference: z.enum(["am", "en"]).optional(),
+        avatarUrl: z.string().trim().optional(),
+    }).parse(req.body);
+
+    const user = await UserModel.findById(req.user.id);
+    if (!user || user.isDeleted) {
+        throw new ApiError(404, "User not found.");
+    }
+
+    if (data.fullName !== undefined) {
+        user.fullName = data.fullName;
+        user.name = data.fullName;
+    }
+    if (data.phone !== undefined) user.phone = data.phone;
+    if (data.bio !== undefined) user.bio = data.bio;
+    if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
+    if (data.languagePreference !== undefined) {
+        user.languagePreference = data.languagePreference;
+        if (user.studentProfile) user.studentProfile.preferredLanguage = data.languagePreference;
+    }
+
+    await user.save();
+
+    res.json({
+        message: "Profile updated successfully.",
+        user: {
+            id: user._id.toString(),
+            name: user.name || user.fullName,
+            fullName: user.fullName || user.name,
+            email: user.email,
+            role: user.role,
+            isVerified: user.isVerified,
+            phone: user.phone,
+            bio: user.bio,
+            avatarUrl: user.avatarUrl,
+            teacherStatus: user.teacherStatus,
+            accountStatus: user.accountStatus,
+            languagePreference: user.languagePreference,
+        },
+    });
 }

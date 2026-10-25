@@ -112,7 +112,12 @@ export function SignInPage() {
                     <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="name@example.com" />
                 </label>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    {t("password")}
+                    <div className="flex items-center justify-between">
+                        <span>{t("password")}</span>
+                        <Link to="/forgot-password" className="text-[11px] font-semibold text-blue-600 hover:underline lowercase first-letter:uppercase">
+                            Forgot password?
+                        </Link>
+                    </div>
                     <input required autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your password" />
                 </label>
                 <button disabled={loading} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50">
@@ -125,7 +130,6 @@ export function SignInPage() {
         </AuthShell>
     );
 }
-
 export function SignupPage({ initialRole = "student" }) {
     const { t } = useTranslation();
     const { refreshUser } = useAuth();
@@ -303,4 +307,203 @@ export function StudentRegistrationPage() {
 
 export function TeacherApplicationPage() {
     return <SignupPage initialRole="teacher" />;
+}
+
+export function ForgotPasswordPage() {
+    const { t } = useTranslation();
+    const [email, setEmail] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [feedback, setFeedback] = useState("");
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        setFeedback("");
+        try {
+            const res = await apiRequest("/api/auth/forgot-password", {
+                method: "POST",
+                body: JSON.stringify({ email }),
+            });
+            setSubmitted(true);
+            setFeedback(res.message || "A reset link and code have been sent if an account matches.");
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AuthShell title="Reset your password" subtitle="Enter your email to receive recovery instructions">
+            <Feedback>{feedback}</Feedback>
+            {submitted ? (
+                <div className="space-y-5 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-xl text-emerald-700">
+                        ✓
+                    </div>
+                    <p className="text-sm text-slate-600">
+                        Check your email inbox for the reset link and 6-digit code.
+                    </p>
+                    <div className="flex flex-col gap-2 pt-2">
+                        <Link
+                            to={`/reset-password?email=${encodeURIComponent(email)}`}
+                            className="w-full rounded-2xl bg-blue-600 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700"
+                        >
+                            Enter Reset Code
+                        </Link>
+                        <Link to="/sign-in" className="text-xs font-bold text-slate-500 hover:text-slate-800">
+                            Back to sign in
+                        </Link>
+                    </div>
+                </div>
+            ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        {t("email")}
+                        <input
+                            required
+                            type="email"
+                            autoComplete="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            placeholder="name@example.com"
+                        />
+                    </label>
+                    <button
+                        disabled={loading || !email}
+                        type="submit"
+                        className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50"
+                    >
+                        {loading ? t("loading") : "Send Reset Instructions"}
+                    </button>
+                    <div className="pt-2 text-center text-xs">
+                        <Link to="/sign-in" className="font-bold text-slate-600 hover:text-blue-600">
+                            ← Return to sign in
+                        </Link>
+                    </div>
+                </form>
+            )}
+        </AuthShell>
+    );
+}
+
+export function ResetPasswordPage() {
+    const { t } = useTranslation();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const searchParams = new URLSearchParams(location.search);
+    const initialEmail = searchParams.get("email") || "";
+    const initialToken = searchParams.get("token") || "";
+
+    const [email, setEmail] = useState(initialEmail);
+    const [tokenOrCode, setTokenOrCode] = useState(initialToken);
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [feedback, setFeedback] = useState("");
+    const [success, setSuccess] = useState(false);
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        if (newPassword !== confirmPassword) {
+            setFeedback("Passwords do not match.");
+            return;
+        }
+        setLoading(true);
+        setFeedback("");
+        try {
+            const res = await apiRequest("/api/auth/reset-password", {
+                method: "POST",
+                body: JSON.stringify({ email, tokenOrCode, newPassword }),
+            });
+            setSuccess(true);
+            setFeedback(res.message || "Password reset successful.");
+            setTimeout(() => {
+                navigate("/sign-in");
+            }, 2500);
+        } catch (error) {
+            setFeedback(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AuthShell title="Set new password" subtitle="Choose a strong password for your LearnHUB account">
+            <Feedback>{feedback}</Feedback>
+            {success ? (
+                <div className="space-y-4 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-2xl text-emerald-700">
+                        ✓
+                    </div>
+                    <h2 className="text-lg font-bold text-slate-900">Password Changed!</h2>
+                    <p className="text-xs text-slate-600">Redirecting to sign-in page…</p>
+                </div>
+            ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        {t("email")}
+                        <input
+                            required
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                        />
+                    </label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Reset Code or Token
+                        <input
+                            required
+                            type="text"
+                            value={tokenOrCode}
+                            onChange={(e) => setTokenOrCode(e.target.value)}
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-mono tracking-wider normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            placeholder="6-digit code or link token"
+                        />
+                    </label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        New Password
+                        <input
+                            required
+                            minLength={8}
+                            maxLength={128}
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            placeholder="At least 8 characters"
+                        />
+                    </label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Confirm New Password
+                        <input
+                            required
+                            minLength={8}
+                            maxLength={128}
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            placeholder="Re-enter password"
+                        />
+                    </label>
+                    <button
+                        disabled={loading || !newPassword || !confirmPassword || !tokenOrCode}
+                        type="submit"
+                        className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50"
+                    >
+                        {loading ? t("loading") : "Update Password"}
+                    </button>
+                    <div className="pt-2 text-center text-xs">
+                        <Link to="/sign-in" className="font-bold text-slate-600 hover:text-blue-600">
+                            ← Return to sign in
+                        </Link>
+                    </div>
+                </form>
+            )}
+        </AuthShell>
+    );
 }

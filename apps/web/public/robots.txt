@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Allow: /courses
+Allow: /categories
+Allow: /how-it-works
+Allow: /pricing
+Allow: /instructors
+Allow: /help
+Allow: /about
+Allow: /faq
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+Allow: /verify-certificate
+
+# Disallow private dashboards and authenticated areas
+Disallow: /app/
+Disallow: /admin/
+Disallow: /workspace/
+Disallow: /verify-email
+
+Sitemap: https://learnhub.et/sitemap.xml

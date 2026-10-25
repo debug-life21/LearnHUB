@@ -1,10 +1,21 @@
 import { Router } from "express";
 import { z } from "zod";
 import { clearAuthCookie, hashPassword, verifyPassword } from "../auth.js";
-import { adminLogin, login, google, resendCode, signup, verifyCode } from "../controllers/authController.js";
+import {
+    adminLogin,
+    forgotPassword,
+    google,
+    login,
+    resendCode,
+    resetPassword,
+    signup,
+    updateProfile,
+    verifyCode,
+} from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
 import { UserModel } from "../models/User.js";
+import { sendSecurityAlertEmail } from "../utils/email.js";
 
 export const authRouter = Router();
 
@@ -14,6 +25,9 @@ authRouter.post("/login", asyncHandler(login));
 authRouter.post("/admin-login", asyncHandler(adminLogin));
 authRouter.post("/resend-code", asyncHandler(resendCode));
 authRouter.post("/google", asyncHandler(google));
+authRouter.post("/forgot-password", asyncHandler(forgotPassword));
+authRouter.post("/reset-password", asyncHandler(resetPassword));
+authRouter.patch("/profile", protect, asyncHandler(updateProfile));
 
 async function legacySignup(req, res, next, role) {
     req.body = { ...req.body, name: req.body.name || req.body.fullName, role };
@@ -35,7 +49,7 @@ authRouter.post("/logout", (_req, res) => {
 
 authRouter.get("/me", protect, asyncHandler(async (req, res) => {
     const user = await UserModel.findById(req.user.id)
-        .select("-password -passwordHash -verificationCode -codeExpiresAt -codePurpose -codeAttempts -codeSentAt")
+        .select("-password -passwordHash -verificationCode -codeExpiresAt -codePurpose -codeAttempts -codeSentAt -resetPasswordToken -resetPasswordExpires")
         .lean();
     if (!user || user.isDeleted) {
         throw new ApiError(404, "User not found.");
@@ -48,16 +62,16 @@ authRouter.get("/me", protect, asyncHandler(async (req, res) => {
             email: user.email,
             role: user.role,
             isVerified: user.isVerified,
+            phone: user.phone || "",
+            bio: user.bio || "",
+            avatarUrl: user.avatarUrl || "",
             teacherStatus: user.teacherStatus,
             accountStatus: user.accountStatus,
             languagePreference: user.languagePreference,
+            studentProfile: user.studentProfile,
+            teacherProfile: user.teacherProfile,
         },
     });
-}));
-
-authRouter.post("/forgot-password", asyncHandler(async (req, res) => {
-    z.object({ email: z.string().trim().email() }).parse(req.body);
-    throw new ApiError(501, "Password reset is not available yet.");
 }));
 
 authRouter.post("/change-password", protect, asyncHandler(async (req, res) => {
@@ -80,5 +94,12 @@ authRouter.post("/change-password", protect, asyncHandler(async (req, res) => {
     user.password = await hashPassword(data.newPassword);
     user.passwordHash = undefined;
     await user.save();
+
+    await sendSecurityAlertEmail({
+        email: user.email,
+        name: user.name || user.fullName,
+        action: "Your password was changed via account settings.",
+    });
+
     res.json({ message: "Password updated successfully." });
 }));

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { API_BASE_URL, apiRequest } from "../lib/api";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
@@ -12,6 +13,9 @@ export function TeacherDashboard({ user }) {
     const [resources, setResources] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [feedback, setFeedback] = useState("");
+    // Password change state
+    const [securityForm, setSecurityForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    const [securityLoading, setSecurityLoading] = useState(false);
     // Attendance state
     const [selectedSessionId, setSelectedSessionId] = useState("");
     const [attendanceRecords, setAttendanceRecords] = useState({});
@@ -63,7 +67,7 @@ export function TeacherDashboard({ user }) {
         mimeType: "application/pdf",
         base64Data: "",
     });
-    const loadTeacherData = async () => {
+    const loadTeacherData = useCallback(async () => {
         try {
             const [dash, classesRes, assignRes, quizRes, resRes] = await Promise.all([
                 apiRequest("/api/teacher/dashboard"),
@@ -72,23 +76,25 @@ export function TeacherDashboard({ user }) {
                 apiRequest("/api/teacher/assessments"),
                 apiRequest("/api/resources"),
             ]);
-            setClasses(classesRes.classes);
-            setUpcomingLessons(dash.upcomingLessons);
-            setAssignments(assignRes.assignments);
-            setAssessments(quizRes.assessments);
-            setResources(resRes.resources);
-            setNotifications(dash.notifications);
-            if (dash.upcomingLessons[0] && !selectedSessionId) {
+            setClasses(classesRes.classes || []);
+            setUpcomingLessons(dash.upcomingLessons || []);
+            setAssignments(assignRes.assignments || []);
+            setAssessments(quizRes.assessments || []);
+            setResources(resRes.resources || []);
+            setNotifications(dash.notifications || []);
+            if (dash.upcomingLessons?.[0] && !selectedSessionId) {
                 setSelectedSessionId(dash.upcomingLessons[0]._id);
             }
         }
         catch (err) {
             setFeedback(err.message);
         }
-    };
+    }, [selectedSessionId]);
     useEffect(() => {
-        void loadTeacherData();
-    }, []);
+        let mounted = true;
+        loadTeacherData();
+        return () => { mounted = false; };
+    }, [loadTeacherData]);
     // Handle Attendance Change
     const setStudentAttendance = (studentId, status) => {
         setAttendanceRecords((prev) => ({
@@ -232,6 +238,32 @@ export function TeacherDashboard({ user }) {
             setFeedback(err.message);
         }
     };
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (securityForm.newPassword !== securityForm.confirmPassword) {
+            setFeedback("New passwords do not match.");
+            return;
+        }
+        setSecurityLoading(true);
+        setFeedback("");
+        try {
+            const res = await apiRequest("/api/auth/change-password", {
+                method: "POST",
+                body: JSON.stringify({
+                    currentPassword: securityForm.currentPassword,
+                    newPassword: securityForm.newPassword,
+                }),
+            });
+            setFeedback(res.message || "Password updated successfully.");
+            setSecurityForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+        } catch (err) {
+            setFeedback(err.message || "Failed to update password.");
+        } finally {
+            setSecurityLoading(false);
+        }
+    };
+
     const currentClassForAttendance = classes.find((c) => c.students?.length > 0);
     return (<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
       {/* Top Banner */}
@@ -271,6 +303,7 @@ export function TeacherDashboard({ user }) {
             { id: "assignments", label: `Assignments (${assignments.length})`, icon: "📚" },
             { id: "assessments", label: `Assessments (${assessments.length})`, icon: "⏱️" },
             { id: "resources", label: `Resources (${resources.length})`, icon: "📁" },
+            { id: "security", label: "Account security", icon: "🔒" },
         ].map((tab) => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
                 ? "bg-slate-900 text-white shadow-sm"
                 : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
@@ -342,6 +375,14 @@ export function TeacherDashboard({ user }) {
                         <span className="text-slate-400">{s.email}</span>
                       </div>))}
                   </div>
+                </div>
+                <div className="pt-2 border-t border-slate-100">
+                  <Link
+                    to={`/workspace/${cls._id}`}
+                    className="block w-full text-center rounded-2xl bg-emerald-800 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 transition shadow-sm"
+                  >
+                    Open Cohort Workspace →
+                  </Link>
                 </div>
               </div>))}
           </div>
@@ -492,6 +533,66 @@ export function TeacherDashboard({ user }) {
               </div>))}
           </div>
         </div>) : null}
+
+      {/* 8. ACCOUNT SECURITY */}
+      {activeTab === "security" ? (
+        <div className="space-y-6 max-w-xl">
+          <DashboardCard title="Account Password & Security">
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Current Password
+                </label>
+                <input
+                  required
+                  type="password"
+                  value={securityForm.currentPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs outline-none"
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  New Password (min. 8 characters)
+                </label>
+                <input
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  type="password"
+                  value={securityForm.newPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs outline-none"
+                  placeholder="At least 8 characters"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Confirm New Password
+                </label>
+                <input
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  type="password"
+                  value={securityForm.confirmPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs outline-none"
+                  placeholder="Repeat new password"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={securityLoading}
+                className="w-full rounded-xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                {securityLoading ? "Updating…" : "Update Password"}
+              </button>
+            </form>
+          </DashboardCard>
+        </div>
+      ) : null}
 
       {/* MODAL: View Submissions & Grade */}
       <Modal title={`Learner submissions: ${submissionsModal.assignment?.title || ""}`} isOpen={submissionsModal.open} onClose={() => setSubmissionsModal({ open: false, assignment: null, list: [] })}>

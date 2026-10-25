@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { API_BASE_URL, apiRequest } from "../lib/api";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
@@ -12,8 +13,12 @@ export function StudentDashboard({ user }) {
     const [resources, setResources] = useState([]);
     const [attendanceRecords, setAttendanceRecords] = useState([]);
     const [progressData, setProgressData] = useState(null);
+    const [certificates, setCertificates] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [feedback, setFeedback] = useState("");
+    // Password change state
+    const [securityForm, setSecurityForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    const [securityLoading, setSecurityLoading] = useState(false);
     // Submit Assignment Modal
     const [submitModal, setSubmitModal] = useState({
         open: false,
@@ -34,9 +39,9 @@ export function StudentDashboard({ user }) {
         currentSkillLevel: "Beginner",
         preferredSchedule: "",
     });
-    const loadStudentData = async () => {
+    const loadStudentData = useCallback(async () => {
         try {
-            const [dash, classesRes, assignRes, quizRes, resRes, attendRes, progRes,] = await Promise.all([
+            const [dash, classesRes, assignRes, quizRes, resRes, attendRes, progRes, certRes] = await Promise.all([
                 apiRequest("/api/student/dashboard"),
                 apiRequest("/api/student/classes"),
                 apiRequest("/api/student/assignments"),
@@ -44,15 +49,17 @@ export function StudentDashboard({ user }) {
                 apiRequest("/api/resources"),
                 apiRequest("/api/student/attendance"),
                 apiRequest("/api/student/progress"),
+                apiRequest("/api/student/certificates").catch(() => ({ certificates: [] })),
             ]);
-            setClasses(classesRes.classes);
-            setUpcomingLessons(dash.upcomingLessons);
-            setAssignments(assignRes.assignments);
-            setAssessments(quizRes.assessments);
-            setResources(resRes.resources);
-            setAttendanceRecords(attendRes.records);
-            setProgressData(progRes.progress);
-            setNotifications(dash.notifications);
+            setClasses(classesRes.classes || []);
+            setUpcomingLessons(dash.upcomingLessons || []);
+            setAssignments(assignRes.assignments || []);
+            setAssessments(quizRes.assessments || []);
+            setResources(resRes.resources || []);
+            setAttendanceRecords(attendRes.records || []);
+            setProgressData(progRes.progress || null);
+            setCertificates(certRes.certificates || []);
+            setNotifications(dash.notifications || []);
             if (dash.student?.studentProfile) {
                 setProfileForm({
                     learningGoals: dash.student.studentProfile.learningGoals || "",
@@ -65,10 +72,12 @@ export function StudentDashboard({ user }) {
         catch (err) {
             setFeedback(err.message);
         }
-    };
-    useEffect(() => {
-        void loadStudentData();
     }, []);
+    useEffect(() => {
+        let mounted = true;
+        loadStudentData();
+        return () => { mounted = false; };
+    }, [loadStudentData]);
     // Submit Assignment Action
     const handleSubmitAssignment = async (e) => {
         e.preventDefault();
@@ -148,6 +157,42 @@ export function StudentDashboard({ user }) {
             setFeedback(err.message);
         }
     };
+
+    const handleClaimCertificate = async (classId) => {
+        try {
+            const res = await apiRequest(`/api/student/classes/${classId}/claim-certificate`, { method: "POST" });
+            setFeedback(res.message);
+            loadStudentData();
+        } catch (err) {
+            setFeedback(err.message);
+        }
+    };
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (securityForm.newPassword !== securityForm.confirmPassword) {
+            setFeedback("New passwords do not match.");
+            return;
+        }
+        setSecurityLoading(true);
+        setFeedback("");
+        try {
+            const res = await apiRequest("/api/auth/change-password", {
+                method: "POST",
+                body: JSON.stringify({
+                    currentPassword: securityForm.currentPassword,
+                    newPassword: securityForm.newPassword,
+                }),
+            });
+            setFeedback(res.message || "Password updated successfully.");
+            setSecurityForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+        } catch (err) {
+            setFeedback(err.message || "Failed to update password.");
+        } finally {
+            setSecurityLoading(false);
+        }
+    };
+
     const nextSession = upcomingLessons[0];
     return (<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
       {/* Next Lesson Banner */}
@@ -197,7 +242,9 @@ export function StudentDashboard({ user }) {
             { id: "assessments", label: `Assessments (${assessments.length})`, icon: "⏱️" },
             { id: "resources", label: `Learning resources (${resources.length})`, icon: "📁" },
             { id: "progress", label: "My progress", icon: "📈" },
+            { id: "certificates", label: `Certificates (${certificates.length})`, icon: "🎓" },
             { id: "profile", label: "Learning preferences", icon: "⚙️" },
+            { id: "security", label: "Account security", icon: "🔒" },
         ].map((tab) => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
                 ? "bg-slate-900 text-white shadow-sm"
                 : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
@@ -259,6 +306,14 @@ export function StudentDashboard({ user }) {
                   <p><strong>Program:</strong> {cls.course?.title}</p>
                   <p><strong>Instructor:</strong> {cls.teacher?.fullName || "Not assigned"}</p>
                   <p><strong>Time zone:</strong> {cls.timeZone}</p>
+                </div>
+                <div className="pt-2 border-t border-slate-100">
+                  <Link
+                    to={`/workspace/${cls._id}`}
+                    className="block w-full text-center rounded-2xl bg-emerald-800 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 transition shadow-sm"
+                  >
+                    Enter Learning Workspace →
+                  </Link>
                 </div>
               </div>))}
           </div>
@@ -449,6 +504,124 @@ export function StudentDashboard({ user }) {
             </form>
           </DashboardCard>
         </div>) : null}
+
+      {/* 8. CERTIFICATES */}
+      {activeTab === "certificates" ? (
+        <div className="space-y-8">
+          <DashboardCard title="Your Verified Credentials">
+            {certificates.length === 0 ? (
+              <div className="space-y-6">
+                <EmptyState
+                  title="No certificates earned yet."
+                  description="Complete at least 70% of your course requirements (attendance, assignments, and quizzes) to claim your official certificate of completion."
+                />
+                {classes.map((cls) => (
+                  <div key={cls._id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div>
+                      <h4 className="font-bold text-slate-900">{cls.course?.title || cls.title}</h4>
+                      <p className="text-xs text-slate-500">Cohort: {cls.title}</p>
+                    </div>
+                    <button
+                      onClick={() => handleClaimCertificate(cls._id)}
+                      className="rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-900"
+                    >
+                      Check & Claim Certificate
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2">
+                {certificates.map((cert) => (
+                  <div key={cert._id} className="rounded-3xl border border-amber-300 bg-amber-50/50 p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-lg bg-emerald-800 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                        Verified Credential
+                      </span>
+                      <span className="font-mono text-xs font-bold text-slate-600">
+                        {cert.certificateNumber}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900">{cert.courseTitle}</h3>
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <p>Issued to: <strong>{cert.studentName}</strong></p>
+                      <p>Date: {new Date(cert.issueDate).toLocaleDateString()}</p>
+                      <p>Overall Grade: <strong className="text-emerald-800">{cert.overallScore}%</strong></p>
+                    </div>
+                    <Link
+                      to={`/verify-certificate/${cert.certificateNumber}`}
+                      target="_blank"
+                      className="block text-center rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white hover:bg-slate-800 transition"
+                    >
+                      View & Print Certificate 🖨️
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DashboardCard>
+        </div>
+      ) : null}
+
+      {/* 9. ACCOUNT SECURITY */}
+      {activeTab === "security" ? (
+        <div className="space-y-6 max-w-xl">
+          <DashboardCard title="Account Password & Security">
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Current Password
+                </label>
+                <input
+                  required
+                  type="password"
+                  value={securityForm.currentPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs outline-none"
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  New Password (min. 8 characters)
+                </label>
+                <input
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  type="password"
+                  value={securityForm.newPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs outline-none"
+                  placeholder="At least 8 characters"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Confirm New Password
+                </label>
+                <input
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  type="password"
+                  value={securityForm.confirmPassword}
+                  onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs outline-none"
+                  placeholder="Repeat new password"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={securityLoading}
+                className="w-full rounded-xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                {securityLoading ? "Updating…" : "Update Password"}
+              </button>
+            </form>
+          </DashboardCard>
+        </div>
+      ) : null}
 
       {/* MODAL: Submit Assignment */}
       <Modal title={`Submit assignment: ${submitModal.assignment?.title || ""}`} isOpen={submitModal.open} onClose={() => setSubmitModal({ open: false, assignment: null, textResponse: "" })}>
