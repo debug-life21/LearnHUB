@@ -5,6 +5,9 @@ const studentProfileSchema = new Schema({
     learningGoals: { type: String, default: "" },
     currentSkillLevel: { type: String, default: "" },
     preferredSchedule: { type: String, default: "" },
+    preferredCourseIds: [{ type: Schema.Types.ObjectId, ref: "Course" }],
+    weeklyStudyHours: { type: Number, default: 0 },
+    timeZone: { type: String, default: "Africa/Addis_Ababa" },
     preferredLanguage: { type: String, default: "am" },
     placementStatus: {
         type: String,
@@ -17,6 +20,7 @@ const teacherProfileSchema = new Schema({
     expertise: { type: [String], default: [] },
     qualifications: { type: String, default: "" },
     availabilityNotes: { type: String, default: "" },
+    experienceYears: { type: Number, default: 0 },
 }, { _id: false });
 const userSchema = new Schema({
     name: { type: String, trim: true, default: "" },

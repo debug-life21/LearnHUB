@@ -1,12 +1,22 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { API_BASE_URL, apiRequest } from "../lib/api";
+import { API_BASE_URL, apiRequest, loadPublicCourses } from "../lib/api";
+import { SessionSchedule } from "../components/SessionSchedule";
+import { LiveSessionButton } from "../components/LiveSessionButton";
+import { CategoryCoursePicker } from "../components/CategoryCoursePicker";
+import { ProfilePhotoField } from "../components/ProfilePhotoField";
+import { DashboardSettings } from "../components/DashboardSettings";
+import { DashboardSidebar } from "../components/DashboardSidebar";
+import { formatSessionTime } from "../lib/sessionTime";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
+import { useAuth } from "../context/AuthContext";
 export function StudentDashboard({ user }) {
     const { t } = useTranslation();
+    const { refreshUser } = useAuth();
     const [activeTab, setActiveTab] = useState("overview");
     const [classes, setClasses] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [upcomingLessons, setUpcomingLessons] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [assessments, setAssessments] = useState([]);
@@ -35,9 +45,18 @@ export function StudentDashboard({ user }) {
     // Profile preferences form
     const [profileForm, setProfileForm] = useState({
         learningGoals: "",
-        learningInterests: "Web Development",
+        learningInterests: [],
         currentSkillLevel: "Beginner",
         preferredSchedule: "",
+        preferredCourseIds: [],
+        weeklyStudyHours: 5,
+        timeZone: "Africa/Addis_Ababa",
+    });
+    const [personalForm, setPersonalForm] = useState({
+        fullName: user.fullName || "",
+        phone: user.phone || "",
+        bio: user.bio || "",
+        avatarUrl: user.avatarUrl || "",
     });
     const loadStudentData = useCallback(async () => {
         try {
@@ -63,9 +82,12 @@ export function StudentDashboard({ user }) {
             if (dash.student?.studentProfile) {
                 setProfileForm({
                     learningGoals: dash.student.studentProfile.learningGoals || "",
-                    learningInterests: dash.student.studentProfile.learningInterests?.[0] || "Web Development",
+                    learningInterests: dash.student.studentProfile.learningInterests || [],
                     currentSkillLevel: dash.student.studentProfile.currentSkillLevel || "Beginner",
                     preferredSchedule: dash.student.studentProfile.preferredSchedule || "",
+                    preferredCourseIds: (dash.student.studentProfile.preferredCourseIds || []).map((courseId) => String(courseId?._id || courseId)),
+                    weeklyStudyHours: dash.student.studentProfile.weeklyStudyHours || 5,
+                    timeZone: dash.student.studentProfile.timeZone || "Africa/Addis_Ababa",
                 });
             }
         }
@@ -74,10 +96,17 @@ export function StudentDashboard({ user }) {
         }
     }, []);
     useEffect(() => {
-        let mounted = true;
         loadStudentData();
-        return () => { mounted = false; };
+        const refreshTimer = window.setInterval(() => { void loadStudentData(); }, 60_000);
+        return () => window.clearInterval(refreshTimer);
     }, [loadStudentData]);
+    useEffect(() => {
+        let mounted = true;
+        loadPublicCourses()
+            .then((catalog) => { if (mounted) setCourses(catalog); })
+            .catch((err) => { if (mounted) setFeedback(err.message); });
+        return () => { mounted = false; };
+    }, []);
     // Submit Assignment Action
     const handleSubmitAssignment = async (e) => {
         e.preventDefault();
@@ -145,9 +174,12 @@ export function StudentDashboard({ user }) {
                 method: "PATCH",
                 body: JSON.stringify({
                     learningGoals: profileForm.learningGoals,
-                    learningInterests: [profileForm.learningInterests],
+                    learningInterests: profileForm.learningInterests,
                     currentSkillLevel: profileForm.currentSkillLevel,
                     preferredSchedule: profileForm.preferredSchedule,
+                    preferredCourseIds: profileForm.preferredCourseIds,
+                    weeklyStudyHours: Number(profileForm.weeklyStudyHours),
+                    timeZone: profileForm.timeZone,
                 }),
             });
             setFeedback("Learning preferences updated.");
@@ -155,6 +187,21 @@ export function StudentDashboard({ user }) {
         }
         catch (err) {
             setFeedback(err.message);
+        }
+    };
+
+    const handleSavePersonalProfile = async (event) => {
+        event.preventDefault();
+        try {
+            const response = await apiRequest("/api/auth/profile", {
+                method: "PATCH",
+                body: JSON.stringify(personalForm),
+            });
+            setPersonalForm((current) => ({ ...current, ...response.user }));
+            await refreshUser();
+            setFeedback("Personal profile updated.");
+        } catch (err) {
+            setFeedback(err.message || "Could not update personal profile.");
         }
     };
 
@@ -194,7 +241,21 @@ export function StudentDashboard({ user }) {
     };
 
     const nextSession = upcomingLessons[0];
-    return (<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    const dashboardTabs = [
+        { id: "overview", label: "Overview", icon: "📊" },
+        { id: "classes", label: `My cohorts (${classes.length})`, icon: "🏫" },
+        { id: "schedule", label: `Live classes (${upcomingLessons.length})`, icon: "📹" },
+        { id: "assignments", label: `Assignments (${assignments.length})`, icon: "📚" },
+        { id: "assessments", label: `Assessments (${assessments.length})`, icon: "⏱️" },
+        { id: "resources", label: `Learning resources (${resources.length})`, icon: "📁" },
+        { id: "progress", label: "My progress", icon: "📈" },
+        { id: "certificates", label: `Certificates (${certificates.length})`, icon: "🎓" },
+        { id: "profile", label: "My profile", icon: "👤" },
+        { id: "settings", label: "Settings", icon: "⚙️" },
+        { id: "security", label: "Account security", icon: "🔒" },
+    ];
+    return (<div className="min-h-screen space-y-8 px-4 py-6 sm:px-6 lg:pl-72 lg:pr-8">
+      <DashboardSidebar title="Student workspace" user={{ ...user, fullName: personalForm.fullName, avatarUrl: personalForm.avatarUrl }} tabs={dashboardTabs} activeTab={activeTab} onSelect={setActiveTab}/>
       {/* Next Lesson Banner */}
       {nextSession ? (<div className="rounded-3xl bg-gradient-to-r from-blue-900 via-slate-900 to-cyan-950 p-8 text-white shadow-xl flex flex-wrap items-center justify-between gap-6 border border-cyan-500/20">
           <div>
@@ -204,12 +265,10 @@ export function StudentDashboard({ user }) {
             </div>
             <h2 className="mt-3 text-2xl font-black">{nextSession.title}</h2>
             <p className="mt-1 text-xs text-slate-300">
-              {new Date(nextSession.startsAt).toLocaleString()} — {new Date(nextSession.endsAt).toLocaleTimeString()}
+              {formatSessionTime(nextSession.startsAt)} — {formatSessionTime(nextSession.endsAt)}
             </p>
           </div>
-          {nextSession.meetingUrl ? (<a href={nextSession.meetingUrl} target="_blank" rel="noreferrer" className="rounded-2xl bg-cyan-400 px-6 py-3.5 text-sm font-extrabold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300 transition-all hover:scale-105">
-              📹 {t("joinMeeting")}
-            </a>) : null}
+          {nextSession.meetingUrl ? <LiveSessionButton session={nextSession} /> : null}
         </div>) : null}
 
       {/* Student Welcome Card */}
@@ -218,7 +277,10 @@ export function StudentDashboard({ user }) {
           <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
             {t("studentOverview")}
           </span>
-          <h1 className="mt-1 text-3xl font-black text-slate-900">{user.fullName}</h1>
+          <div className="mt-1 flex items-center gap-4">
+            {personalForm.avatarUrl ? <img src={personalForm.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-slate-200"/> : null}
+            <h1 className="text-3xl font-black text-slate-900">{personalForm.fullName}</h1>
+          </div>
           <p className="mt-1 text-sm text-slate-500">{user.email}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -228,30 +290,17 @@ export function StudentDashboard({ user }) {
         </div>
       </div>
 
+      {(!profileForm.preferredCourseIds.length || !profileForm.preferredSchedule) ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p>Complete your course choices and preferred study times so the LearnHUB team can place you in a suitable cohort.</p>
+          <button onClick={() => setActiveTab("profile")} className="rounded-xl bg-amber-800 px-4 py-2 text-xs font-bold text-white hover:bg-amber-900">Complete learning profile</button>
+        </div>
+      ) : null}
+
       {feedback ? (<div className="rounded-2xl bg-blue-50 p-4 text-sm font-semibold text-blue-900 ring-1 ring-blue-200 flex justify-between items-center">
           <span>{feedback}</span>
           <button onClick={() => setFeedback("")} className="text-blue-500 hover:text-blue-800">✕</button>
         </div>) : null}
-
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-        {[
-            { id: "overview", label: "Overview", icon: "📊" },
-            { id: "classes", label: `My cohorts (${classes.length})`, icon: "🏫" },
-            { id: "assignments", label: `Assignments (${assignments.length})`, icon: "📚" },
-            { id: "assessments", label: `Assessments (${assessments.length})`, icon: "⏱️" },
-            { id: "resources", label: `Learning resources (${resources.length})`, icon: "📁" },
-            { id: "progress", label: "My progress", icon: "📈" },
-            { id: "certificates", label: `Certificates (${certificates.length})`, icon: "🎓" },
-            { id: "profile", label: "Learning preferences", icon: "⚙️" },
-            { id: "security", label: "Account security", icon: "🔒" },
-        ].map((tab) => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
-                ? "bg-slate-900 text-white shadow-sm"
-                : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
-            <span>{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>))}
-      </div>
 
       {/* 1. OVERVIEW */}
       {activeTab === "overview" ? (<div className="space-y-8">
@@ -318,6 +367,12 @@ export function StudentDashboard({ user }) {
               </div>))}
           </div>
         </div>) : null}
+
+      {activeTab === "schedule" ? (
+        <DashboardCard title="Live class schedule" subtitle="Times are shown in your device's local time. You can also compare with the cohort time zone.">
+          <SessionSchedule sessions={upcomingLessons} />
+        </DashboardCard>
+      ) : null}
 
       {/* 3. ASSIGNMENTS */}
       {activeTab === "assignments" ? (<div className="space-y-6">
@@ -462,6 +517,23 @@ export function StudentDashboard({ user }) {
 
       {/* 7. PROFILE & PREFERENCES */}
       {activeTab === "profile" ? (<div className="max-w-xl mx-auto">
+          <DashboardCard title="Personal profile" subtitle="Keep your contact information and profile photo current.">
+            <form onSubmit={handleSavePersonalProfile} className="space-y-4">
+              <ProfilePhotoField value={personalForm.avatarUrl} onChange={(avatarUrl) => setPersonalForm({ ...personalForm, avatarUrl })}/>
+              <label className="block text-xs font-bold text-slate-700">Full name
+                <input required minLength={2} maxLength={100} value={personalForm.fullName} onChange={(event) => setPersonalForm({ ...personalForm, fullName: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Phone number
+                <input type="tel" maxLength={30} value={personalForm.phone} onChange={(event) => setPersonalForm({ ...personalForm, phone: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">About me
+                <textarea rows={3} maxLength={500} value={personalForm.bio} onChange={(event) => setPersonalForm({ ...personalForm, bio: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm"/>
+              </label>
+              <p className="text-xs text-slate-500">Email: {user.email} (used for sign-in; contact support to change it)</p>
+              <button type="submit" className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-700">Save personal profile</button>
+            </form>
+          </DashboardCard>
+          <div className="mt-6">
           <DashboardCard title="Learning goals and preferences">
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900 border border-amber-200">
@@ -469,14 +541,21 @@ export function StudentDashboard({ user }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700">{t("learningInterests")}</label>
-                <select value={profileForm.learningInterests} onChange={(e) => setProfileForm({ ...profileForm, learningInterests: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
-                  <option value="Web Development">Web Development</option>
-                  <option value="Programming">Programming</option>
-                  <option value="Languages">Languages</option>
-                  <option value="Computer Science">Computer Science</option>
-                  <option value="Digital Marketing">Digital Marketing</option>
-                </select>
+                <p className="text-xs font-bold text-slate-700">Courses by category</p>
+                <CategoryCoursePicker
+                  courses={courses}
+                  selectedCourseIds={profileForm.preferredCourseIds}
+                  onChange={(preferredCourseIds) => setProfileForm({ ...profileForm, preferredCourseIds })}
+                />
+                <p className="mt-1 text-[11px] text-slate-500">Digital Marketing is listed first. Choose one or more; the team will use these when reviewing your placement.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700">{t("learningInterests")} (comma-separated)</label>
+                <input value={profileForm.learningInterests.join(", ")} onChange={(e) => setProfileForm({
+                    ...profileForm,
+                    learningInterests: e.target.value.split(",").map((interest) => interest.trim()).filter(Boolean),
+                })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
               </div>
 
               <div>
@@ -490,7 +569,16 @@ export function StudentDashboard({ user }) {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700">{t("preferredSchedule")}</label>
-                <input type="text" value={profileForm.preferredSchedule} onChange={(e) => setProfileForm({ ...profileForm, preferredSchedule: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+                <input required type="text" value={profileForm.preferredSchedule} onChange={(e) => setProfileForm({ ...profileForm, preferredSchedule: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="e.g. Weekdays after 6 PM"/>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs font-bold text-slate-700">Hours available per week
+                  <input required type="number" min="1" max="80" value={profileForm.weeklyStudyHours} onChange={(e) => setProfileForm({ ...profileForm, weeklyStudyHours: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+                </label>
+                <label className="block text-xs font-bold text-slate-700">Time zone
+                  <input required value={profileForm.timeZone} onChange={(e) => setProfileForm({ ...profileForm, timeZone: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+                </label>
               </div>
 
               <div>
@@ -503,7 +591,10 @@ export function StudentDashboard({ user }) {
               </button>
             </form>
           </DashboardCard>
+          </div>
         </div>) : null}
+
+      {activeTab === "settings" ? <DashboardSettings user={user} sessions={upcomingLessons}/> : null}
 
       {/* 8. CERTIFICATES */}
       {activeTab === "certificates" ? (

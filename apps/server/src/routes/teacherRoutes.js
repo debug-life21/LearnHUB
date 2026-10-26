@@ -24,9 +24,10 @@ teacherRouter.get("/dashboard", asyncHandler(async (req, res) => {
             .populate("students", "fullName email")
             .sort({ createdAt: -1 })
             .lean(),
-        ClassSessionModel.find({ teacher: teacherId, startsAt: { $gte: now }, status: "scheduled" })
+        ClassSessionModel.find({ teacher: teacherId, endsAt: { $gte: now }, status: "scheduled" })
+            .populate("classroom", "title timeZone")
             .sort({ startsAt: 1 })
-            .limit(10)
+            .limit(50)
             .lean(),
         NotificationModel.find({ user: teacherId }).sort({ createdAt: -1 }).limit(10).lean(),
         AssignmentModel.find({ teacher: teacherId }).select("_id").lean(),
@@ -58,6 +59,7 @@ teacherRouter.get("/classes", asyncHandler(async (req, res) => {
         .lean();
     const classIds = classes.map((classroom) => classroom._id);
     const sessions = await ClassSessionModel.find({ classroom: { $in: classIds } })
+        .populate("classroom", "title timeZone")
         .sort({ startsAt: 1 })
         .lean();
     res.json({ classes, sessions });

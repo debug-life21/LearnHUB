@@ -1,6 +1,6 @@
-import fs from "node:fs/promises";
 import mongoose from "mongoose";
 import { Router } from "express";
+import { pipeline } from "node:stream/promises";
 import { z } from "zod";
 import { hashPassword, requireAuth, requireRole } from "../auth.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
@@ -25,9 +25,17 @@ import { CertificateModel } from "../models/Certificate.js";
 import { DiscussionModel } from "../models/Discussion.js";
 import { LearningResourceModel } from "../models/LearningResource.js";
 import { slugify } from "../utils.js";
-import { getLocalFilePath } from "../lib/storage.js";
+import { deleteStoredFile, getStoredFileStream } from "../lib/storage.js";
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("hub_admin"));
+function isValidTimeZone(timeZone) {
+    try {
+        new Intl.DateTimeFormat("en-US", { timeZone }).format();
+        return true;
+    } catch {
+        return false;
+    }
+}
 adminRouter.get("/teachers/pending", asyncHandler(async (_req, res) => {
     const teachers = await UserModel.find({ role: "teacher", isDeleted: { $ne: true }, teacherStatus: "pending", isVerified: { $ne: false } })
         .select("-password -passwordHash -verificationCode")
@@ -119,6 +127,32 @@ adminRouter.get("/teacher-applications", asyncHandler(async (_req, res) => {
         .sort({ createdAt: -1 })
         .lean();
     res.json({ applications: applications.filter((application) => application.user && !application.user.isDeleted && application.user.isVerified !== false) });
+}));
+adminRouter.get("/teacher-applications/:applicationId/documents/:document", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.applicationId)) {
+        throw new ApiError(400, "Invalid teacher application ID.");
+    }
+    const application = await TeacherApplicationModel.findById(req.params.applicationId).lean();
+    if (!application) {
+        throw new ApiError(404, "Teacher application not found.");
+    }
+    const document = req.params.document === "cv"
+        ? application.documents?.cv
+        : /^certificate-\d+$/.test(req.params.document)
+            ? application.documents?.certificates?.[Number(req.params.document.slice("certificate-".length))]
+            : null;
+    if (!document?.key) {
+        throw new ApiError(404, "Application document not found.");
+    }
+    const storedFile = await getStoredFileStream(document.key, document.storageProvider || "local_disk");
+    if (!storedFile) {
+        throw new ApiError(404, "Application document is no longer available.");
+    }
+    res.setHeader("Content-Type", document.mimeType);
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(document.filename)}`);
+    if (storedFile.contentLength !== undefined) res.setHeader("Content-Length", storedFile.contentLength);
+    res.setHeader("Cache-Control", "private, no-store");
+    await pipeline(storedFile.body, res);
 }));
 adminRouter.patch("/teacher-applications/:applicationId", asyncHandler(async (req, res) => {
     const data = z.object({
@@ -294,6 +328,7 @@ adminRouter.patch("/users/:userId/status", asyncHandler(async (req, res) => {
 adminRouter.get("/students", asyncHandler(async (_req, res) => {
     const students = await UserModel.find({ role: "student", isDeleted: { $ne: true } })
         .select("-passwordHash")
+        .populate("studentProfile.preferredCourseIds", "title")
         .sort({ createdAt: -1 })
         .lean();
     res.json({ students });
@@ -494,7 +529,7 @@ adminRouter.post("/classes", asyncHandler(async (req, res) => {
         teacherId: z.string().optional(),
         capacity: z.number().int().min(1).max(100).default(20),
         status: z.enum(["planned", "active", "completed", "archived"]).default("planned"),
-        timeZone: z.string().default("Africa/Addis_Ababa"),
+        timeZone: z.string().refine(isValidTimeZone, "Enter a valid IANA time zone.").default("Africa/Addis_Ababa"),
         description: z.string().default(""),
         startDate: z.string().datetime().optional(),
         endDate: z.string().datetime().optional(),
@@ -539,6 +574,7 @@ adminRouter.get("/classes", asyncHandler(async (_req, res) => {
         .sort({ createdAt: -1 })
         .lean();
     const sessions = await ClassSessionModel.find({ classroom: { $in: classes.map((classroom) => classroom._id) } })
+        .populate("classroom", "title timeZone")
         .sort({ startsAt: 1 })
         .lean();
     res.json({ classes, sessions });
@@ -551,7 +587,7 @@ adminRouter.patch("/classes/:classId", asyncHandler(async (req, res) => {
         teacherId: z.string().nullable().optional(),
         capacity: z.number().int().min(1).max(100).optional(),
         status: z.enum(["planned", "active", "completed", "archived"]).optional(),
-        timeZone: z.string().optional(),
+        timeZone: z.string().refine(isValidTimeZone, "Enter a valid IANA time zone.").optional(),
         description: z.string().optional(),
     }).refine((value) => Object.keys(value).length > 0, "Provide at least one field to update.").parse(req.body);
     const classroom = await ClassroomModel.findById(req.params.classId);
@@ -595,6 +631,10 @@ adminRouter.delete("/classes/:classId", asyncHandler(async (req, res) => {
     const sessionIds = sessions.map(({ _id }) => _id);
     const assessmentIds = assessments.map(({ _id }) => _id);
     const assignmentIds = assignments.map(({ _id }) => _id);
+    await Promise.all(resources.filter((resource) => !["youtube", "google_drive"].includes(resource.sourceType)).map((resource) => deleteStoredFile(
+        resource.storedKey,
+        resource.storageProvider || "local_disk",
+    )));
     await Promise.all([
         AnnouncementModel.deleteMany({ classroom: classroom._id }),
         AssessmentAttemptModel.deleteMany({ $or: [
@@ -622,11 +662,6 @@ adminRouter.delete("/classes/:classId", asyncHandler(async (req, res) => {
         if (!stillEnrolled) {
             await UserModel.updateOne({ _id: studentId }, { $set: { "studentProfile.placementStatus": "pending" } });
         }
-    }
-    for (const resource of resources) {
-        if (resource.storageProvider !== "local_disk" || !resource.storedKey) continue;
-        const filePath = getLocalFilePath(resource.storedKey);
-        if (filePath) await fs.unlink(filePath);
     }
     await writeAudit(req.user.id, "classroom_deleted", "Classroom", classroom._id.toString());
     res.json({ message: "Cohort and its learning records deleted." });
@@ -780,6 +815,25 @@ adminRouter.patch("/sessions/:sessionId", asyncHandler(async (req, res) => {
     if (data.meetingUrl !== undefined) session.meetingUrl = data.meetingUrl;
     if (data.status !== undefined) session.status = data.status;
     await session.save();
+    const classroom = await ClassroomModel.findById(session.classroom).select("title students").lean();
+    if (classroom) {
+        const recipients = [...new Set([session.teacher.toString(), ...classroom.students.map((studentId) => studentId.toString())])];
+        await NotificationModel.insertMany(recipients.map((recipientId) => ({
+            user: recipientId,
+            title: session.status === "cancelled"
+                ? "Class session cancelled"
+                : session.status === "completed"
+                    ? "Class session completed"
+                    : "Class session updated",
+            message: session.status === "cancelled"
+                ? `"${session.title}" in ${classroom.title} has been cancelled.`
+                : session.status === "completed"
+                    ? `"${session.title}" in ${classroom.title} has been marked complete by an administrator.`
+                    : `"${session.title}" in ${classroom.title} is scheduled for ${session.startsAt.toISOString()}.`,
+            kind: "session",
+            link: "/dashboard",
+        })));
+    }
     await writeAudit(req.user.id, "session_updated", "ClassSession", session._id.toString());
     res.json({ session });
 }));

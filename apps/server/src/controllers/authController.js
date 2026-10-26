@@ -7,17 +7,49 @@ import { setAuthCookie, signToken, verifyPassword, hashPassword } from "../auth.
 import { ApiError } from "../lib/http.js";
 import { TeacherApplicationModel } from "../models/TeacherApplication.js";
 import { UserModel } from "../models/User.js";
+import { CourseModel } from "../models/Course.js";
+import { deleteStoredFile, saveFile, validateFileType } from "../lib/storage.js";
 import { sendVerificationCode, sendPasswordResetEmail, sendSecurityAlertEmail } from "../utils/email.js";
 
 const googleAuthClient = new OAuth2Client();
 const codeLifetimeMs = 10 * 60 * 1000;
 const resendCooldownMs = 60 * 1000;
 
+const studentProfileSchema = z.object({
+    learningInterests: z.array(z.string().trim().min(1).max(80)).max(10).default([]),
+    learningGoals: z.string().trim().max(1000).default(""),
+    currentSkillLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).default("Beginner"),
+    preferredSchedule: z.string().trim().min(2).max(200),
+    preferredCourseIds: z.array(z.string()).min(1).max(10),
+    weeklyStudyHours: z.number().int().min(1).max(80).default(5),
+    timeZone: z.string().trim().max(80).default("Africa/Addis_Ababa"),
+});
+
 const signupSchema = z.object({
     name: z.string().trim().min(2).max(100),
     email: z.string().trim().email().max(254),
     password: z.string().min(8).max(128),
     role: z.enum(["student", "teacher"]),
+    phone: z.string().trim().max(30).default(""),
+    studentProfile: studentProfileSchema.optional(),
+    teacherApplication: z.object({
+        qualifications: z.string().trim().min(2).max(1000),
+        experience: z.string().trim().min(10).max(3000),
+        teachingStatement: z.string().trim().min(20).max(1000),
+        experienceYears: z.number().int().min(0).max(60),
+        teachingCategories: z.array(z.string().trim().min(1).max(80)).min(1).max(10),
+        availability: z.string().trim().min(2).max(500),
+        cv: z.object({
+            originalFilename: z.string().min(1).max(200),
+            mimeType: z.string().min(1).max(120),
+            base64Data: z.string().min(1),
+        }),
+        certificates: z.array(z.object({
+            originalFilename: z.string().min(1).max(200),
+            mimeType: z.string().min(1).max(120),
+            base64Data: z.string().min(1),
+        })).max(5).default([]),
+    }).optional(),
 });
 
 function userResponse(user) {
@@ -55,29 +87,121 @@ function normalizedEmail(email) {
 
 export async function signup(req, res) {
     const data = signupSchema.parse(req.body);
+    if (data.role === "teacher" && !data.teacherApplication) {
+        throw new ApiError(400, "Complete the teacher application and upload a CV.");
+    }
+    if (data.role === "student" && !data.studentProfile) {
+        throw new ApiError(400, "Complete your learning preferences before registering.");
+    }
+    if (data.role === "teacher" && data.phone.length < 7) {
+        throw new ApiError(400, "Enter a contact phone number with at least 7 characters.");
+    }
+    const applicationFiles = [];
+    if (data.teacherApplication) {
+        const files = [data.teacherApplication.cv, ...data.teacherApplication.certificates];
+        for (const file of files) {
+            if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.base64Data)) {
+                throw new ApiError(400, "An application document could not be read. Please select it again.");
+            }
+            const buffer = Buffer.from(file.base64Data, "base64");
+            if (!validateFileType(file.originalFilename, file.mimeType)) {
+                throw new ApiError(400, "CV and certificates must be PDF, Word documents, or images.");
+            }
+            if (!buffer.length || buffer.length > 5 * 1024 * 1024) {
+                throw new ApiError(400, "Each application document must be smaller than 5MB.");
+            }
+            applicationFiles.push({ ...file, buffer });
+        }
+        if (applicationFiles.reduce((total, file) => total + file.buffer.length, 0) > 10 * 1024 * 1024) {
+            throw new ApiError(400, "Application documents must total less than 10MB.");
+        }
+    }
     const email = normalizedEmail(data.email);
     if (await UserModel.exists({ email })) {
         throw new ApiError(409, "An account with this email already exists.");
     }
-    const user = await UserModel.create({
-        name: data.name,
-        fullName: data.name,
-        email,
-        password: await bcrypt.hash(data.password, 12),
-        authProvider: "local",
-        role: data.role,
-        isVerified: false,
-        emailVerified: false,
-        teacherStatus: data.role === "teacher" ? "pending" : "approved",
-        accountStatus: "pending_approval",
-    });
-    if (data.role === "teacher") {
-        await TeacherApplicationModel.create({
-            user: user._id,
-            qualifications: "To be provided",
-            experience: "To be provided",
-            teachingCategories: [],
+    let preferredCourseIds = [];
+    if (data.role === "student") {
+        preferredCourseIds = data.studentProfile.preferredCourseIds;
+        if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
+            throw new ApiError(400, "Select valid courses from the course catalog.");
+        }
+        const matchingCourses = await CourseModel.countDocuments({
+            _id: { $in: preferredCourseIds },
+            status: "published",
         });
+        if (matchingCourses !== new Set(preferredCourseIds).size) {
+            throw new ApiError(400, "One or more selected courses are no longer available.");
+        }
+    }
+    const savedTeacherFiles = [];
+    if (data.role === "teacher") {
+        try {
+            for (const file of applicationFiles) {
+                savedTeacherFiles.push(await saveFile(file.buffer, file.originalFilename, file.mimeType));
+            }
+        } catch (error) {
+            await Promise.all(savedTeacherFiles.map((file) => deleteStoredFile(file.key, file.storageProvider)));
+            throw error;
+        }
+    }
+    let user;
+    try {
+        user = await UserModel.create({
+            name: data.name,
+            fullName: data.name,
+            email,
+            phone: data.phone,
+            password: await bcrypt.hash(data.password, 12),
+            authProvider: "local",
+            role: data.role,
+            isVerified: false,
+            emailVerified: false,
+            teacherStatus: data.role === "teacher" ? "pending" : "approved",
+            accountStatus: "pending_approval",
+            studentProfile: data.role === "student" ? {
+                ...data.studentProfile,
+                preferredCourseIds,
+                placementStatus: "pending",
+            } : undefined,
+            teacherProfile: data.role === "teacher" ? {
+                qualifications: data.teacherApplication.qualifications,
+                expertise: data.teacherApplication.teachingCategories,
+                availabilityNotes: data.teacherApplication.availability,
+                experienceYears: data.teacherApplication.experienceYears,
+            } : undefined,
+        });
+        if (data.role === "teacher") {
+            await TeacherApplicationModel.create({
+                user: user._id,
+                qualifications: data.teacherApplication.qualifications,
+                experience: data.teacherApplication.experience,
+                teachingStatement: data.teacherApplication.teachingStatement,
+                experienceYears: data.teacherApplication.experienceYears,
+                teachingCategories: data.teacherApplication.teachingCategories,
+                availability: data.teacherApplication.availability,
+                documents: {
+                    cv: {
+                        key: savedTeacherFiles[0].key,
+                        storageProvider: savedTeacherFiles[0].storageProvider,
+                        filename: applicationFiles[0].originalFilename,
+                        mimeType: applicationFiles[0].mimeType,
+                        size: savedTeacherFiles[0].size,
+                    },
+                    certificates: applicationFiles.slice(1).map((file, index) => ({
+                        key: savedTeacherFiles[index + 1].key,
+                        storageProvider: savedTeacherFiles[index + 1].storageProvider,
+                        filename: file.originalFilename,
+                        mimeType: file.mimeType,
+                        size: savedTeacherFiles[index + 1].size,
+                    })),
+                },
+            });
+        }
+    } catch (error) {
+        if (user?._id) await UserModel.deleteOne({ _id: user._id });
+        await Promise.all(savedTeacherFiles.map((file) => deleteStoredFile(file.key, file.storageProvider)));
+        throw error;
     }
     await issueCode(user, "signup");
     res.status(201).json({ message: "Verification code sent.", email, purpose: "signup" });
@@ -223,6 +347,8 @@ export async function google(req, res) {
     const data = z.object({
         credential: z.string().min(1),
         role: z.enum(["student", "teacher"]).optional(),
+        phone: z.string().trim().max(30).default(""),
+        studentProfile: studentProfileSchema.optional(),
     }).parse(req.body);
     if (!env.GOOGLE_CLIENT_ID) {
         throw new ApiError(503, "Google sign-in is not configured.");
@@ -250,26 +376,40 @@ export async function google(req, res) {
         if (!data.role) {
             throw new ApiError(400, "Choose a role on the sign-up page before continuing with Google.");
         }
+        if (data.role === "teacher") {
+            throw new ApiError(400, "Teacher applications must be submitted with the required CV and qualifications.");
+        }
+        if (!data.studentProfile) {
+            throw new ApiError(400, "Complete your learning plan before creating a student account.");
+        }
+        const preferredCourseIds = data.studentProfile.preferredCourseIds;
+        if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
+            throw new ApiError(400, "Select valid courses from the course catalog.");
+        }
+        const matchingCourses = await CourseModel.countDocuments({
+            _id: { $in: preferredCourseIds },
+            status: "published",
+        });
+        if (matchingCourses !== new Set(preferredCourseIds).size) {
+            throw new ApiError(400, "One or more selected courses are no longer available.");
+        }
         user = await UserModel.create({
             name: payload.name?.trim() || email.split("@")[0],
             fullName: payload.name?.trim() || email.split("@")[0],
             email,
+            phone: data.phone,
             googleId: payload.sub,
             authProvider: "google",
             role: data.role,
             isVerified: true,
             emailVerified: true,
-            teacherStatus: data.role === "teacher" ? "pending" : "approved",
-            accountStatus: data.role === "teacher" ? "pending_approval" : "active",
+            teacherStatus: "approved",
+            accountStatus: "active",
+            studentProfile: {
+                ...data.studentProfile,
+                placementStatus: "pending",
+            },
         });
-        if (data.role === "teacher") {
-            await TeacherApplicationModel.create({
-                user: user._id,
-                qualifications: "To be provided",
-                experience: "To be provided",
-                teachingCategories: [],
-            });
-        }
     } else {
         if (user.role === "admin" || user.role === "hub_admin" || user.role === "support_staff") {
             throw new ApiError(403, "Google sign-in is not available for this account.");
@@ -412,8 +552,18 @@ export async function updateProfile(req, res) {
         fullName: z.string().trim().min(2).max(100).optional(),
         phone: z.string().trim().max(30).optional(),
         bio: z.string().trim().max(500).optional(),
+        teacherProfile: z.object({
+            expertise: z.array(z.string().trim().min(1).max(80)).max(10).optional(),
+            qualifications: z.string().trim().max(1000).optional(),
+            availabilityNotes: z.string().trim().max(500).optional(),
+            experienceYears: z.number().int().min(0).max(60).optional(),
+        }).optional(),
         languagePreference: z.enum(["am", "en"]).optional(),
-        avatarUrl: z.string().trim().optional(),
+        avatarUrl: z.string().trim().max(1_400_000).refine((value) => (
+            value === "" ||
+            /^https:\/\/[^\s]+$/i.test(value) ||
+            /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)
+        ), "Profile photos must be a secure URL or an uploaded JPG, PNG, or WebP image."),
     }).parse(req.body);
 
     const user = await UserModel.findById(req.user.id);
@@ -427,6 +577,13 @@ export async function updateProfile(req, res) {
     }
     if (data.phone !== undefined) user.phone = data.phone;
     if (data.bio !== undefined) user.bio = data.bio;
+    if (data.teacherProfile && user.role === "teacher") {
+        user.teacherProfile ??= {};
+        if (data.teacherProfile.expertise !== undefined) user.teacherProfile.expertise = data.teacherProfile.expertise;
+        if (data.teacherProfile.qualifications !== undefined) user.teacherProfile.qualifications = data.teacherProfile.qualifications;
+        if (data.teacherProfile.availabilityNotes !== undefined) user.teacherProfile.availabilityNotes = data.teacherProfile.availabilityNotes;
+        if (data.teacherProfile.experienceYears !== undefined) user.teacherProfile.experienceYears = data.teacherProfile.experienceYears;
+    }
     if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
     if (data.languagePreference !== undefined) {
         user.languagePreference = data.languagePreference;
@@ -450,6 +607,7 @@ export async function updateProfile(req, res) {
             teacherStatus: user.teacherStatus,
             accountStatus: user.accountStatus,
             languagePreference: user.languagePreference,
+            teacherProfile: user.teacherProfile,
         },
     });
 }

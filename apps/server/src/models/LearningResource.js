@@ -2,16 +2,24 @@ import mongoose, { Schema } from "mongoose";
 const learningResourceSchema = new Schema({
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
-    originalFilename: { type: String, required: true },
-    storedKey: { type: String, required: true },
+    originalFilename: { type: String, default: "" },
+    storedKey: { type: String, default: "" },
     mimeType: { type: String, required: true },
-    fileSize: { type: Number, required: true },
+    fileSize: { type: Number, default: 0 },
+    sourceType: {
+        type: String,
+        enum: ["upload", "youtube", "google_drive"],
+        default: "upload",
+        index: true,
+    },
+    externalUrl: { type: String, default: "" },
+    sourceUrl: { type: String, default: "" },
     uploader: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     course: { type: Schema.Types.ObjectId, ref: "Course", default: null, index: true },
     classroom: { type: Schema.Types.ObjectId, ref: "Classroom", default: null, index: true },
     category: {
         type: String,
-        enum: ["document", "pdf", "video", "slide", "audio", "worksheet", "other"],
+        enum: ["document", "pdf", "spreadsheet", "video", "slide", "audio", "worksheet", "other"],
         default: "document",
     },
     visibility: {

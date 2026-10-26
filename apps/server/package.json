@@ -10,10 +10,12 @@
     "seed": "node src/seed.js",
     "seed:catalog": "node src/seedCatalog.js",
     "seed:admin": "node src/seedAdmin.js",
-    "test": "node --test test/system.test.js",
+    "migrate:uploads-to-r2": "node src/migrateUploadsToR2.js",
+    "test": "node --test test/*.test.js",
     "lint": "node build.js --check"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1157.0",
     "argon2": "^0.44.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

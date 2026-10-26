@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
+import { SocialLinks } from "./components/SocialLinks";
 
 const HomePage = lazy(() => import("./pages/HomePage").then((page) => ({ default: page.HomePage })));
 const ExplorePage = lazy(() => import("./pages/ExplorePage").then((page) => ({ default: page.ExplorePage })));
@@ -132,5 +133,6 @@ export default function App() {
         </Suspense>
       </main>
       <Footer />
+      <SocialLinks />
     </div>);
 }

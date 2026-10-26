@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { apiRequest } from "../lib/api";
+import { API_BASE_URL, apiRequest } from "../lib/api";
+import { dateTimeInputToISOString, formatDateTimeInput, formatSessionTime } from "../lib/sessionTime";
+import { ProfilePhotoField } from "../components/ProfilePhotoField";
+import { DashboardSettings } from "../components/DashboardSettings";
+import { DashboardSidebar } from "../components/DashboardSidebar";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
-
-function toDateTimeInput(value) {
-    const date = new Date(value);
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-    return localDate.toISOString().slice(0, 16);
-}
+import { useAuth } from "../context/AuthContext";
 
 export function AdminDashboard({ user }) {
     const { t } = useTranslation();
+    const { refreshUser } = useAuth();
     const [activeTab, setActiveTab] = useState("overview");
     // State collections
     const [metrics, setMetrics] = useState({});
@@ -22,6 +22,7 @@ export function AdminDashboard({ user }) {
     const [courses, setCourses] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sessions, setSessions] = useState([]);
+    const [learningResources, setLearningResources] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
     const [faqs, setFaqs] = useState([]);
     const [inquiries, setInquiries] = useState([]);
@@ -30,6 +31,14 @@ export function AdminDashboard({ user }) {
     const [reportsLoaded, setReportsLoaded] = useState(false);
     const [isReportsLoading, setIsReportsLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
+    const [adminProfile, setAdminProfile] = useState({
+        fullName: user.fullName || "",
+        phone: user.phone || "",
+        bio: user.bio || "",
+        avatarUrl: user.avatarUrl || "",
+    });
+    const [securityForm, setSecurityForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    const [securityLoading, setSecurityLoading] = useState(false);
     const [loadError, setLoadError] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [teacherSearch, setTeacherSearch] = useState("");
@@ -52,16 +61,20 @@ export function AdminDashboard({ user }) {
     const [createClassModal, setCreateClassModal] = useState(false);
     const [createCategoryModal, setCreateCategoryModal] = useState(false);
     const [createSessionModal, setCreateSessionModal] = useState(false);
+    const [createResourceModal, setCreateResourceModal] = useState(false);
     const [createAnnouncementModal, setCreateAnnouncementModal] = useState(false);
     const [createAdministratorModal, setCreateAdministratorModal] = useState(false);
     const [createUserModal, setCreateUserModal] = useState(false);
     const [createFaqModal, setCreateFaqModal] = useState(false);
     const [deleteRecord, setDeleteRecord] = useState(null);
     const [deleteRecordError, setDeleteRecordError] = useState("");
+    const [currentTime, setCurrentTime] = useState(() => Date.now());
     const [editingCourseId, setEditingCourseId] = useState("");
     const [editingCategoryId, setEditingCategoryId] = useState("");
     const [editingClassId, setEditingClassId] = useState("");
     const [editingSessionId, setEditingSessionId] = useState("");
+    const [updatingSessionId, setUpdatingSessionId] = useState("");
+    const [isUploadingResource, setIsUploadingResource] = useState(false);
     const [editingAnnouncementId, setEditingAnnouncementId] = useState("");
     const [editingFaqId, setEditingFaqId] = useState("");
     const [administratorForm, setAdministratorForm] = useState({ fullName: "", email: "", password: "" });
@@ -96,6 +109,18 @@ export function AdminDashboard({ user }) {
         meetingUrl: "",
         status: "scheduled",
     });
+    const [resourceForm, setResourceForm] = useState({
+        title: "",
+        description: "",
+        classroomId: "",
+        sourceType: "youtube",
+        sourceUrl: "",
+        category: "video",
+        visibility: "class_only",
+        originalFilename: "",
+        mimeType: "",
+        base64Data: "",
+    });
     const [announcementForm, setAnnouncementForm] = useState({
         title: "",
         content: "",
@@ -111,6 +136,8 @@ export function AdminDashboard({ user }) {
         () => classes.filter((classroom) => classroom.teacher?._id),
         [classes],
     );
+    const selectedSessionClass = classes.find((classroom) => classroom._id === sessionForm.classId);
+    const sessionTimeZone = selectedSessionClass?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const activeTeachers = useMemo(
         () => teachers.filter((teacher) => teacher.accountStatus === "active"),
         [teachers],
@@ -155,7 +182,7 @@ export function AdminDashboard({ user }) {
         setIsLoading(true);
         setLoadError("");
         try {
-            const [dash, appsRes, teachRes, studRes, adminRes, catRes, courseRes, classRes, annRes, faqRes, inquiryRes] = await Promise.all([
+            const [dash, appsRes, teachRes, studRes, adminRes, catRes, courseRes, classRes, resourceRes, annRes, faqRes, inquiryRes] = await Promise.all([
                 apiRequest("/api/admin/dashboard"),
                 apiRequest("/api/admin/teacher-applications"),
                 apiRequest("/api/admin/teachers"),
@@ -164,6 +191,7 @@ export function AdminDashboard({ user }) {
                 apiRequest("/api/admin/categories"),
                 apiRequest("/api/admin/courses"),
                 apiRequest("/api/admin/classes"),
+                apiRequest("/api/resources"),
                 apiRequest("/api/admin/announcements"),
                 apiRequest("/api/admin/faqs"),
                 apiRequest("/api/admin/contact-inquiries"),
@@ -177,6 +205,7 @@ export function AdminDashboard({ user }) {
             setCourses(courseRes.courses);
             setClasses(classRes.classes);
             setSessions(classRes.sessions || []);
+            setLearningResources(resourceRes.resources || []);
             setAnnouncements(annRes.announcements);
             setFaqs(faqRes.faqs);
             setInquiries(inquiryRes.inquiries);
@@ -210,6 +239,10 @@ export function AdminDashboard({ user }) {
     useEffect(() => {
         void loadAll();
     }, [loadAll]);
+    useEffect(() => {
+        const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
+        return () => window.clearInterval(timer);
+    }, []);
     // Action: Approve / Reject teacher
     const handleTeacherApprove = async (appId) => {
         try {
@@ -455,8 +488,8 @@ export function AdminDashboard({ user }) {
                     classId: sessionForm.classId || classes[0]?._id,
                     title: sessionForm.title,
                     description: sessionForm.description,
-                    startsAt: new Date(sessionForm.startsAt).toISOString(),
-                    endsAt: new Date(sessionForm.endsAt).toISOString(),
+                    startsAt: dateTimeInputToISOString(sessionForm.startsAt, sessionTimeZone),
+                    endsAt: dateTimeInputToISOString(sessionForm.endsAt, sessionTimeZone),
                     meetingUrl: sessionForm.meetingUrl,
                     ...(editingSessionId ? { status: sessionForm.status } : {}),
                 }),
@@ -477,6 +510,95 @@ export function AdminDashboard({ user }) {
         }
         catch (err) {
             setFeedback(err.message);
+        }
+    };
+    const handleSessionStatusChange = async (session, status) => {
+        if (status === "cancelled" && !window.confirm(`Cancel “${session.title}”? The teacher and learners will be notified.`)) {
+            return;
+        }
+        setUpdatingSessionId(session._id);
+        try {
+            await apiRequest(`/api/admin/sessions/${session._id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ status }),
+            });
+            setFeedback(status === "completed" ? "Session marked complete." : "Session cancelled. Participants were notified.");
+            await loadAll();
+        } catch (err) {
+            setFeedback(err.message || "Could not update this session.");
+        } finally {
+            setUpdatingSessionId("");
+        }
+    };
+    const handleResourceFileChange = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (file.size > 18 * 1024 * 1024) {
+            setFeedback("Choose a resource smaller than 18MB so it can be uploaded reliably.");
+            event.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result;
+            if (typeof result !== "string" || !result.includes(",")) {
+                setFeedback("The selected file could not be read. Please choose it again.");
+                return;
+            }
+            const isVideo = file.type.startsWith("video/");
+            setResourceForm((form) => ({
+                ...form,
+                title: form.title || file.name.replace(/\.[^.]+$/, ""),
+                originalFilename: file.name,
+                mimeType: file.type,
+                base64Data: result.split(",")[1],
+                category: isVideo ? "video" : file.type === "application/pdf" ? "pdf" : form.category === "video" ? "document" : form.category,
+            }));
+        };
+        reader.onerror = () => setFeedback("The selected file could not be read. Please choose it again.");
+        reader.readAsDataURL(file);
+    };
+    const handleUploadResource = async (event) => {
+        event.preventDefault();
+        if (resourceForm.sourceType === "upload" && !resourceForm.base64Data) {
+            setFeedback("Select a video or document file before uploading.");
+            return;
+        }
+        if (resourceForm.sourceType !== "upload" && !resourceForm.sourceUrl.trim()) {
+            setFeedback("Enter a YouTube or Google Drive link.");
+            return;
+        }
+        if (resourceForm.visibility === "class_only" && !resourceForm.classroomId) {
+            setFeedback("Choose a cohort for a class-only resource, or change visibility to public.");
+            return;
+        }
+        setIsUploadingResource(true);
+        try {
+            const response = await apiRequest("/api/resources/upload", {
+                method: "POST",
+                body: JSON.stringify({
+                    title: resourceForm.title,
+                    description: resourceForm.description,
+                    sourceType: resourceForm.sourceType,
+                    ...(resourceForm.sourceType !== "upload" ? { sourceUrl: resourceForm.sourceUrl } : {}),
+                    ...(resourceForm.classroomId ? { classroomId: resourceForm.classroomId } : {}),
+                    category: resourceForm.category,
+                    visibility: resourceForm.visibility,
+                    ...(resourceForm.sourceType === "upload" ? {
+                        originalFilename: resourceForm.originalFilename,
+                        mimeType: resourceForm.mimeType,
+                        base64Data: resourceForm.base64Data,
+                    } : {}),
+                }),
+            });
+            setFeedback(response.message || "Learning resource uploaded.");
+            setCreateResourceModal(false);
+            setResourceForm({ title: "", description: "", classroomId: "", sourceType: "youtube", sourceUrl: "", category: "video", visibility: "class_only", originalFilename: "", mimeType: "", base64Data: "" });
+            await loadAll();
+        } catch (err) {
+            setFeedback(err.message || "Could not upload the learning resource.");
+        } finally {
+            setIsUploadingResource(false);
         }
     };
     // Action: Create Announcement
@@ -526,7 +648,64 @@ export function AdminDashboard({ user }) {
             setInquiryFeedback(err instanceof Error ? err.message : "Could not update inquiry.");
         }
     };
-    return (<div className="admin-workspace min-h-screen w-full px-4 py-8 sm:px-6 lg:px-8">
+    const handleSaveAdminProfile = async (event) => {
+        event.preventDefault();
+        try {
+            const response = await apiRequest("/api/auth/profile", {
+                method: "PATCH",
+                body: JSON.stringify(adminProfile),
+            });
+            setAdminProfile((current) => ({ ...current, ...response.user }));
+            await refreshUser();
+            setFeedback("Profile updated.");
+        } catch (error) {
+            setFeedback(error.message || "Could not update your profile.");
+        }
+    };
+    const handleChangeAdminPassword = async (event) => {
+        event.preventDefault();
+        if (securityForm.newPassword !== securityForm.confirmPassword) {
+            setFeedback("New passwords do not match.");
+            return;
+        }
+        setSecurityLoading(true);
+        try {
+            const response = await apiRequest("/api/auth/change-password", {
+                method: "POST",
+                body: JSON.stringify({
+                    currentPassword: securityForm.currentPassword,
+                    newPassword: securityForm.newPassword,
+                }),
+            });
+            setSecurityForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+            setFeedback(response.message || "Password updated successfully.");
+        } catch (error) {
+            setFeedback(error.message || "Could not update password.");
+        } finally {
+            setSecurityLoading(false);
+        }
+    };
+    const dashboardTabs = [
+        { id: "overview", label: "Overview", icon: "📊" },
+        { id: "teachers", label: `Instructors (${teachers.length})`, icon: "👨‍🏫" },
+        { id: "students", label: `Learners (${students.length})`, icon: "🎓" },
+        { id: "administrators", label: `Admins (${administrators.length})`, icon: "🛡️" },
+        { id: "courses", label: `Programs (${courses.length})`, icon: "📚" },
+        { id: "classes", label: `Cohorts (${classes.length})`, icon: "🏫" },
+        { id: "resources", label: `Resources (${learningResources.length})`, icon: "📁" },
+        { id: "announcements", label: `Updates (${announcements.length})`, icon: "📢" },
+        { id: "faqs", label: `FAQs (${faqs.length})`, icon: "❓" },
+        { id: "support", label: `Inbox (${inquiries.filter((item) => item.status !== "closed").length})`, icon: "✉️" },
+        { id: "reports", label: "Reports & activity", icon: "📑" },
+        { id: "profile", label: "My profile", icon: "👤" },
+        { id: "settings", label: "Settings", icon: "⚙️" },
+        { id: "security", label: "Account security", icon: "🔒" },
+    ];
+    return (<div className="admin-workspace min-h-screen w-full px-4 py-6 sm:px-6 lg:pl-72 lg:pr-8">
+      <DashboardSidebar title="Admin workspace" user={{ ...user, fullName: adminProfile.fullName, avatarUrl: adminProfile.avatarUrl }} tabs={dashboardTabs} activeTab={activeTab} onSelect={(tabId) => {
+          setActiveTab(tabId);
+          if (tabId === "reports" && !reportsLoaded) void loadReports();
+      }}/>
       <div className="mx-auto max-w-7xl space-y-8">
       {/* Top Welcome Card */}
       <div className="admin-welcome relative overflow-hidden p-6 sm:p-8">
@@ -536,7 +715,10 @@ export function AdminDashboard({ user }) {
           <span className="admin-eyebrow text-xs font-bold uppercase tracking-[0.16em]">
             LearnHUB · {t("adminOverview")}
           </span>
-          <h1 className="editorial-display mt-3 text-4xl text-stone-950 sm:text-5xl">Good to see you, {user.fullName?.split(" ")[0]}.</h1>
+          <div className="flex items-center gap-4">
+            {adminProfile.avatarUrl ? <img src={adminProfile.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-stone-200"/> : null}
+            <h1 className="editorial-display mt-3 text-4xl text-stone-950 sm:text-5xl">Good to see you, {adminProfile.fullName?.split(" ")[0]}.</h1>
+          </div>
           <p className="mt-2 text-sm text-stone-500">Your learning community, at a glance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -595,30 +777,6 @@ export function AdminDashboard({ user }) {
           <button onClick={() => setFeedback("")} className="text-blue-500 hover:text-blue-800">✕</button>
         </div>) : null}
 
-      {/* Tabs Bar */}
-      <div role="tablist" aria-label="Admin dashboard sections" className="admin-tabs flex gap-2 overflow-x-auto">
-        {[
-            { id: "overview", label: "Overview", icon: "📊" },
-            { id: "teachers", label: `Instructors (${teachers.length})`, icon: "👨‍🏫" },
-            { id: "students", label: `Learners (${students.length})`, icon: "🎓" },
-            { id: "administrators", label: `Admins (${administrators.length})`, icon: "🛡️" },
-            { id: "courses", label: `Programs (${courses.length})`, icon: "📚" },
-            { id: "classes", label: `Cohorts (${classes.length})`, icon: "🏫" },
-            { id: "announcements", label: `Updates (${announcements.length})`, icon: "📢" },
-            { id: "faqs", label: `FAQs (${faqs.length})`, icon: "❓" },
-            { id: "support", label: `Inbox (${inquiries.filter((item) => item.status !== "closed").length})`, icon: "✉️" },
-            { id: "reports", label: "Reports & activity", icon: "📑" },
-        ].map((tab) => (<button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => {
-                setActiveTab(tab.id);
-                if (tab.id === "reports" && !reportsLoaded) void loadReports();
-            }} className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
-                ? "bg-slate-900 text-white shadow-sm"
-                : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
-            <span>{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>))}
-      </div>
-
       {/* 1. OVERVIEW TAB */}
       {activeTab === "overview" ? (<div className="space-y-8">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -643,6 +801,21 @@ export function AdminDashboard({ user }) {
                         </div>
                         <p className="text-xs text-slate-600 line-clamp-2"><strong>Qualifications:</strong> {app.qualifications}</p>
                         <p className="text-xs text-slate-600 line-clamp-2"><strong>Experience:</strong> {app.experience}</p>
+                        {app.teachingStatement ? <p className="text-xs text-slate-600 line-clamp-2"><strong>Teaching statement:</strong> {app.teachingStatement}</p> : null}
+                        <p className="text-xs text-slate-600"><strong>Years:</strong> {app.experienceYears ?? 0} · <strong>Subjects:</strong> {app.teachingCategories?.join(", ") || "Not specified"}</p>
+                        <p className="text-xs text-slate-600"><strong>Availability:</strong> {app.availability || "Not specified"}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {app.documents?.cv?.key ? (
+                            <a href={`${API_BASE_URL}/api/admin/teacher-applications/${app._id}/documents/cv`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50">
+                              Download CV: {app.documents.cv.filename}
+                            </a>
+                          ) : null}
+                          {app.documents?.certificates?.map((document, index) => (
+                            <a key={document.key} href={`${API_BASE_URL}/api/admin/teacher-applications/${app._id}/documents/certificate-${index}`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50">
+                              Certificate: {document.filename}
+                            </a>
+                          ))}
+                        </div>
                         <div className="flex gap-2 pt-2 border-t border-slate-100">
                           <button onClick={() => handleTeacherApprove(app._id)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700">
                             ✓ {t("approve")}
@@ -665,6 +838,13 @@ export function AdminDashboard({ user }) {
                           <p className="mt-1 text-xs text-slate-600">
                             Interests: {stud.studentProfile?.learningInterests?.join(", ") || "General"}
                           </p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            Courses: {stud.studentProfile?.preferredCourseIds?.map((course) => course.title || "Selected course").join(", ") || "Not selected"}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            Schedule: {stud.studentProfile?.preferredSchedule || "Not specified"} · {stud.studentProfile?.weeklyStudyHours || 0} hrs/week · Level: {stud.studentProfile?.currentSkillLevel || "Not specified"}
+                          </p>
+                          {stud.studentProfile?.learningGoals ? <p className="mt-1 text-xs text-slate-600">Goals: {stud.studentProfile.learningGoals}</p> : null}
                         </div>
                         <button
                           onClick={() => {
@@ -995,29 +1175,50 @@ export function AdminDashboard({ user }) {
                     }} className="text-xs font-bold text-emerald-800 hover:underline disabled:cursor-not-allowed disabled:opacity-40">+ Schedule</button>
                   </div>
                   <div className="space-y-2">
-                    {sessions.filter((session) => String(session.classroom) === cls._id).map((session) => (<div key={session._id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-stone-50 p-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-slate-800">{session.title}</p>
-                        <p className="text-[11px] text-slate-500">{new Date(session.startsAt).toLocaleString()} · {session.status}</p>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <button type="button" onClick={() => {
-                          setEditingSessionId(session._id);
-                          setSessionForm({
-                            classId: cls._id,
-                            title: session.title,
-                            description: session.description || "",
-                            startsAt: toDateTimeInput(session.startsAt),
-                            endsAt: toDateTimeInput(session.endsAt),
-                            meetingUrl: session.meetingUrl || "",
-                            status: session.status,
-                          });
-                          setCreateSessionModal(true);
-                        }} className="rounded-md border border-stone-200 px-2 py-1 text-[11px] font-bold text-slate-700">Edit</button>
-                        <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/sessions/${session._id}`, label: `Session “${session.title}” and its attendance` })} className="rounded-md border border-rose-200 px-2 py-1 text-[11px] font-bold text-rose-700">Delete</button>
-                      </div>
-                    </div>))}
-                    {!sessions.some((session) => String(session.classroom) === cls._id) && <p className="text-xs text-slate-400">No sessions scheduled.</p>}
+                    {sessions.filter((session) => String(session.classroom?._id ?? session.classroom) === cls._id).map((session) => {
+                      const startsAt = new Date(session.startsAt).getTime();
+                      const endsAt = new Date(session.endsAt).getTime();
+                      const isLive = session.status === "scheduled" && startsAt <= currentTime && endsAt > currentTime;
+                      const statusLabel = isLive ? "Live now" : session.status;
+                      return (
+                        <div key={session._id} className="rounded-lg bg-stone-50 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-slate-800">{session.title}</p>
+                              <p className="text-[11px] text-slate-500">{formatSessionTime(session.startsAt, cls.timeZone)} · {formatSessionTime(session.endsAt, cls.timeZone)}</p>
+                              <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${isLive ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"}`}>{statusLabel}</p>
+                              <p className="mt-1 text-[11px] text-slate-500">{cls.teacher?.fullName || "No teacher"} · {cls.students?.length || 0} learners · {cls.timeZone}</p>
+                            </div>
+                            {session.meetingUrl ? (
+                              <a href={session.meetingUrl} target="_blank" rel="noopener noreferrer" className="rounded-md bg-cyan-700 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-cyan-800">Open Meet</a>
+                            ) : <span className="text-[10px] font-semibold text-amber-700">Meet link missing</span>}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <button type="button" onClick={() => {
+                              setEditingSessionId(session._id);
+                              setSessionForm({
+                                classId: cls._id,
+                                title: session.title,
+                                description: session.description || "",
+                                startsAt: formatDateTimeInput(session.startsAt, cls.timeZone),
+                                endsAt: formatDateTimeInput(session.endsAt, cls.timeZone),
+                                meetingUrl: session.meetingUrl || "",
+                                status: session.status,
+                              });
+                              setCreateSessionModal(true);
+                            }} className="rounded-md border border-stone-200 px-2 py-1 text-[11px] font-bold text-slate-700">Edit / control</button>
+                            {session.status === "scheduled" && (
+                              <>
+                                <button type="button" disabled={updatingSessionId === session._id} onClick={() => handleSessionStatusChange(session, "completed")} className="rounded-md border border-emerald-200 px-2 py-1 text-[11px] font-bold text-emerald-700 disabled:opacity-50">Mark complete</button>
+                                <button type="button" disabled={updatingSessionId === session._id} onClick={() => handleSessionStatusChange(session, "cancelled")} className="rounded-md border border-amber-200 px-2 py-1 text-[11px] font-bold text-amber-800 disabled:opacity-50">Cancel session</button>
+                              </>
+                            )}
+                            <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/sessions/${session._id}`, label: `Session “${session.title}” and its attendance` })} className="rounded-md border border-rose-200 px-2 py-1 text-[11px] font-bold text-rose-700">Delete</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!sessions.some((session) => String(session.classroom?._id ?? session.classroom) === cls._id) && <p className="text-xs text-slate-400">No sessions scheduled.</p>}
                   </div>
                 </div>
               </div>))}
@@ -1026,6 +1227,47 @@ export function AdminDashboard({ user }) {
         </div>) : null}
 
       {/* 6. ANNOUNCEMENTS TAB */}
+      {activeTab === "resources" ? (<div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Learning resources</h3>
+              <p className="mt-1 text-sm text-slate-600">Add videos and PDF, Word, Excel, or PowerPoint materials to a cohort. Learners open them in the learning-space Course Materials tab.</p>
+            </div>
+            <button type="button" onClick={() => {
+              setResourceForm({ title: "", description: "", classroomId: "", sourceType: "youtube", sourceUrl: "", category: "video", visibility: "class_only", originalFilename: "", mimeType: "", base64Data: "" });
+              setCreateResourceModal(true);
+            }} className="rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900">+ Add resource</button>
+          </div>
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
+            <strong>YouTube:</strong> Copy the video URL and add it here. LearnHUB embeds the video using YouTube&apos;s privacy-enhanced player and limits related videos to the same channel when YouTube supports it.
+            <br/><strong>Google Drive documents:</strong> Add PDF, Word, Excel, or PowerPoint files in Drive, choose <em>Share → General access → Anyone with the link → Viewer</em>, then paste the sharing link here. The selected file previews inside the learning space. Anyone with the link may also open it outside LearnHUB.
+            <br/><strong>Privacy:</strong> Use public or unlisted YouTube videos only. YouTube may still show creator-added end screens or recommendations; YouTube does not let LearnHUB remove every YouTube overlay.
+          </div>
+          <div className="grid gap-3">
+            {learningResources.map((resource) => {
+              const cohortTitle = resource.classroom?.title || "Public resource";
+              return (
+                <article key={resource._id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="text-2xl" aria-hidden="true">{resource.sourceType === "youtube" || resource.category === "video" ? "🎬" : "📄"}</span>
+                    <div className="min-w-0">
+                      <h4 className="truncate font-bold text-slate-900">{resource.title}</h4>
+                      <p className="mt-1 text-xs text-slate-600">{cohortTitle} · {resource.sourceType === "youtube"                       ? "YouTube video" : resource.sourceType === "google_drive" ? `Google Drive ${resource.category}` : resource.category}</p>
+                      <p className="mt-1 truncate text-xs text-slate-500">{resource.description || resource.originalFilename || resource.sourceUrl}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <a href={resource.sourceUrl || `/api/resources/${resource._id}/download`} target={resource.sourceType === "upload" ? undefined : "_blank"} rel={resource.sourceType === "upload" ? undefined : "noopener noreferrer"} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" download={resource.sourceType === "upload" || undefined}>{resource.sourceType === "upload" ? "Download" : "Open link"}</a>
+                    <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/resources/${resource._id}`, label: `Resource “${resource.title}”` })} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
+                  </div>
+                </article>
+              );
+            })}
+            {learningResources.length === 0 && <EmptyState title="No learning resources yet" description="Add a video lesson or course document to make it available in a cohort learning space."/>}
+          </div>
+        </div>) : null}
+
+      {/* 7. ANNOUNCEMENTS TAB */}
       {activeTab === "announcements" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold text-slate-900">Announcements</h3>
@@ -1173,6 +1415,48 @@ export function AdminDashboard({ user }) {
             </div>
           </DashboardCard>
         </div>) : null}
+
+      {activeTab === "profile" ? (
+        <div className="mx-auto max-w-2xl">
+          <DashboardCard title="Administrator profile" subtitle="Manage the personal and contact information shown on your account.">
+            <form onSubmit={handleSaveAdminProfile} className="space-y-4">
+              <ProfilePhotoField value={adminProfile.avatarUrl} onChange={(avatarUrl) => setAdminProfile({ ...adminProfile, avatarUrl })}/>
+              <label className="block text-xs font-bold text-slate-700">Full name
+                <input required minLength={2} maxLength={100} value={adminProfile.fullName} onChange={(event) => setAdminProfile({ ...adminProfile, fullName: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Phone number
+                <input type="tel" maxLength={30} value={adminProfile.phone} onChange={(event) => setAdminProfile({ ...adminProfile, phone: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">About me
+                <textarea rows={3} maxLength={500} value={adminProfile.bio} onChange={(event) => setAdminProfile({ ...adminProfile, bio: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <p className="text-xs text-slate-500">Email: {user.email} (used for sign-in; contact support to change it)</p>
+              <button type="submit" className="w-full rounded-xl bg-emerald-800 py-2.5 text-xs font-bold text-white hover:bg-emerald-900">Save profile</button>
+            </form>
+          </DashboardCard>
+        </div>
+      ) : null}
+
+      {activeTab === "settings" ? <DashboardSettings user={user} sessions={sessions.filter((session) => session.status === "scheduled")}/> : null}
+
+      {activeTab === "security" ? (
+        <div className="max-w-xl">
+          <DashboardCard title="Account security" subtitle="Change your password to keep your administrator account secure.">
+            <form onSubmit={handleChangeAdminPassword} className="space-y-4">
+              <label className="block text-xs font-bold text-slate-700">Current password
+                <input required type="password" value={securityForm.currentPassword} onChange={(event) => setSecurityForm({ ...securityForm, currentPassword: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">New password (minimum 8 characters)
+                <input required minLength={8} maxLength={128} type="password" value={securityForm.newPassword} onChange={(event) => setSecurityForm({ ...securityForm, newPassword: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Confirm new password
+                <input required minLength={8} maxLength={128} type="password" value={securityForm.confirmPassword} onChange={(event) => setSecurityForm({ ...securityForm, confirmPassword: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <button type="submit" disabled={securityLoading} className="w-full rounded-xl bg-slate-900 py-3 text-xs font-bold text-white disabled:opacity-50">{securityLoading ? "Updating…" : "Update password"}</button>
+            </form>
+          </DashboardCard>
+        </div>
+      ) : null}
 
       {/* MODAL: Reject Teacher */}
       <Modal title={t("reject")} isOpen={rejectionModal.open} onClose={() => setRejectionModal({ open: false, appId: "", reason: "" })}>
@@ -1490,6 +1774,84 @@ export function AdminDashboard({ user }) {
         </form>
       </Modal>
 
+      <Modal title="Add learning resource" isOpen={createResourceModal} onClose={() => {
+        if (isUploadingResource) return;
+        setCreateResourceModal(false);
+        setResourceForm({ title: "", description: "", classroomId: "", sourceType: "youtube", sourceUrl: "", category: "video", visibility: "class_only", originalFilename: "", mimeType: "", base64Data: "" });
+      }}>
+        <form onSubmit={handleUploadResource} className="space-y-4">
+          <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+            Add a YouTube video or Google Drive document link. The resource appears inside the selected cohort&apos;s learning space; no R2 account is needed.
+          </p>
+          <label className="block text-xs font-bold text-slate-700">Resource title
+            <input required minLength={2} maxLength={120} value={resourceForm.title} onChange={(event) => setResourceForm({ ...resourceForm, title: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal" placeholder="Example: Week 1 introduction video"/>
+          </label>
+          <label className="block text-xs font-bold text-slate-700">Description
+            <textarea rows={2} maxLength={1000} value={resourceForm.description} onChange={(event) => setResourceForm({ ...resourceForm, description: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal" placeholder="What will students learn from this resource?"/>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-bold text-slate-700">Resource source
+              <select value={resourceForm.sourceType} onChange={(event) => {
+                const sourceType = event.target.value;
+                setResourceForm({
+                    ...resourceForm,
+                    sourceType,
+                    category: sourceType === "youtube" ? "video" : sourceType === "google_drive" ? "pdf" : "document",
+                    sourceUrl: "",
+                    originalFilename: "",
+                    mimeType: "",
+                    base64Data: "",
+                });
+              }} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal">
+                <option value="youtube">YouTube video</option>
+                <option value="google_drive">Google Drive document</option>
+                <option value="upload">Upload a file to server</option>
+              </select>
+            </label>
+            <label className="block text-xs font-bold text-slate-700">Cohort
+              <select value={resourceForm.classroomId} onChange={(event) => setResourceForm({ ...resourceForm, classroomId: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal">
+                <option value="">Choose a cohort</option>
+                {classes.map((classroom) => <option key={classroom._id} value={classroom._id}>{classroom.title}</option>)}
+              </select>
+            </label>
+          </div>
+          {resourceForm.sourceType === "upload" ? (
+            <label className="block text-xs font-bold text-slate-700">Choose file
+              <input required type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.mp4,.webm,.mp3,.wav,.txt" onChange={handleResourceFileChange} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-xs font-normal"/>
+              <span className="mt-1 block font-normal text-slate-500">{resourceForm.originalFilename ? `Selected: ${resourceForm.originalFilename}` : "Files are stored by the app server (up to 18MB)."}</span>
+            </label>
+          ) : (
+            <>
+            {resourceForm.sourceType === "google_drive" && (
+              <label className="block text-xs font-bold text-slate-700">Document format
+                <select value={resourceForm.category} onChange={(event) => setResourceForm({ ...resourceForm, category: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal">
+                  <option value="pdf">PDF</option>
+                  <option value="document">Word document</option>
+                  <option value="spreadsheet">Excel spreadsheet</option>
+                  <option value="slide">PowerPoint presentation</option>
+                </select>
+              </label>
+            )}
+            <label className="block text-xs font-bold text-slate-700">{resourceForm.sourceType === "youtube" ? "YouTube video link" : "Google Drive sharing link"}
+              <input required type="url" value={resourceForm.sourceUrl} onChange={(event) => setResourceForm({ ...resourceForm, sourceUrl: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal" placeholder={resourceForm.sourceType === "youtube" ? "https://www.youtube.com/watch?v=..." : "https://drive.google.com/file/d/.../view"}/>
+              <span className="mt-1 block font-normal leading-5 text-slate-500">
+                {resourceForm.sourceType === "youtube"
+                    ? "Use a public or unlisted YouTube video. Related-video suggestions are limited by YouTube, not fully controlled by LearnHUB."
+                    : "Supports PDF, Word, Excel, and PowerPoint. In Drive, set General access to Anyone with the link and Viewer. Anyone with that link can open the file."}
+              </span>
+            </label>
+            </>
+          )}
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+            <input type="checkbox" checked={resourceForm.visibility === "public"} onChange={(event) => setResourceForm({ ...resourceForm, visibility: event.target.checked ? "public" : "class_only" })} className="accent-emerald-700"/>
+            Make this resource public instead of cohort-only
+          </label>
+          <button type="submit" disabled={isUploadingResource || (resourceForm.sourceType === "upload" ? !resourceForm.base64Data : !resourceForm.sourceUrl.trim())} className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-300">
+            {isUploadingResource ? "Saving…" : resourceForm.sourceType === "upload" ? "Upload resource" : "Add resource"}
+          </button>
+        </form>
+      </Modal>
+
       {/* MODAL: Schedule Session */}
       <Modal title={editingSessionId ? "Edit session" : t("scheduleSession")} isOpen={createSessionModal} onClose={() => {
         setCreateSessionModal(false);
@@ -1504,6 +1866,7 @@ export function AdminDashboard({ user }) {
               {schedulableClasses.map((c) => (<option key={c._id} value={c._id}>{c.title}</option>))}
             </select>
             {schedulableClasses.length === 0 && <p className="mt-1 text-xs text-rose-700">Assign an active teacher to a class before scheduling sessions.</p>}
+            {selectedSessionClass && <p className="mt-1 text-xs text-slate-500">Schedule times use this cohort&apos;s time zone: <strong>{sessionTimeZone}</strong>.</p>}
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>

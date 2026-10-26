@@ -36,9 +36,42 @@
 
 .editorial-hero {
   overflow: hidden;
+  position: relative;
   background:
     radial-gradient(ellipse at 82% 8%, rgb(223 218 197 / 45%), transparent 32rem),
     linear-gradient(135deg, #f5f2eb 0%, #f0ede4 100%);
+}
+
+.editorial-hero h1 {
+  animation: public-heading-in 520ms ease-out both;
+}
+
+.public-heading {
+  animation: public-heading-in 520ms ease-out both;
+}
+
+.public-heading-badge {
+  border-color: #d8d1c4;
+  background: #eee9dd;
+  color: #47644e;
+  letter-spacing: 0.06em;
+}
+
+.editorial-page :is(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid #8a6c3e;
+  outline-offset: 3px;
+}
+
+@keyframes public-heading-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .editorial-kicker {
@@ -242,6 +275,18 @@
 
 .editorial-footer a:hover {
   color: #e7d5ad;
+}
+
+.editorial-footer .footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  color: #c5c8bf;
+  transition: color 160ms ease;
+}
+
+.editorial-footer .footer-link:hover {
+  color: #a7d6b7;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -29,3 +29,14 @@ export async function apiRequest(path, options = {}) {
     });
     return response.data;
 }
+
+export async function loadPublicCourses() {
+    const firstPage = await apiRequest("/api/public/courses?page=1&limit=50");
+    const pageCount = Math.ceil((firstPage.pagination?.total || firstPage.courses.length) / 50);
+    const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+            apiRequest(`/api/public/courses?page=${index + 2}&limit=50`),
+        ),
+    );
+    return [...(firstPage.courses || []), ...remainingPages.flatMap((page) => page.courses || [])];
+}

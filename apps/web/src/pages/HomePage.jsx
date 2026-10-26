@@ -195,11 +195,10 @@ export function HomePage() {
 
       {/* 2. Platform Real-Time Statistics */}
       {data?.stats ? (<section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-16 relative z-20">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <MetricCard label={t("students")} value={data.stats.activeStudents} subtext="Learners building new skills" icon="🎓"/>
             <MetricCard label={t("teachers")} value={data.stats.activeTeachers} subtext="Instructors guiding learners" icon="👨‍🏫"/>
             <MetricCard label={t("classes")} value={data.stats.activeClasses} subtext="Learning together in cohorts" icon="📚"/>
-            <MetricCard label={t("pendingApplications")} value={data.stats.pendingTeacherApplications} subtext="Being reviewed by our team" icon="📝"/>
           </div>
         </section>) : null}
 

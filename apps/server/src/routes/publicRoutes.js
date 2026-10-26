@@ -110,7 +110,10 @@ publicRouter.get("/courses/:slugOrId", asyncHandler(async (req, res) => {
     });
 
     res.json({
-        course,
+        course: {
+            ...course,
+            modules: Array.isArray(course.modules) ? course.modules : [],
+        },
         activeCohortsCount,
     });
 }));

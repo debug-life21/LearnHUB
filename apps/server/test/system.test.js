@@ -43,6 +43,15 @@ test.after(async () => {
     await mongoose.connection.close();
 });
 
+async function studentSignupProfile() {
+    const course = await Course.findOne({ status: "published" }).select("_id").lean();
+    assert.ok(course, "A published course is required for student signup tests.");
+    return {
+        preferredSchedule: "Weekday evenings",
+        preferredCourseIds: [course._id.toString()],
+    };
+}
+
 // ─── Public Catalog ───────────────────────────────────────────────────────────
 
 test("Public Course Catalog: pagination", async () => {
@@ -86,11 +95,26 @@ test("Auth Registration: rejects invalid email", async () => {
     assert.equal(res.status, 400);
 });
 
+test("Auth Registration: requires onboarding details for students and teacher applicants", async () => {
+    const studentRes = await request("/api/auth/signup", {
+        method: "POST",
+        body: { name: "Student Without Preferences", email: `student.profile.${Date.now()}@example.com`, password: "Password123!", role: "student" },
+    });
+    assert.equal(studentRes.status, 400);
+
+    const teacherRes = await request("/api/auth/signup", {
+        method: "POST",
+        body: { name: "Teacher Without Application", email: `teacher.application.${Date.now()}@example.com`, password: "Password123!", role: "teacher" },
+    });
+    assert.equal(teacherRes.status, 400);
+});
+
 test("Auth Registration: creates account with hashed verification code", async () => {
     const email = `reg.${Date.now()}@example.com`;
+    const profile = await studentSignupProfile();
     const res = await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Verified Student", email, password: "Password123!", role: "student" },
+        body: { name: "Verified Student", email, password: "Password123!", role: "student", studentProfile: profile },
     });
     assert.equal(res.status, 201, `Expected 201 but got ${res.status}: ${JSON.stringify(res.data)}`);
     assert.equal(res.data.purpose, "signup");
@@ -101,17 +125,19 @@ test("Auth Registration: creates account with hashed verification code", async (
     assert.equal(created.isVerified, false);
     assert.ok(created.verificationCode, "verificationCode must be set (bcrypt hash)");
     assert.equal(created.codePurpose, "signup");
+    assert.equal(created.studentProfile.preferredSchedule, "Weekday evenings");
+    assert.equal(created.studentProfile.preferredCourseIds[0].toString(), profile.preferredCourseIds[0]);
 });
 
 test("Auth Registration: rejects duplicate email with 409", async () => {
     const email = `dup.${Date.now()}@example.com`;
     await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "First User", email, password: "Password123!", role: "student" },
+        body: { name: "First User", email, password: "Password123!", role: "student", studentProfile: await studentSignupProfile() },
     });
     const res = await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Duplicate", email, password: "Password123!", role: "student" },
+        body: { name: "Duplicate", email, password: "Password123!", role: "student", studentProfile: await studentSignupProfile() },
     });
     assert.equal(res.status, 409, `Expected 409 conflict but got ${res.status}`);
 });
@@ -120,7 +146,7 @@ test("Auth Registration: rejects wrong verification code", async () => {
     const email = `verify.${Date.now()}@example.com`;
     await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Verifying Student", email, password: "Password123!", role: "student" },
+        body: { name: "Verifying Student", email, password: "Password123!", role: "student", studentProfile: await studentSignupProfile() },
     });
     const res = await request("/api/auth/verify-code", {
         method: "POST",

@@ -5,25 +5,22 @@ import { useAuth } from "../context/AuthContext";
 import { BrandLogo } from "./BrandLogo";
 
 const navigationItems = [
-    { to: "/", label: "Home", i18nKey: "home", end: true },
     { to: "/courses", label: "Courses", i18nKey: "courses" },
-    { to: "/categories", label: "Categories", i18nKey: "explore" },
-    { to: "/how-it-works", label: "How It Works", i18nKey: "howItWorks" },
-    { to: "/pricing", label: "Plans", i18nKey: "pricing" },
-    { to: "/instructors", label: "Educators", i18nKey: "teachers" },
-    { to: "/help", label: "Help", i18nKey: "help" },
-    { to: "/about", label: "About", i18nKey: "about" },
+    { to: "/how-it-works", label: "How it works", i18nKey: "navHowItWorks" },
+    { to: "/instructors", label: "Instructors", i18nKey: "navInstructors" },
+    { to: "/faq", label: "FAQ", i18nKey: "faq" },
+    { to: "/contact", label: "Contact", i18nKey: "contact" },
 ];
 
 function navLinkClass({ isActive }) {
-    return `rounded-xl px-3 py-1.5 text-xs font-bold transition-colors whitespace-nowrap ${
+    return `rounded-xl px-3 py-2 text-[13px] font-semibold transition-all whitespace-nowrap ${
         isActive
-            ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+            ? "bg-white text-emerald-950 shadow-sm ring-1 ring-emerald-900/5"
+            : "text-slate-600 hover:bg-white/70 hover:text-slate-950"
     }`;
 }
 
-function NavigationLinks({ onNavigate }) {
+function NavigationLinks({ onNavigate, mobile = false }) {
     const { t } = useTranslation();
 
     return navigationItems.map(({ to, label, i18nKey, end }) => {
@@ -35,9 +32,14 @@ function NavigationLinks({ onNavigate }) {
                 to={to}
                 end={end}
                 onClick={onNavigate}
-                className={navLinkClass}
+                className={({ isActive }) => mobile
+                    ? `flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                        isActive ? "bg-emerald-50 text-emerald-900" : "text-slate-700 hover:bg-slate-50"
+                    }`
+                    : navLinkClass({ isActive })}
             >
                 {displayText}
+                {mobile ? <span aria-hidden="true" className="text-slate-400">→</span> : null}
             </NavLink>
         );
     });
@@ -88,17 +90,17 @@ export function Navbar() {
             ? "Teacher"
             : "Student";
     return (
-        <header className="editorial-nav sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.03] backdrop-blur-xl">
-            <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 lg:px-8">
+        <header className="editorial-nav sticky top-0 z-40 border-b border-emerald-950/10 bg-[#fffdf8]/95 shadow-[0_8px_30px_rgba(27,43,33,0.07)] backdrop-blur-xl">
+            <div className="mx-auto flex min-h-[4.5rem] max-w-[88rem] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
                 <Link
                     to="/"
-                    className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
+                    className="nav-brand shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700"
                     aria-label="LearnHUB home"
                 >
                     <BrandLogo />
                 </Link>
 
-                <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-2xl bg-slate-50 p-1 lg:flex">
+                <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-2xl border border-slate-200/70 bg-slate-100/80 p-1 lg:flex">
                     <NavigationLinks />
                 </nav>
 
@@ -107,7 +109,7 @@ export function Navbar() {
                         <div className="hidden items-center gap-2 lg:flex">
                             <Link
                                 to="/dashboard"
-                                className="inline-flex items-center gap-2 rounded-xl bg-[#25362d] px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                                className="inline-flex items-center gap-2 rounded-xl bg-[#25362d] px-3.5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
                                 <span className="max-w-32 truncate">{user.fullName || t("dashboard")}</span>
                                 <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-100">
@@ -137,7 +139,7 @@ export function Navbar() {
                             </Link>
                             <Link
                                 to="/register/student"
-                                className="rounded-xl bg-emerald-800 px-3.5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                                className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white shadow-[0_5px_14px_rgba(6,78,59,0.2)] transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
                                 {t("studentSignUp")}
                             </Link>
@@ -173,8 +175,8 @@ export function Navbar() {
 
             {mobileMenuOpen && (
                 <div id="mobile-navigation" className="border-t border-slate-200 bg-white px-4 pb-4 pt-3 shadow-lg shadow-slate-900/5 lg:hidden">
-                    <nav aria-label="Mobile navigation" className="flex flex-col gap-1">
-                        <NavigationLinks onNavigate={closeMobileMenu} />
+                    <nav aria-label="Mobile navigation" className="grid gap-1 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+                        <NavigationLinks onNavigate={closeMobileMenu} mobile />
                     </nav>
 
                     {user ? (

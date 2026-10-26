@@ -3,6 +3,16 @@ import { useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
 import { Modal } from "../components/UIComponents";
+import { LiveSessionButton } from "../components/LiveSessionButton";
+import { formatSessionTime } from "../lib/sessionTime";
+import { OfficeDocumentPreview } from "../components/OfficeDocumentPreview";
+import { DashboardSidebar } from "../components/DashboardSidebar";
+
+const isVideoResource = (resource) => (
+    resource.sourceType === "youtube" ||
+    resource.category === "video" ||
+    resource.mimeType?.startsWith("video/")
+);
 
 export function LearningWorkspace() {
     const { classroomId } = useParams();
@@ -15,11 +25,13 @@ export function LearningWorkspace() {
     const [activeTab, setActiveTab] = useState("player");
     const [loading, setLoading] = useState(true);
     const [feedback, setFeedback] = useState("");
+    const [workspaceNow, setWorkspaceNow] = useState(() => Date.now());
 
     // Video Player state
     const [currentLesson, setCurrentLesson] = useState(null);
     const [playbackRate, setPlaybackRate] = useState(1);
     const videoRef = useRef(null);
+    const [selectedVideoResource, setSelectedVideoResource] = useState(null);
 
     // Discussion modal / form state
     const [newThreadModal, setNewThreadModal] = useState(false);
@@ -30,6 +42,11 @@ export function LearningWorkspace() {
 
     // Document Viewer state
     const [selectedDoc, setSelectedDoc] = useState(null);
+    const videoResources = useMemo(() => resources.filter(isVideoResource), [resources]);
+    const courseMaterials = useMemo(
+        () => resources.filter((resource) => !isVideoResource(resource)),
+        [resources],
+    );
 
     // Load workspace data
     const loadWorkspace = useCallback(async () => {
@@ -51,7 +68,9 @@ export function LearningWorkspace() {
 
             // Fetch classroom sessions if available
             if (classesRes.sessions) {
-                setSessions(classesRes.sessions.filter((s) => s.classroom === classroomId));
+                setSessions(classesRes.sessions.filter((session) => (
+                    (session.classroom?._id || session.classroom)?.toString() === classroomId
+                )));
             }
 
             // Fetch resources
@@ -60,9 +79,8 @@ export function LearningWorkspace() {
                 (r) => r.classroom?._id === classroomId || r.classroom === classroomId
             );
             setResources(classResources);
-            if (classResources.length > 0 && !selectedDoc) {
-                setSelectedDoc(classResources[0]);
-            }
+            setSelectedDoc((current) => current || classResources.find((resource) => !isVideoResource(resource)) || null);
+            setSelectedVideoResource((current) => current || classResources.find(isVideoResource) || null);
 
             // Fetch discussions
             const discRes = await apiRequest(`${apiPrefix}/classes/${classroomId}/discussions`);
@@ -84,30 +102,44 @@ export function LearningWorkspace() {
         } finally {
             setLoading(false);
         }
-    }, [classroomId, user?.role, selectedDoc]);
+    }, [classroomId, user?.role]);
 
     useEffect(() => {
         void loadWorkspace();
     }, [loadWorkspace]);
 
+    useEffect(() => {
+        const timer = window.setInterval(() => setWorkspaceNow(Date.now()), 15_000);
+        return () => window.clearInterval(timer);
+    }, []);
+
     // Resume video progress
     useEffect(() => {
-        if (!videoRef.current || !currentLesson) return;
-        const savedTime = localStorage.getItem(`learnhub_video_progress_${currentLesson.title}`);
+        if (!videoRef.current) return;
+        const progressId = selectedVideoResource?._id || currentLesson?.title;
+        if (!progressId) return;
+        const savedTime = localStorage.getItem(`learnhub_video_progress_${progressId}`);
         if (savedTime && parseFloat(savedTime) > 0) {
             videoRef.current.currentTime = parseFloat(savedTime);
         }
-    }, [currentLesson]);
+    }, [currentLesson, selectedVideoResource]);
 
     const nextSession = useMemo(() => {
-        const now = Date.now();
-        return sessions.find((s) => s.status === "scheduled" && new Date(s.startsAt).getTime() >= now);
-    }, [sessions]);
+        const activeSession = sessions.find((session) => (
+            session.status === "scheduled" &&
+            new Date(session.startsAt).getTime() <= workspaceNow &&
+            new Date(session.endsAt).getTime() > workspaceNow
+        ));
+        return activeSession || sessions.find((session) => (
+            session.status === "scheduled" && new Date(session.endsAt).getTime() > workspaceNow
+        ));
+    }, [sessions, workspaceNow]);
 
     const handleTimeUpdate = () => {
-        if (videoRef.current && currentLesson) {
+        const progressId = selectedVideoResource?._id || currentLesson?.title;
+        if (videoRef.current && progressId) {
             localStorage.setItem(
-                `learnhub_video_progress_${currentLesson.title}`,
+                `learnhub_video_progress_${progressId}`,
                 String(videoRef.current.currentTime)
             );
         }
@@ -185,7 +217,19 @@ export function LearningWorkspace() {
     }
 
     return (
-        <div className="editorial-page min-h-screen pb-24">
+        <div className="editorial-page min-h-screen pb-24 lg:pl-72">
+            <DashboardSidebar
+                title="Learning space"
+                user={user}
+                backHref="/dashboard"
+                tabs={[
+                    { id: "player", label: "Interactive Video", icon: "🎬" },
+                    { id: "documents", label: `Course Materials (${courseMaterials.length})`, icon: "📄" },
+                    { id: "discussions", label: `Cohort Discussions (${discussions.length})`, icon: "💬" },
+                ]}
+                activeTab={activeTab}
+                onSelect={setActiveTab}
+            />
             {/* Workspace Header Topbar */}
             <div className="sticky top-16 z-30 border-b border-stone-200/90 bg-white/95 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
                 <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
@@ -206,48 +250,26 @@ export function LearningWorkspace() {
 
                     {/* Live Meeting Action */}
                     <div className="flex items-center gap-3">
-                        {nextSession?.meetingUrl ? (
-                            <a
-                                href={nextSession.meetingUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2 rounded-2xl bg-cyan-500 px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-md shadow-cyan-500/20 hover:bg-cyan-400 transition"
-                            >
-                                <span className="h-2 w-2 rounded-full bg-slate-950 animate-ping"></span>
-                                <span>Join Google Meet</span>
-                            </a>
+                        {nextSession ? (
+                            <div className="flex flex-col items-end gap-1">
+                                <p className="text-right text-[11px] font-semibold text-stone-600">
+                                    {nextSession.title} · {formatSessionTime(nextSession.startsAt)}
+                                </p>
+                                <LiveSessionButton session={nextSession} />
+                                {nextSession.meetingUrl ? (
+                                    <span className="text-[10px] text-stone-500">Google Meet opens in a new tab.</span>
+                                ) : null}
+                            </div>
                         ) : (
                             <span className="rounded-xl bg-stone-100 px-3 py-1.5 text-[11px] font-semibold text-stone-500">
-                                No live session right now
+                                No upcoming live session
                             </span>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Workspace Workspace Tabs */}
             <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-                <div className="flex flex-wrap gap-2 border-b border-stone-200 pb-3">
-                    {[
-                        { id: "player", label: "Interactive Lessons & Video", icon: "🎬" },
-                        { id: "documents", label: `Course Materials (${resources.length})`, icon: "📄" },
-                        { id: "discussions", label: `Cohort Discussions (${discussions.length})`, icon: "💬" },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`rounded-2xl px-4 py-2.5 text-xs font-bold transition ${
-                                activeTab === tab.id
-                                    ? "bg-stone-900 text-white shadow-sm"
-                                    : "bg-white text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50"
-                            }`}
-                        >
-                            {tab.icon} {tab.label}
-                        </button>
-                    ))}
-                </div>
-
                 {feedback && (
                     <div className="mt-4 rounded-2xl bg-emerald-50 p-3.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 flex justify-between items-center">
                         <span>{feedback}</span>
@@ -261,7 +283,24 @@ export function LearningWorkspace() {
                         {/* Video Player Column */}
                         <div className="lg:col-span-2 space-y-6">
                             <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-2xl ring-1 ring-white/10">
-                                {currentLesson?.videoUrl ? (
+                                {selectedVideoResource?.sourceType === "youtube" ? (
+                                    <iframe
+                                        src={selectedVideoResource.externalUrl}
+                                        title={selectedVideoResource.title}
+                                        className="w-full aspect-video border-0 bg-black"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        referrerPolicy="strict-origin-when-cross-origin"
+                                        allowFullScreen
+                                    />
+                                ) : selectedVideoResource ? (
+                                    <video
+                                        ref={videoRef}
+                                        src={`/api/resources/${selectedVideoResource.storedKey}/file`}
+                                        controls
+                                        onTimeUpdate={handleTimeUpdate}
+                                        className="w-full aspect-video bg-black"
+                                    />
+                                ) : currentLesson?.videoUrl ? (
                                     <video
                                         ref={videoRef}
                                         src={currentLesson.videoUrl}
@@ -283,25 +322,27 @@ export function LearningWorkspace() {
 
                                 {/* Custom Player Controls Toolbar */}
                                 <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 bg-slate-900/90 px-6 py-3 text-xs">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-slate-400">Speed:</span>
-                                        {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
-                                            <button
-                                                key={spd}
-                                                type="button"
-                                                onClick={() => handleSpeedChange(spd)}
-                                                className={`rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
-                                                    playbackRate === spd
-                                                        ? "bg-emerald-500 text-slate-950"
-                                                        : "bg-white/10 text-white hover:bg-white/20"
-                                                }`}
-                                            >
-                                                {spd}x
-                                            </button>
-                                        ))}
-                                    </div>
+                                    {selectedVideoResource?.sourceType !== "youtube" && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-400">Speed:</span>
+                                            {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                                                <button
+                                                    key={spd}
+                                                    type="button"
+                                                    onClick={() => handleSpeedChange(spd)}
+                                                    className={`rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
+                                                        playbackRate === spd
+                                                            ? "bg-emerald-500 text-slate-950"
+                                                            : "bg-white/10 text-white hover:bg-white/20"
+                                                    }`}
+                                                >
+                                                    {spd}x
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                     <span className="text-[11px] text-slate-400 font-mono">
-                                        Progress Auto-Saved
+                                        {selectedVideoResource?.sourceType === "youtube" ? "YouTube video" : "Progress Auto-Saved"}
                                     </span>
                                 </div>
                             </div>
@@ -309,19 +350,43 @@ export function LearningWorkspace() {
                             {/* Lesson Overview Card */}
                             <div className="rounded-3xl bg-white p-7 shadow-sm ring-1 ring-stone-200">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
-                                    CURRENT LESSON
+                                    {selectedVideoResource ? "VIDEO RESOURCE" : "CURRENT LESSON"}
                                 </span>
                                 <h2 className="editorial-display mt-1 text-2xl font-bold text-stone-900">
-                                    {currentLesson?.title}
+                                    {selectedVideoResource?.title || currentLesson?.title}
                                 </h2>
                                 <p className="mt-2 text-xs text-stone-600 leading-relaxed">
-                                    {currentLesson?.description || "In this session, learners review core concepts, discuss practice exercises, and interact with the instructor."}
+                                    {selectedVideoResource?.description || currentLesson?.description || "In this session, learners review core concepts, discuss practice exercises, and interact with the instructor."}
                                 </p>
                             </div>
                         </div>
 
                         {/* Lessons Syllabus Sidebar */}
                         <div className="space-y-4">
+                            {videoResources.length > 0 && (
+                                <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
+                                    <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-4">
+                                        Interactive Videos ({videoResources.length})
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {videoResources.map((resource) => (
+                                            <button
+                                                key={resource._id}
+                                                type="button"
+                                                onClick={() => setSelectedVideoResource(resource)}
+                                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs transition ${
+                                                    selectedVideoResource?._id === resource._id
+                                                        ? "bg-emerald-800 text-white font-bold"
+                                                        : "bg-stone-50 text-stone-700 hover:bg-stone-100"
+                                                }`}
+                                            >
+                                                <span aria-hidden="true">▶</span>
+                                                <span className="line-clamp-2">{resource.title}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
                                 <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-4">
                                     Syllabus Modules
@@ -340,7 +405,10 @@ export function LearningWorkspace() {
                                                             <button
                                                                 key={lIdx}
                                                                 type="button"
-                                                                onClick={() => setCurrentLesson(les)}
+                                                                onClick={() => {
+                                                                    setCurrentLesson(les);
+                                                                    setSelectedVideoResource(null);
+                                                                }}
                                                                 className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition ${
                                                                     isSelected
                                                                         ? "bg-emerald-800 text-white font-bold"
@@ -381,16 +449,32 @@ export function LearningWorkspace() {
                                         </div>
                                         <a
                                             href={`/api/resources/${selectedDoc._id}/download`}
-                                            className="rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-900"
+                                            className={`rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-900 ${selectedDoc.sourceType !== "upload" ? "hidden" : ""}`}
                                             download
                                         >
-                                            ⬇ Download File
+                                            ⬇ Download file
                                         </a>
                                     </div>
 
                                     {/* In-Browser PDF / Document Preview */}
                                     <div className="aspect-[4/3] sm:aspect-[16/10] w-full rounded-2xl bg-stone-100 overflow-hidden ring-1 ring-stone-200">
-                                        {selectedDoc.mimeType?.includes("pdf") ? (
+                                        {selectedDoc.sourceType === "google_drive" ? (
+                                            <iframe
+                                                src={selectedDoc.externalUrl}
+                                                title={selectedDoc.title}
+                                                className="h-full w-full border-0 bg-white"
+                                                referrerPolicy="no-referrer"
+                                                allow="autoplay"
+                                            />
+                                        ) : selectedDoc.mimeType?.startsWith("video/") ? (
+                                            <video
+                                                src={`/api/resources/${selectedDoc.storedKey}/file`}
+                                                controls
+                                                preload="metadata"
+                                                className="h-full w-full bg-black"
+                                                aria-label={selectedDoc.title}
+                                            />
+                                        ) : selectedDoc.mimeType?.includes("pdf") ? (
                                             <iframe
                                                 src={`/api/resources/${selectedDoc.storedKey}/file`}
                                                 title={selectedDoc.title}
@@ -402,10 +486,12 @@ export function LearningWorkspace() {
                                                 alt={selectedDoc.title}
                                                 className="w-full h-full object-contain"
                                             />
+                                        ) : /\.(docx|xlsx|pptx)$/i.test(selectedDoc.originalFilename || "") ? (
+                                            <OfficeDocumentPreview resource={selectedDoc} />
                                         ) : (
                                             <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                                                 <span className="text-4xl mb-2">📁</span>
-                                                <h4 className="font-bold text-stone-800 text-sm">{selectedDoc.originalFilename}</h4>
+                                                <h4 className="font-bold text-stone-800 text-sm">{selectedDoc.originalFilename || selectedDoc.title}</h4>
                                                 <p className="text-xs text-stone-500 mt-1">
                                                     In-browser preview is optimized for PDF and images. Download file to view locally.
                                                 </p>
@@ -414,7 +500,7 @@ export function LearningWorkspace() {
                                                     className="mt-4 rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white"
                                                     download
                                                 >
-                                                    Download Resource
+                                                    Download resource
                                                 </a>
                                             </div>
                                         )}
@@ -422,7 +508,7 @@ export function LearningWorkspace() {
                                 </div>
                             ) : (
                                 <div className="rounded-3xl bg-white p-12 text-center ring-1 ring-stone-200">
-                                    <p className="text-xs text-stone-500">No educational files uploaded yet for this cohort.</p>
+                                    <p className="text-xs text-stone-500">No course materials have been added for this cohort yet.</p>
                                 </div>
                             )}
                         </div>
@@ -430,9 +516,9 @@ export function LearningWorkspace() {
                         {/* Resources List Sidebar */}
                         <div className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 shadow-sm space-y-3">
                             <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                Available Materials ({resources.length})
+                                Available Materials ({courseMaterials.length})
                             </h3>
-                            {resources.map((res) => {
+                            {courseMaterials.map((res) => {
                                 const isSelected = selectedDoc?._id === res._id;
                                 return (
                                     <button
@@ -445,11 +531,11 @@ export function LearningWorkspace() {
                                                 : "bg-stone-50 hover:bg-stone-100"
                                         }`}
                                     >
-                                        <span className="text-lg">📄</span>
+                                        <span className="text-lg">{res.sourceType === "youtube" ? "🎬" : "📄"}</span>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-bold text-stone-900 line-clamp-1">{res.title}</p>
                                             <p className="text-[10px] text-stone-500">
-                                                {(res.fileSize / 1024 / 1024).toFixed(1)} MB · {res.category}
+                                                {res.sourceType === "youtube" ? "YouTube video" : res.sourceType === "google_drive" ? `Google Drive ${res.category}` : `${(res.fileSize / 1024 / 1024).toFixed(1)} MB · ${res.category}`}
                                             </p>
                                         </div>
                                     </button>

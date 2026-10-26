@@ -14,6 +14,7 @@ import { AttendanceRecordModel } from "../models/AttendanceRecord.js";
 import { AnnouncementModel } from "../models/Announcement.js";
 import { CertificateModel } from "../models/Certificate.js";
 import { DiscussionModel } from "../models/Discussion.js";
+import { CourseModel } from "../models/Course.js";
 import { randomBytes } from "node:crypto";
 export const studentRouter = Router();
 studentRouter.use(requireAuth, requireRole("student"));
@@ -34,11 +35,12 @@ studentRouter.get("/dashboard", asyncHandler(async (req, res) => {
     const [upcomingLessons, assignments, submissions, attendanceRecords] = await Promise.all([
         ClassSessionModel.find({
             classroom: { $in: classIds },
-            startsAt: { $gte: now },
+            endsAt: { $gte: now },
             status: "scheduled",
         })
+            .populate("classroom", "title timeZone")
             .sort({ startsAt: 1 })
-            .limit(10)
+            .limit(50)
             .lean(),
         AssignmentModel.find({ classroom: { $in: classIds } }).select("_id").lean(),
         AssignmentSubmissionModel.find({ student: studentId }).lean(),
@@ -71,6 +73,7 @@ studentRouter.get("/classes", asyncHandler(async (req, res) => {
         .lean();
     const classIds = classes.map((c) => c._id);
     const sessions = await ClassSessionModel.find({ classroom: { $in: classIds } })
+        .populate("classroom", "title timeZone")
         .sort({ startsAt: 1 })
         .lean();
     res.json({ classes, sessions });
@@ -294,8 +297,24 @@ studentRouter.patch("/profile", asyncHandler(async (req, res) => {
         learningGoals: z.string().optional(),
         currentSkillLevel: z.string().optional(),
         preferredSchedule: z.string().optional(),
+        preferredCourseIds: z.array(z.string()).min(1).max(10).optional(),
+        weeklyStudyHours: z.number().int().min(1).max(80).optional(),
+        timeZone: z.string().trim().max(80).optional(),
         preferredLanguage: z.enum(["am", "en"]).optional(),
     }).parse(req.body);
+    const preferredCourseIds = data.preferredCourseIds ?? [];
+    if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
+        throw new ApiError(400, "Select valid courses from the course catalog.");
+    }
+    if (data.preferredCourseIds !== undefined) {
+        const availableCourses = await CourseModel.countDocuments({
+            _id: { $in: preferredCourseIds },
+            status: "published",
+        });
+        if (availableCourses !== new Set(preferredCourseIds).size) {
+            throw new ApiError(400, "One or more selected courses are no longer available.");
+        }
+    }
     const user = await UserModel.findById(studentId);
     if (!user) {
         throw new ApiError(404, "Student not found.");
@@ -318,6 +337,12 @@ studentRouter.patch("/profile", asyncHandler(async (req, res) => {
         user.studentProfile.currentSkillLevel = data.currentSkillLevel;
     if (data.preferredSchedule !== undefined)
         user.studentProfile.preferredSchedule = data.preferredSchedule;
+    if (data.preferredCourseIds !== undefined)
+        user.studentProfile.preferredCourseIds = preferredCourseIds;
+    if (data.weeklyStudyHours !== undefined)
+        user.studentProfile.weeklyStudyHours = data.weeklyStudyHours;
+    if (data.timeZone !== undefined)
+        user.studentProfile.timeZone = data.timeZone;
     if (data.preferredLanguage !== undefined) {
         user.studentProfile.preferredLanguage = data.preferredLanguage;
         user.languagePreference = data.preferredLanguage;

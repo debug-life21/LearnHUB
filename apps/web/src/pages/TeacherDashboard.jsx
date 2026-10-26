@@ -2,9 +2,17 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { API_BASE_URL, apiRequest } from "../lib/api";
+import { SessionSchedule } from "../components/SessionSchedule";
+import { LiveSessionButton } from "../components/LiveSessionButton";
+import { ProfilePhotoField } from "../components/ProfilePhotoField";
+import { DashboardSettings } from "../components/DashboardSettings";
+import { DashboardSidebar } from "../components/DashboardSidebar";
+import { formatSessionTime } from "../lib/sessionTime";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
+import { useAuth } from "../context/AuthContext";
 export function TeacherDashboard({ user }) {
     const { t } = useTranslation();
+    const { refreshUser } = useAuth();
     const [activeTab, setActiveTab] = useState("overview");
     const [classes, setClasses] = useState([]);
     const [upcomingLessons, setUpcomingLessons] = useState([]);
@@ -13,6 +21,16 @@ export function TeacherDashboard({ user }) {
     const [resources, setResources] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [feedback, setFeedback] = useState("");
+    const [profileForm, setProfileForm] = useState({
+        fullName: user.fullName || "",
+        phone: user.phone || "",
+        bio: user.bio || "",
+        avatarUrl: user.avatarUrl || "",
+        expertise: user.teacherProfile?.expertise?.join(", ") || "",
+        qualifications: user.teacherProfile?.qualifications || "",
+        availabilityNotes: user.teacherProfile?.availabilityNotes || "",
+        experienceYears: user.teacherProfile?.experienceYears || 0,
+    });
     // Password change state
     const [securityForm, setSecurityForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
     const [securityLoading, setSecurityLoading] = useState(false);
@@ -91,9 +109,9 @@ export function TeacherDashboard({ user }) {
         }
     }, [selectedSessionId]);
     useEffect(() => {
-        let mounted = true;
         loadTeacherData();
-        return () => { mounted = false; };
+        const refreshTimer = window.setInterval(() => { void loadTeacherData(); }, 60_000);
+        return () => window.clearInterval(refreshTimer);
     }, [loadTeacherData]);
     // Handle Attendance Change
     const setStudentAttendance = (studentId, status) => {
@@ -264,15 +282,57 @@ export function TeacherDashboard({ user }) {
         }
     };
 
+    const handleSaveProfile = async (event) => {
+        event.preventDefault();
+        try {
+            const response = await apiRequest("/api/auth/profile", {
+                method: "PATCH",
+                body: JSON.stringify({
+                    fullName: profileForm.fullName,
+                    phone: profileForm.phone,
+                    bio: profileForm.bio,
+                    avatarUrl: profileForm.avatarUrl,
+                    teacherProfile: {
+                        expertise: profileForm.expertise.split(",").map((item) => item.trim()).filter(Boolean),
+                        qualifications: profileForm.qualifications,
+                        availabilityNotes: profileForm.availabilityNotes,
+                        experienceYears: Number(profileForm.experienceYears),
+                    },
+                }),
+            });
+            setProfileForm((current) => ({ ...current, fullName: response.user.fullName, avatarUrl: response.user.avatarUrl }));
+            await refreshUser();
+            setFeedback("Professional profile updated.");
+        } catch (err) {
+            setFeedback(err.message);
+        }
+    };
+
     const currentClassForAttendance = classes.find((c) => c.students?.length > 0);
-    return (<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    const dashboardTabs = [
+        { id: "overview", label: "Overview", icon: "📊" },
+        { id: "classes", label: `My cohorts (${classes.length})`, icon: "🏫" },
+        { id: "schedule", label: `Live sessions (${upcomingLessons.length})`, icon: "📹" },
+        { id: "attendance", label: "Attendance", icon: "📝" },
+        { id: "assignments", label: `Assignments (${assignments.length})`, icon: "📚" },
+        { id: "assessments", label: `Assessments (${assessments.length})`, icon: "⏱️" },
+        { id: "resources", label: `Resources (${resources.length})`, icon: "📁" },
+        { id: "profile", label: "Professional profile", icon: "👤" },
+        { id: "settings", label: "Settings", icon: "⚙️" },
+        { id: "security", label: "Account security", icon: "🔒" },
+    ];
+    return (<div className="min-h-screen space-y-8 px-4 py-6 sm:px-6 lg:pl-72 lg:pr-8">
+      <DashboardSidebar title="Teacher workspace" user={{ ...user, fullName: profileForm.fullName, avatarUrl: profileForm.avatarUrl }} tabs={dashboardTabs} activeTab={activeTab} onSelect={setActiveTab}/>
       {/* Top Banner */}
       <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl flex flex-wrap items-center justify-between gap-6">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
             {t("teacherOverview")}
           </span>
-          <h1 className="mt-2 text-3xl font-black">{user.fullName}</h1>
+          <div className="flex items-center gap-4">
+            {profileForm.avatarUrl ? <img src={profileForm.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-white/30"/> : null}
+            <h1 className="mt-2 text-3xl font-black">{profileForm.fullName}</h1>
+          </div>
           <p className="mt-1 text-sm text-slate-400">{user.email}</p>
         </div>
         <div className="flex gap-2">
@@ -293,25 +353,6 @@ export function TeacherDashboard({ user }) {
           <button onClick={() => setFeedback("")} className="text-blue-500 hover:text-blue-800">✕</button>
         </div>) : null}
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-        {[
-            { id: "overview", label: "Overview", icon: "📊" },
-            { id: "classes", label: `My cohorts (${classes.length})`, icon: "🏫" },
-            { id: "schedule", label: `Live sessions (${upcomingLessons.length})`, icon: "📹" },
-            { id: "attendance", label: "Attendance", icon: "📝" },
-            { id: "assignments", label: `Assignments (${assignments.length})`, icon: "📚" },
-            { id: "assessments", label: `Assessments (${assessments.length})`, icon: "⏱️" },
-            { id: "resources", label: `Resources (${resources.length})`, icon: "📁" },
-            { id: "security", label: "Account security", icon: "🔒" },
-        ].map((tab) => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${activeTab === tab.id
-                ? "bg-slate-900 text-white shadow-sm"
-                : "bg-white text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200"}`}>
-            <span>{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>))}
-      </div>
-
       {/* 1. OVERVIEW */}
       {activeTab === "overview" ? (<div className="space-y-8">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -327,17 +368,9 @@ export function TeacherDashboard({ user }) {
                 {upcomingLessons.length === 0 ? (<EmptyState title="No sessions scheduled yet."/>) : (upcomingLessons.map((session) => (<div key={session._id} className="rounded-2xl border border-slate-200 p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="font-bold text-slate-900">{session.title}</h4>
-                        <Badge variant="cyan">{new Date(session.startsAt).toLocaleTimeString()}</Badge>
+                        <Badge variant="cyan">{formatSessionTime(session.startsAt)}</Badge>
                       </div>
-                      <p className="text-xs text-slate-500">
-                        {new Date(session.startsAt).toLocaleDateString()}
-                      </p>
-                      {session.meetingUrl ? (<div className="pt-2">
-                          <a href={session.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white hover:bg-cyan-700 transition-colors">
-                            <span>📹</span>
-                            <span>{t("joinMeeting")}</span>
-                          </a>
-                        </div>) : null}
+                      {session.meetingUrl ? <div className="pt-2"><LiveSessionButton session={session} compact /></div> : null}
                     </div>)))}
               </div>
             </DashboardCard>
@@ -390,23 +423,8 @@ export function TeacherDashboard({ user }) {
 
       {/* 3. SCHEDULE */}
       {activeTab === "schedule" ? (<div className="space-y-6">
-          <DashboardCard title="Live session schedule">
-            <div className="space-y-4">
-              {upcomingLessons.map((session) => (<div key={session._id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 p-5">
-                  <div>
-                    <h4 className="font-bold text-slate-900">{session.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {new Date(session.startsAt).toLocaleString()} — {new Date(session.endsAt).toLocaleTimeString()}
-                    </p>
-                    <p className="text-xs text-slate-600 mt-1">{session.description}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {session.meetingUrl ? (<a href={session.meetingUrl} target="_blank" rel="noreferrer" className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white hover:bg-cyan-700">
-                        {t("joinMeeting")}
-                      </a>) : null}
-                  </div>
-                </div>))}
-            </div>
+          <DashboardCard title="Live class schedule" subtitle="Times are shown in your device's local time. You can also compare with the cohort time zone.">
+            <SessionSchedule sessions={upcomingLessons} />
           </DashboardCard>
         </div>) : null}
 
@@ -418,7 +436,7 @@ export function TeacherDashboard({ user }) {
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select a session</label>
                 <select value={selectedSessionId} onChange={(e) => setSelectedSessionId(e.target.value)} className="w-full sm:w-96 rounded-xl border border-slate-200 p-2.5 text-xs outline-none bg-white">
                   {upcomingLessons.map((s) => (<option key={s._id} value={s._id}>
-                      {s.title} ({new Date(s.startsAt).toLocaleDateString()})
+                      {s.title} ({formatSessionTime(s.startsAt)})
                     </option>))}
                 </select>
               </div>
@@ -618,6 +636,40 @@ export function TeacherDashboard({ user }) {
               </div>)))}
         </div>
       </Modal>
+
+      {activeTab === "profile" ? (
+        <div className="mx-auto max-w-2xl">
+          <DashboardCard title="Professional profile" subtitle="Keep your contact details, qualifications, teaching subjects, and availability up to date.">
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <ProfilePhotoField value={profileForm.avatarUrl} onChange={(avatarUrl) => setProfileForm({ ...profileForm, avatarUrl })}/>
+              <label className="block text-xs font-bold text-slate-700">Full name
+                <input required minLength={2} maxLength={100} value={profileForm.fullName} onChange={(event) => setProfileForm({ ...profileForm, fullName: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Phone number
+                <input type="tel" maxLength={30} value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Professional introduction
+                <textarea rows={3} maxLength={500} value={profileForm.bio} onChange={(event) => setProfileForm({ ...profileForm, bio: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Subjects / expertise (comma-separated)
+                <input value={profileForm.expertise} onChange={(event) => setProfileForm({ ...profileForm, expertise: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Qualifications
+                <textarea rows={3} maxLength={1000} value={profileForm.qualifications} onChange={(event) => setProfileForm({ ...profileForm, qualifications: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Years of experience
+                <input required type="number" min="0" max="60" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
+              </label>
+              <label className="block text-xs font-bold text-slate-700">Availability
+                <textarea rows={2} maxLength={500} value={profileForm.availabilityNotes} onChange={(event) => setProfileForm({ ...profileForm, availabilityNotes: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm" placeholder="Days, times, and time zone"/>
+              </label>
+              <button type="submit" className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white hover:bg-slate-800">Save professional profile</button>
+            </form>
+          </DashboardCard>
+        </div>
+      ) : null}
+
+      {activeTab === "settings" ? <DashboardSettings user={user} sessions={upcomingLessons}/> : null}
 
       {/* MODAL: Create Assignment */}
       <Modal title={t("createAssignment")} isOpen={createAssignModal} onClose={() => setCreateAssignModal(false)}>

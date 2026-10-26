@@ -3,7 +3,8 @@ import { GoogleLogin } from "@react-oauth/google";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../lib/api";
+import { apiRequest, loadPublicCourses } from "../lib/api";
+import { CategoryCoursePicker } from "../components/CategoryCoursePicker";
 
 function AuthShell({ title, subtitle, children }) {
     return (
@@ -46,6 +47,19 @@ function GoogleSignIn({ onCredential, disabled }) {
             />
         </div>
     );
+}
+
+function readApplicationFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({
+            originalFilename: file.name,
+            mimeType: file.type,
+            base64Data: String(reader.result).split(",")[1],
+        });
+        reader.onerror = () => reject(new Error(`Could not read ${file.name}. Please try again.`));
+        reader.readAsDataURL(file);
+    });
 }
 
 export function SignInPage() {
@@ -107,7 +121,7 @@ export function SignInPage() {
                 <span className="h-px flex-1 bg-slate-200" />OR CONTINUE WITH EMAIL<span className="h-px flex-1 bg-slate-200" />
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="block text-xs font-bold text-slate-700">
                     {t("email")}
                     <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="name@example.com" />
                 </label>
@@ -140,10 +154,49 @@ export function SignupPage({ initialRole = "student" }) {
     const [role, setRole] = useState(initialRole);
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
+    const [courses, setCourses] = useState([]);
+    const [contactPhone, setContactPhone] = useState("");
+    const [studentForm, setStudentForm] = useState({
+        learningGoals: "",
+        learningInterests: "",
+        currentSkillLevel: "Beginner",
+        preferredSchedule: "",
+        preferredCourseIds: [],
+        weeklyStudyHours: 5,
+        timeZone: "Africa/Addis_Ababa",
+    });
+    const [teacherForm, setTeacherForm] = useState({
+        qualifications: "",
+        experience: "",
+        experienceYears: 0,
+        teachingCategories: "",
+        availability: "",
+        teachingStatement: "",
+        cv: null,
+        certificates: [],
+    });
+
+    useEffect(() => {
+        let active = true;
+        async function loadCourses() {
+            try {
+                const catalog = await loadPublicCourses();
+                if (active) setCourses(catalog);
+            } catch (error) {
+                if (active) setFeedback(`Could not load the course catalog: ${error.message}`);
+            }
+        }
+        void loadCourses();
+        return () => { active = false; };
+    }, []);
 
     const continueWithGoogle = useCallback(async (credential) => {
         if (!credential) {
             setFeedback("Google sign-up could not be completed. Please try again.");
+            return;
+        }
+        if (!studentForm.preferredCourseIds.length || studentForm.preferredSchedule.trim().length < 2) {
+            setFeedback("Choose at least one course and add your preferred study times before creating your student account.");
             return;
         }
         setLoading(true);
@@ -151,7 +204,21 @@ export function SignupPage({ initialRole = "student" }) {
         try {
             await apiRequest("/api/auth/google", {
                 method: "POST",
-                body: JSON.stringify({ credential, role }),
+                body: JSON.stringify({
+                    credential,
+                    role,
+                    phone: contactPhone,
+                    studentProfile: {
+                        learningGoals: studentForm.learningGoals,
+                        learningInterests: studentForm.learningInterests
+                            .split(",").map((interest) => interest.trim()).filter(Boolean),
+                        currentSkillLevel: studentForm.currentSkillLevel,
+                        preferredSchedule: studentForm.preferredSchedule,
+                        preferredCourseIds: studentForm.preferredCourseIds,
+                        weeklyStudyHours: Number(studentForm.weeklyStudyHours),
+                        timeZone: studentForm.timeZone,
+                    },
+                }),
             });
             await refreshUser();
             await navigate("/dashboard");
@@ -160,16 +227,79 @@ export function SignupPage({ initialRole = "student" }) {
         } finally {
             setLoading(false);
         }
-    }, [navigate, refreshUser, role]);
+    }, [contactPhone, navigate, refreshUser, role, studentForm]);
+
+    const handleTeacherDocuments = async (event) => {
+        const files = Array.from(event.target.files || []);
+        const fieldName = event.currentTarget.name;
+        if (files.some((file) => file.size > 5 * 1024 * 1024)) {
+            setFeedback("Each CV or certificate must be smaller than 5MB.");
+            event.target.value = "";
+            return;
+        }
+        if (files.reduce((sum, file) => sum + file.size, 0) > 10 * 1024 * 1024) {
+            setFeedback("Application documents must total less than 10MB.");
+            event.target.value = "";
+            return;
+        }
+        try {
+            const documents = await Promise.all(files.map(readApplicationFile));
+            setTeacherForm((form) => ({
+                ...form,
+                ...(fieldName === "cv" ? { cv: documents[0] } : { certificates: documents }),
+            }));
+            setFeedback("");
+        } catch (error) {
+            setFeedback(error.message);
+        }
+    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        if (role === "student" && studentForm.preferredCourseIds.length === 0) {
+            setFeedback("Choose at least one course you want to study.");
+            return;
+        }
+        if (role === "teacher" && !teacherForm.cv) {
+            setFeedback("Upload your CV to submit a teacher application.");
+            return;
+        }
         setLoading(true);
         setFeedback("");
         try {
             const response = await apiRequest("/api/auth/signup", {
                 method: "POST",
-                body: JSON.stringify({ name, email, password, role }),
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                    role,
+                    phone: contactPhone,
+                    ...(role === "student" ? {
+                        studentProfile: {
+                            learningGoals: studentForm.learningGoals,
+                            learningInterests: studentForm.learningInterests
+                                .split(",").map((interest) => interest.trim()).filter(Boolean),
+                            currentSkillLevel: studentForm.currentSkillLevel,
+                            preferredSchedule: studentForm.preferredSchedule,
+                            preferredCourseIds: studentForm.preferredCourseIds,
+                            weeklyStudyHours: Number(studentForm.weeklyStudyHours),
+                            timeZone: studentForm.timeZone,
+                        },
+                    } : {
+                        teacherApplication: {
+                            qualifications: teacherForm.qualifications,
+                            experience: teacherForm.experience,
+                            teachingStatement: teacherForm.teachingStatement,
+                            experienceYears: Number(teacherForm.experienceYears),
+                            teachingCategories: teacherForm.teachingCategories
+                                .split(",").map((category) => category.trim()).filter(Boolean),
+                            availability: teacherForm.availability,
+                            cv: teacherForm.cv,
+                            certificates: teacherForm.certificates,
+                        },
+                    }),
+                }),
             });
             sessionStorage.setItem("learnhub_pending_email", response.email);
             sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
@@ -181,42 +311,208 @@ export function SignupPage({ initialRole = "student" }) {
         }
     };
 
+    const fieldClass = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10";
     return (
-        <AuthShell title="Create your account" subtitle="Create your account to start learning or teaching">
-            <Feedback>{feedback}</Feedback>
-            <GoogleSignIn onCredential={continueWithGoogle} disabled={loading} />
-            <div className="mb-5 flex items-center gap-3 text-xs font-semibold text-slate-400">
-                <span className="h-px flex-1 bg-slate-200" />OR SIGN UP WITH EMAIL<span className="h-px flex-1 bg-slate-200" />
+        <div className="editorial-page auth-page mx-auto w-full px-4 py-8 sm:px-6 sm:py-12">
+          <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+            <aside className="relative overflow-hidden rounded-3xl bg-[#20372c] p-7 text-white shadow-xl sm:p-9 lg:sticky lg:top-24">
+              <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-300/10 blur-3xl"/>
+              <div className="relative">
+                <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-sm text-amber-200">LH</span>
+                  LearnHUB
+                </Link>
+                <p className="mt-10 text-xs font-bold uppercase tracking-[0.2em] text-amber-200">{role === "student" ? "Your learning journey" : "Teach with LearnHUB"}</p>
+                <h1 className="editorial-display mt-3 text-4xl leading-tight sm:text-5xl">
+                  {role === "student" ? "Build skills for what comes next." : "Help learners move forward."}
+                </h1>
+                <p className="mt-4 max-w-md text-sm leading-6 text-emerald-50/75">
+                  {role === "student"
+                    ? "Tell us what you want to learn and when you are available. Our team will help match you with the right cohort."
+                    : "Share your teaching background, expertise, and availability. Our team reviews every application before approval."}
+                </p>
+                <div className="mt-8 space-y-3">
+                  {(role === "student"
+                    ? [["01", "Choose your learning path"], ["02", "Set goals and study times"], ["03", "Get matched with a cohort"]]
+                    : [["01", "Add your teaching profile"], ["02", "Upload your CV and credentials"], ["03", "Verify email; admin reviews your application"]]
+                  ).map(([number, text]) => (
+                    <div key={number} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-200/15 text-xs font-black text-amber-100">{number}</span>
+                      <span className="text-xs font-semibold text-white/90">{text}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-8 rounded-2xl border border-white/10 bg-black/10 p-4 text-xs leading-5 text-emerald-50/70">
+                  Your information is used to set up your LearnHUB account and support your learning or teaching application.
+                </div>
+              </div>
+            </aside>
+
+            <main className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_24px_70px_rgba(29,43,34,0.10)] sm:p-8">
+            <div className="mb-7">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-800">Create account</p>
+              <h2 className="editorial-display mt-2 text-3xl tracking-tight text-slate-950 sm:text-4xl">Let’s get started.</h2>
+              <p className="mt-2 text-sm text-slate-500">First choose how you want to use LearnHUB, then complete your account details.</p>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+            <Feedback>{feedback}</Feedback>
+            {role === "student" ? <GoogleSignIn onCredential={continueWithGoogle} disabled={loading} /> : (
+                <p className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-sm leading-5 text-amber-950">
+                    Teacher applications require a CV and teaching details, so please register with email.
+                </p>
+            )}
+            {role === "student" && (
+              <div className="mb-5 flex items-center gap-3 text-xs font-semibold text-slate-400">
+                <span className="h-px flex-1 bg-slate-200" />OR CONTINUE WITH EMAIL<span className="h-px flex-1 bg-slate-200" />
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <fieldset>
+                  <legend className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-600">I want to join as</legend>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { value: "student", title: "Student", description: "Learn new skills", icon: "🎓" },
+                      { value: "teacher", title: "Teacher", description: "Apply to teach", icon: "👩‍🏫" },
+                    ].map((option) => (
+                      <button key={option.value} type="button" onClick={() => setRole(option.value)} aria-pressed={role === option.value}
+                        className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition ${
+                          role === option.value ? "border-emerald-700 bg-emerald-50 ring-2 ring-emerald-700/10" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                        }`}>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm">{option.icon}</span>
+                        <span>
+                          <span className="block text-sm font-bold text-slate-900">{option.title}</span>
+                          <span className="mt-0.5 block text-[11px] text-slate-500">{option.description}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">Account details</h3>
+                    <p className="mt-1 text-xs text-slate-500">Use an email address you can access to verify your account.</p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-xs font-bold text-slate-700">
                     {t("fullName")}
-                    <input required minLength={2} maxLength={100} autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your name" />
+                    <input required minLength={2} maxLength={100} autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} className={fieldClass} placeholder="Your name" />
                 </label>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="block text-xs font-bold text-slate-700">
                     {t("email")}
-                    <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="name@example.com" />
+                    <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={fieldClass} placeholder="name@example.com" />
                 </label>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                <label className="block text-xs font-bold text-slate-700 sm:col-span-2">
                     {t("password")}
-                    <input required minLength={8} maxLength={128} autoComplete="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="At least 8 characters" />
+                    <input required minLength={8} maxLength={128} autoComplete="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass} placeholder="At least 8 characters" />
                 </label>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    I want to join as
-                    <select value={role} onChange={(event) => setRole(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
-                        <option value="student">Student</option>
-                        <option value="teacher">Teacher</option>
-                    </select>
-                </label>
-                {role === "teacher" && <p className="rounded-2xl border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900">Teacher accounts need admin approval after email verification.</p>}
-                <button disabled={loading} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50">
-                    {loading ? t("loading") : "Create account"}
+                  </div>
+                </section>
+                {role === "student" ? (
+                    <div className="space-y-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-4 sm:p-5">
+                        <div>
+                          <h2 className="text-sm font-black text-slate-900">Your learning plan</h2>
+                          <p className="mt-1 text-xs text-slate-500">Help us understand your goals and plan around your schedule.</p>
+                        </div>
+                        <fieldset>
+                            <legend className="text-xs font-bold text-slate-700">Choose courses by category</legend>
+                            <CategoryCoursePicker
+                                courses={courses}
+                                selectedCourseIds={studentForm.preferredCourseIds}
+                                onChange={(preferredCourseIds) => setStudentForm({ ...studentForm, preferredCourseIds })}
+                            />
+                            <p className="mt-1 text-xs font-normal text-slate-500">Digital Marketing is listed first. Choose one or more courses from any categories.</p>
+                        </fieldset>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Learning interests (comma-separated)
+                            <input value={studentForm.learningInterests} onChange={(event) => setStudentForm({ ...studentForm, learningInterests: event.target.value })} className={fieldClass} placeholder="Languages, Web Development"/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Current level
+                            <select value={studentForm.currentSkillLevel} onChange={(event) => setStudentForm({ ...studentForm, currentSkillLevel: event.target.value })} className={fieldClass}>
+                                <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+                            </select>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Learning goals
+                            <textarea value={studentForm.learningGoals} onChange={(event) => setStudentForm({ ...studentForm, learningGoals: event.target.value })} rows={3} maxLength={1000} className={fieldClass} placeholder="What would you like to learn or achieve?"/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Best days / times to study
+                            <input required value={studentForm.preferredSchedule} onChange={(event) => setStudentForm({ ...studentForm, preferredSchedule: event.target.value })} className={fieldClass} placeholder="e.g. Weekdays after 6 PM"/>
+                        </label>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="block text-xs font-bold text-slate-700">
+                                Hours available per week
+                                <input required type="number" min="1" max="80" value={studentForm.weeklyStudyHours} onChange={(event) => setStudentForm({ ...studentForm, weeklyStudyHours: event.target.value })} className={fieldClass}/>
+                            </label>
+                            <label className="block text-xs font-bold text-slate-700">
+                                Time zone
+                                <input required value={studentForm.timeZone} onChange={(event) => setStudentForm({ ...studentForm, timeZone: event.target.value })} className={fieldClass}/>
+                            </label>
+                        </div>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Contact phone number (optional)
+                            <input type="tel" autoComplete="tel" value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} className={fieldClass}/>
+                        </label>
+                    </div>
+                ) : (
+                    <div className="space-y-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/80 to-white p-4 sm:p-5">
+                        <div>
+                          <h2 className="text-sm font-black text-slate-900">Teaching application</h2>
+                          <p className="mt-1 text-xs text-slate-500">Share your experience and supporting documents for administrator review.</p>
+                        </div>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Qualifications / education
+                            <textarea required minLength={2} maxLength={1000} value={teacherForm.qualifications} onChange={(event) => setTeacherForm({ ...teacherForm, qualifications: event.target.value })} rows={2} className={fieldClass} placeholder="Degrees, certifications, and relevant training"/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Teaching experience
+                            <textarea required minLength={10} maxLength={3000} value={teacherForm.experience} onChange={(event) => setTeacherForm({ ...teacherForm, experience: event.target.value })} rows={4} className={fieldClass} placeholder="Describe your teaching experience and accomplishments"/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Years of teaching experience
+                            <input required type="number" min="0" max="60" value={teacherForm.experienceYears} onChange={(event) => setTeacherForm({ ...teacherForm, experienceYears: event.target.value })} className={fieldClass}/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Subjects you can teach (comma-separated)
+                            <input required value={teacherForm.teachingCategories} onChange={(event) => setTeacherForm({ ...teacherForm, teachingCategories: event.target.value })} className={fieldClass} placeholder="Mathematics, English, Web Development"/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Teaching availability
+                            <textarea required minLength={2} maxLength={500} value={teacherForm.availability} onChange={(event) => setTeacherForm({ ...teacherForm, availability: event.target.value })} rows={2} className={fieldClass} placeholder="Days, times, and time zone"/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Why do you want to teach with LearnHUB?
+                            <textarea required minLength={20} maxLength={1000} value={teacherForm.teachingStatement} onChange={(event) => setTeacherForm({ ...teacherForm, teachingStatement: event.target.value })} rows={3} className={fieldClass} placeholder="Describe how you support learners and what you would bring to LearnHUB."/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Contact phone number
+                            <input required type="tel" autoComplete="tel" minLength={7} maxLength={30} value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} className={fieldClass}/>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            CV / Resume (required, PDF, Word, or image; max 5MB)
+                            <input required type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" onChange={handleTeacherDocuments} className="mt-2 block w-full rounded-xl border border-dashed border-slate-300 bg-white p-3 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-800 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white"/>
+                            {teacherForm.cv ? <span className="mt-1 block font-normal text-emerald-700">{teacherForm.cv.originalFilename}</span> : null}
+                        </label>
+                        <label className="block text-xs font-bold text-slate-700">
+                            Certificates / qualification documents (optional, up to 5 files)
+                            <input type="file" name="certificates" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" onChange={handleTeacherDocuments} className="mt-2 block w-full rounded-xl border border-dashed border-slate-300 bg-white p-3 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-bold file:text-slate-700"/>
+                            {teacherForm.certificates.map((certificate) => <span key={certificate.originalFilename} className="mt-1 block font-normal text-slate-600">{certificate.originalFilename}</span>)}
+                        </label>
+                        <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">After you verify your email, an administrator will review your application before teacher access is enabled.</p>
+                    </div>
+                )}
+                <button disabled={loading} type="submit" className="w-full rounded-xl bg-emerald-800 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-50">
+                    {loading ? t("loading") : role === "teacher" ? "Submit teacher application" : "Create student account"}
                 </button>
             </form>
             <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-600">
                 Already have an account? <Link to="/sign-in" className="font-bold text-blue-600 hover:underline">Sign in</Link>
             </p>
-        </AuthShell>
+            <p className="mt-3 text-center text-xs text-slate-400">By continuing, you agree to LearnHUB&apos;s <Link to="/terms" className="font-semibold text-slate-600 hover:underline">Terms</Link> and <Link to="/privacy" className="font-semibold text-slate-600 hover:underline">Privacy Policy</Link>.</p>
+            </main>
+          </div>
+        </div>
     );
 }
 

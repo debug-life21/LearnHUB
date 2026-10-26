@@ -6,9 +6,16 @@ LearnHUB is a modern, responsive, and secure full-stack education management pla
 
 ## 🌟 Key Highlights & Architectural Features
 
+- **Focused Public Navigation**: The main navigation prioritizes course discovery, how learning works, instructors, FAQs, and contact support. Less-used links remain available in the site footer.
+- **Social Media Links**: Configure LearnHUB's Facebook, X/Twitter, Telegram, YouTube, and TikTok URLs in `apps/web/src/components/SocialLinks.jsx`. A compact fixed icon bar appears at the bottom-right of the site. Unconfigured profiles remain visible but disabled until their official URLs are added.
+
 ### 1. Non-Negotiable Business Rules (Server-Enforced)
 - **Hub Admin Controls Teacher Hiring**: Teachers cannot approve themselves or hire other teachers. All teacher applicants remain pending until reviewed and approved or rejected by the Hub Admin.
 - **Hub Admin Controls Student Placement**: Students submit learning interests, skill levels, and schedule preferences upon registration. The Hub Admin assigns each student to an appropriate course, class, and teacher. Students cannot self-assign.
+- **Complete Onboarding Profiles**: Student registration collects course choices, learning goals, skill level, weekly study hours, time zone, and preferred study times. Teacher applications collect qualifications, teaching experience, subjects, availability, a required CV, and optional certificates for administrator review.
+- **Dashboard Profiles & Settings**: Students, teachers, and administrators can upload a profile photo and edit essential personal details. Teacher profiles include qualifications, expertise, experience, and availability; student learning preferences remain separately editable. All roles can manage language, device class reminders, and account security from their dashboard.
+- **Modern Dashboard Navigation**: Student, teacher, admin, and cohort learning spaces use a persistent left-side vertical menu on desktop and a horizontally scrollable menu on smaller screens.
+- **Modern Registration Experience**: Student and teacher signup use role-specific onboarding panels, accessible role selection, clearly grouped account and learning/application details, and responsive layouts. Required course choices, teaching documents, email verification, and teacher approval steps remain enforced.
 - **Teachers Teach Assigned Classes**: Strict server-side RBAC ensures teachers can only view and manage classes assigned directly to them.
 - **Students Access Assigned Learning Only**: Students have verified access exclusively to their enrolled courses, authorized Google Meet links, class materials, assignments, and quizzes.
 - **Server-Side Authorization on Every Protected Endpoint**: Authorization uses cryptographic JWT sessions in HttpOnly SameSite cookies, verified in middleware.
@@ -22,7 +29,8 @@ LearnHUB is a modern, responsive, and secure full-stack education management pla
 
 ### 3. Integrated Live Google Meet Lessons
 - Scheduled class sessions include verified Google Meet links (`https://meet.google.com/...`).
-- Time-until-session indicators and direct one-click **Join Meeting** button.
+- Live class buttons show a live countdown and unlock five minutes before the session starts; early browser reminders can still notify learners ten minutes before class.
+- Google Meet opens in a new tab because standard Meet links cannot be embedded in arbitrary application iframes.
 - Teacher schedule conflict prevention prevents double-booking teachers for overlapping sessions.
 
 ### 4. Continuous Evaluation & Progress Modeling
@@ -44,9 +52,12 @@ LearnHUB is a modern, responsive, and secure full-stack education management pla
 ### 7. Learning Workspace
 - In-browser video player with playback speed controls and localStorage progress saving.
 - PDF/document viewer for class resources.
+- Administrators can add cohort resources from the **Resources** dashboard tab: embed YouTube videos or Google Drive PDFs, Word documents, spreadsheets, and presentations without using LearnHUB server disk or an R2 account. Google Drive and YouTube resources open in the Learning Space; Drive files must be shared with viewer access for the intended audience. Locally uploaded DOCX, XLSX, and PPTX files are parsed and previewed in the Learning Space; legacy DOC/XLS/PPT files are not supported by that preview. YouTube embeds use its privacy-enhanced player and `rel=0`; YouTube may still show same-channel recommendations or creator-added end screens.
+- Direct file uploads remain available and use local storage by default; Cloudflare R2 is optional, not required for embedded links.
+- Upload storage can use Cloudflare R2. Set `STORAGE_PROVIDER=r2` and the R2 credentials in the server `.env`; files stay private and are streamed through authenticated LearnHUB resource routes.
 - Lesson syllabus checklist per cohort.
 - Cohort discussion board with threaded replies (student & teacher).
-- One-click Google Meet launcher with live session countdown.
+- Google Meet join control with a live countdown and a five-minute pre-class join window.
 
 ### 8. Password Reset & Account Security
 - Secure forgot-password flow: 6-digit code + token link, bcrypt-hashed at rest, 15-minute expiry.
@@ -166,6 +177,14 @@ npm test
 | `/apply/teacher` | Teacher application |
 | `/forgot-password` | Password reset request |
 | `/reset-password` | Password reset confirmation |
+
+## 🧾 Student & Teacher Onboarding
+
+- Students select one or more published courses grouped by catalog category (Digital Marketing is listed first) and provide their learning goals, current level, weekly study availability, and time zone during registration. They can update these details from **Learning preferences** in the student dashboard; the administrator uses them when reviewing cohort placement.
+- Teacher applicants provide their contact phone, qualifications, teaching experience, years of experience, subjects, availability, and a short teaching statement, and upload a CV. They may also upload up to five supporting certificates. Each document is limited to 5MB and the combined upload limit is 10MB. Application files are stored privately and can only be downloaded by Hub Administrators from the application review view.
+- Approved teachers can update their professional profile, contact details, teaching subjects, qualifications, and availability from the teacher dashboard.
+- Students and teachers can view scheduled and currently running live classes from their dashboards. Session times are displayed in each user's device time zone, with the cohort time zone shown when it differs. Administrators schedule sessions in the cohort's configured time zone and can review the assigned teacher, learners, and session state.
+- Students and teachers can enable browser/device notifications for a reminder about 10 minutes before class. Notifications require browser permission and LearnHUB to remain open; closing the browser stops these in-page reminders.
 
 ## 🔐 Authenticated Routes
 
@@ -317,7 +336,17 @@ SMTP_PASS=your-gmail-app-password
 ADMIN_EMAIL=admin@learnhub.et
 ADMIN_PASSWORD=your-secure-admin-password
 SEED_DEMO_DATA=false
+STORAGE_PROVIDER=local
+# For Cloudflare R2, set STORAGE_PROVIDER=r2 and fill all R2 values:
+R2_ACCOUNT_ID=
+R2_BUCKET=learnhub-resources
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
 ```
+
+Keep R2 credentials only in `apps/server/.env` (or your hosting provider's server-side secrets), never in frontend environment variables or committed files. Switching to R2 affects new uploads; existing local files must be migrated separately before removing the old server storage.
+
+To migrate existing resources and teacher application documents after setting `STORAGE_PROVIDER=r2` and all four R2 values, run `npm run migrate:uploads-to-r2 --workspace server`. The script copies files to R2, updates their storage metadata, and retains the local originals as a backup. It can be rerun safely if it stops partway through.
 
 ### `apps/web/.env`
 

@@ -13,11 +13,28 @@ const envSchema = z.object({
     SMTP_PORT: z.coerce.number().default(587),
     SMTP_USER: z.string().default(""),
     SMTP_PASS: z.string().default(""),
+    STORAGE_PROVIDER: z.enum(["local", "r2"]).default("local"),
+    R2_ACCOUNT_ID: z.string().default(""),
+    R2_BUCKET: z.string().default(""),
+    R2_ACCESS_KEY_ID: z.string().default(""),
+    R2_SECRET_ACCESS_KEY: z.string().default(""),
     ADMIN_EMAIL: z.string().default(""),
     ADMIN_PASSWORD: z.string().default(""),
     SEED_DEMO_DATA: z.enum(["true", "false"]).default("false"),
     JWT_SECRET: z.string().min(16).default("learnhub_dev_secret_please_change"),
     JWT_EXPIRES_IN: z.string().default("7d"),
+}).superRefine((values, context) => {
+    if (values.STORAGE_PROVIDER === "r2") {
+        for (const name of ["R2_ACCOUNT_ID", "R2_BUCKET", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]) {
+            if (!values[name].trim()) {
+                context.addIssue({
+                    code: "custom",
+                    path: [name],
+                    message: `${name} is required when STORAGE_PROVIDER=r2.`,
+                });
+            }
+        }
+    }
 });
 export const env = envSchema.parse(process.env);
 env.MONGODB_URI = env.MONGO_URI || env.MONGODB_URI;
