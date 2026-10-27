@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
@@ -83,6 +83,8 @@ function DashboardDispatcher() {
 }
 
 export default function App() {
+    const location = useLocation();
+    const isDashboard = location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/workspace");
     return (<div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 font-sans selection:bg-emerald-700 selection:text-white">
       <Navbar />
       <main className="flex-1">
@@ -132,7 +134,7 @@ export default function App() {
         </Routes>
         </Suspense>
       </main>
-      <Footer />
-      <SocialLinks />
+      {!isDashboard && <Footer />}
+      {!isDashboard && <SocialLinks />}
     </div>);
 }

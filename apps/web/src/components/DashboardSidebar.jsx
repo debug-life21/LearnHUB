@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backHref, backLabel = "Back to dashboard" }) {
     return (
-        <aside className="z-40 w-full border-b border-slate-200 bg-white/95 px-3 py-3 shadow-sm backdrop-blur lg:fixed lg:inset-y-16 lg:left-0 lg:w-64 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-4 lg:py-6 lg:shadow-none">
+        <aside className="z-40 w-full border-b border-slate-200 bg-white/95 px-3 py-3 shadow-sm backdrop-blur lg:fixed lg:bottom-0 lg:left-0 lg:top-[4.5rem] lg:w-64 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-4 lg:py-6 lg:shadow-none">
             <div className="mb-4 flex items-center justify-between gap-3 px-2 lg:mb-7">
                 <div className="min-w-0">
                     <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">LearnHUB</p>

@@ -74,28 +74,7 @@ async function seed() {
         });
         console.log("Created Teacher: teacher@learnhub.et / LearnHub2026!");
     }
-    // 3. Sample Student
-    let student = await UserModel.findOne({ email: "student@learnhub.et" });
-    if (!student) {
-        student = await UserModel.create({
-            fullName: "Yonas Haile",
-            email: "student@learnhub.et",
-            passwordHash: defaultPasswordHash,
-            role: "student",
-            languagePreference: "am",
-            accountStatus: "active",
-            emailVerified: true,
-            studentProfile: {
-                learningInterests: ["Web Development", "Programming"],
-                learningGoals: "Build production-ready web apps with React and Node.js.",
-                currentSkillLevel: "Beginner-Intermediate",
-                preferredSchedule: "Evenings after 6:00 PM",
-                preferredLanguage: "am",
-                placementStatus: "assigned",
-            },
-        });
-        console.log("Created Student: student@learnhub.et / LearnHub2026!");
-    }
+
     // 4. Sample Course
     let course = await CourseModel.findOne({ slug: "modern-full-stack-web-development" });
     if (!course) {
@@ -121,7 +100,7 @@ async function seed() {
             title: "Web Dev Cohort 1 - Addis Ababa",
             course: course._id,
             teacher: teacher._id,
-            students: [student._id],
+            students: [],
             capacity: 25,
             status: "active",
             timeZone: "Africa/Addis_Ababa",

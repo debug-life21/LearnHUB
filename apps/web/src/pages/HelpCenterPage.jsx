@@ -1,10 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { apiRequest } from "../lib/api";
 
 export function HelpCenterPage() {
-    const { t } = useTranslation();
     const [faqSearch, setFaqSearch] = useState("");
     const [activeSection, setActiveSection] = useState("students");
     const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" });

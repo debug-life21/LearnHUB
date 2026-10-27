@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { apiRequest } from "../lib/api";
-import { Badge } from "../components/UIComponents";
 
 export function VerifyCertificatePage() {
     const { certificateNumber } = useParams();
@@ -9,14 +8,12 @@ export function VerifyCertificatePage() {
     const [certificate, setCertificate] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [searched, setSearched] = useState(false);
 
     const lookupCertificate = async (num) => {
         if (!num || !num.trim()) return;
         setLoading(true);
         setError("");
         setCertificate(null);
-        setSearched(true);
         try {
             const res = await apiRequest(`/api/public/certificates/${encodeURIComponent(num.trim())}`);
             setCertificate(res.certificate);

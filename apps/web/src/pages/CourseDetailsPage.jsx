@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { apiRequest } from "../lib/api";
-import { Badge, EmptyState } from "../components/UIComponents";
+import { EmptyState } from "../components/UIComponents";
 
 export function CourseDetailsPage() {
     const { slug } = useParams();
-    const { t } = useTranslation();
     const [course, setCourse] = useState(null);
     const [activeCohortsCount, setActiveCohortsCount] = useState(0);
     const [loading, setLoading] = useState(true);

@@ -597,14 +597,6 @@ export function VerifyCodePage() {
     );
 }
 
-export function StudentRegistrationPage() {
-    return <SignupPage initialRole="student" />;
-}
-
-export function TeacherApplicationPage() {
-    return <SignupPage initialRole="teacher" />;
-}
-
 export function ForgotPasswordPage() {
     const { t } = useTranslation();
     const [email, setEmail] = useState("");

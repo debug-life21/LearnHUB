@@ -25,7 +25,7 @@ function requireR2Client() {
     return r2Client;
 }
 
-export const ALLOWED_MIME_TYPES = new Set([
+const ALLOWED_MIME_TYPES = new Set([
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -42,7 +42,7 @@ export const ALLOWED_MIME_TYPES = new Set([
     "audio/wav",
     "text/plain",
 ]);
-export const DISALLOWED_EXTENSIONS = new Set([
+const DISALLOWED_EXTENSIONS = new Set([
     ".exe",
     ".bat",
     ".sh",

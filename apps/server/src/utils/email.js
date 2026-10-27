@@ -144,36 +144,3 @@ export async function sendSecurityAlertEmail({ email, name, action }) {
         console.error("Security alert email delivery failed.", error);
     }
 }
-
-export async function sendClassNotificationEmail({ email, name, classTitle, sessionTitle, sessionTime, meetingUrl }) {
-    const escapedName = escapeHtml(name);
-    const client = getTransporter();
-    if (!client) {
-        console.log(`[LearnHUB Dev Mailer] Class notification for ${email}: ${classTitle} - ${sessionTitle}`);
-        return;
-    }
-    try {
-        await client.sendMail({
-            from: `"LearnHUB Classes" <${env.SMTP_USER}>`,
-            to: email,
-            subject: `Upcoming Live Class: ${classTitle}`,
-            text: `Hello ${name}, your class "${classTitle} - ${sessionTitle}" is scheduled for ${sessionTime}. Meeting: ${meetingUrl}`,
-            html: emailWrapper("Upcoming Live Class", `
-              <h1 style="font-size:20px;font-weight:800;color:#0f172a;margin-top:0;">Upcoming Live Session</h1>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">You have a live class coming up:</p>
-              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px;margin:20px 0;">
-                <div style="font-weight:800;font-size:16px;color:#166534;">${escapeHtml(classTitle)}</div>
-                <div style="font-size:14px;color:#15803d;margin-top:4px;">${escapeHtml(sessionTitle)}</div>
-                <div style="font-size:13px;color:#475569;margin-top:8px;">Time: <strong>${escapeHtml(sessionTime)}</strong></div>
-              </div>
-              ${meetingUrl ? `
-              <div style="text-align:center;margin:24px 0;">
-                <a href="${escapeHtml(meetingUrl)}" style="background:#059669;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;display:inline-block;">Join Live Meeting</a>
-              </div>` : ""}
-            `),
-        });
-    } catch (error) {
-        console.error("Class notification email delivery failed.", error);
-    }
-}

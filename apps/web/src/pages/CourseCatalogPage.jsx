@@ -1,11 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { apiRequest } from "../lib/api";
-import { Badge, EmptyState } from "../components/UIComponents";
+import { EmptyState } from "../components/UIComponents";
 
 export function CourseCatalogPage() {
-    const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const [courses, setCourses] = useState([]);
     const [categories, setCategories] = useState([]);
