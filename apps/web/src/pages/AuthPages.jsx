@@ -146,42 +146,47 @@ export function SignInPage() {
     );
 }
 const COUNTRIES = [
-    { code: "ET", name: "Ethiopia", flag: "🇪🇹", dial: "+251", pattern: /^\+?251[1-9]\d{7,8}$/, example: "+251912345678" },
-    { code: "US", name: "United States", flag: "🇺🇸", dial: "+1", pattern: /^\+?1[2-9]\d{9}$/, example: "+12025551234" },
-    { code: "GB", name: "United Kingdom", flag: "🇬🇧", dial: "+44", pattern: /^\+?44[1-9]\d{9,10}$/, example: "+447911123456" },
-    { code: "KE", name: "Kenya", flag: "🇰🇪", dial: "+254", pattern: /^\+?254[17]\d{8}$/, example: "+254712345678" },
-    { code: "NG", name: "Nigeria", flag: "🇳🇬", dial: "+234", pattern: /^\+?234[789]\d{9}$/, example: "+2348012345678" },
-    { code: "ZA", name: "South Africa", flag: "🇿🇦", dial: "+27", pattern: /^\+?27[1-9]\d{8}$/, example: "+27821234567" },
-    { code: "IN", name: "India", flag: "🇮🇳", dial: "+91", pattern: /^\+?91[6-9]\d{9}$/, example: "+919876543210" },
-    { code: "AE", name: "UAE", flag: "🇦🇪", dial: "+971", pattern: /^\+?971[2-9]\d{7,8}$/, example: "+971501234567" },
-    { code: "DE", name: "Germany", flag: "🇩🇪", dial: "+49", pattern: /^\+?49[1-9]\d{9,11}$/, example: "+4915112345678" },
-    { code: "FR", name: "France", flag: "🇫🇷", dial: "+33", pattern: /^\+?33[1-9]\d{8}$/, example: "+33612345678" },
-    { code: "CA", name: "Canada", flag: "🇨🇦", dial: "+1", pattern: /^\+?1[2-9]\d{9}$/, example: "+16135551234" },
-    { code: "AU", name: "Australia", flag: "🇦🇺", dial: "+61", pattern: /^\+?61[2-9]\d{8}$/, example: "+61412345678" },
-    { code: "SA", name: "Saudi Arabia", flag: "🇸🇦", dial: "+966", pattern: /^\+?966[5]\d{8}$/, example: "+966512345678" },
-    { code: "EG", name: "Egypt", flag: "🇪🇬", dial: "+20", pattern: /^\+?20[1]\d{9}$/, example: "+201012345678" },
-    { code: "GH", name: "Ghana", flag: "🇬🇭", dial: "+233", pattern: /^\+?233[2-9]\d{8}$/, example: "+233241234567" },
-    { code: "TZ", name: "Tanzania", flag: "🇹🇿", dial: "+255", pattern: /^\+?255[6-7]\d{8}$/, example: "+255712345678" },
-    { code: "UG", name: "Uganda", flag: "🇺🇬", dial: "+256", pattern: /^\+?256[3-7]\d{8}$/, example: "+256712345678" },
-    { code: "RW", name: "Rwanda", flag: "🇷🇼", dial: "+250", pattern: /^\+?250[7]\d{8}$/, example: "+250781234567" },
-    { code: "CN", name: "China", flag: "🇨🇳", dial: "+86", pattern: /^\+?86[1]\d{10}$/, example: "+8613812345678" },
-    { code: "JP", name: "Japan", flag: "🇯🇵", dial: "+81", pattern: /^\+?81[0-9]\d{8,9}$/, example: "+819012345678" },
-    { code: "BR", name: "Brazil", flag: "🇧🇷", dial: "+55", pattern: /^\+?55[1-9]\d{9,10}$/, example: "+5511912345678" },
-    { code: "IT", name: "Italy", flag: "🇮🇹", dial: "+39", pattern: /^\+?39[0-9]\d{8,10}$/, example: "+393123456789" },
-    { code: "ES", name: "Spain", flag: "🇪🇸", dial: "+34", pattern: /^\+?34[6-9]\d{8}$/, example: "+34612345678" },
-    { code: "TR", name: "Turkey", flag: "🇹🇷", dial: "+90", pattern: /^\+?90[5]\d{9}$/, example: "+905301234567" },
-    { code: "PK", name: "Pakistan", flag: "🇵🇰", dial: "+92", pattern: /^\+?92[3]\d{9}$/, example: "+923001234567" },
-    { code: "BD", name: "Bangladesh", flag: "🇧🇩", dial: "+880", pattern: /^\+?880[1]\d{9}$/, example: "+8801712345678" },
-    { code: "MX", name: "Mexico", flag: "🇲🇽", dial: "+52", pattern: /^\+?52[1-9]\d{9}$/, example: "+525512345678" },
-    { code: "OTHER", name: "Other", flag: "🌍", dial: "", pattern: /^\+?\d{7,15}$/, example: "+1234567890" },
+    { code: "ET", name: "Ethiopia", flag: "🇪🇹", dial: "+251", pattern: /^(?:\+?251[97]\d{8}|0?[97]\d{8})$/, example: "912 345 678", placeholder: "912 345 678" },
+    { code: "US", name: "United States", flag: "🇺🇸", dial: "+1", pattern: /^(?:\+?1)?[2-9]\d{9}$/, example: "202 555 1234", placeholder: "202 555 1234" },
+    { code: "GB", name: "United Kingdom", flag: "🇬🇧", dial: "+44", pattern: /^(?:\+?44|0)?[1-9]\d{9,10}$/, example: "7911 123456", placeholder: "7911 123456" },
+    { code: "KE", name: "Kenya", flag: "🇰🇪", dial: "+254", pattern: /^(?:\+?254|0)?[17]\d{8}$/, example: "712 345 678", placeholder: "712 345 678" },
+    { code: "NG", name: "Nigeria", flag: "🇳🇬", dial: "+234", pattern: /^(?:\+?234|0)?[789]\d{9}$/, example: "801 234 5678", placeholder: "801 234 5678" },
+    { code: "ZA", name: "South Africa", flag: "🇿🇦", dial: "+27", pattern: /^(?:\+?27|0)?[1-9]\d{8}$/, example: "82 123 4567", placeholder: "82 123 4567" },
+    { code: "IN", name: "India", flag: "🇮🇳", dial: "+91", pattern: /^(?:\+?91)?[6-9]\d{9}$/, example: "98765 43210", placeholder: "98765 43210" },
+    { code: "AE", name: "UAE", flag: "🇦🇪", dial: "+971", pattern: /^(?:\+?971|0)?[2-9]\d{7,8}$/, example: "50 123 4567", placeholder: "50 123 4567" },
+    { code: "DE", name: "Germany", flag: "🇩🇪", dial: "+49", pattern: /^(?:\+?49|0)?[1-9]\d{9,11}$/, example: "151 12345678", placeholder: "151 12345678" },
+    { code: "FR", name: "France", flag: "🇫🇷", dial: "+33", pattern: /^(?:\+?33|0)?[1-9]\d{8}$/, example: "6 12 34 56 78", placeholder: "6 12 34 56 78" },
+    { code: "CA", name: "Canada", flag: "🇨🇦", dial: "+1", pattern: /^(?:\+?1)?[2-9]\d{9}$/, example: "613 555 1234", placeholder: "613 555 1234" },
+    { code: "AU", name: "Australia", flag: "🇦🇺", dial: "+61", pattern: /^(?:\+?61|0)?[2-9]\d{8}$/, example: "412 345 678", placeholder: "412 345 678" },
+    { code: "SA", name: "Saudi Arabia", flag: "🇸🇦", dial: "+966", pattern: /^(?:\+?966|0)?[5]\d{8}$/, example: "51 234 5678", placeholder: "51 234 5678" },
+    { code: "EG", name: "Egypt", flag: "🇪🇬", dial: "+20", pattern: /^(?:\+?20|0)?[1]\d{9}$/, example: "10 1234 5678", placeholder: "10 1234 5678" },
+    { code: "GH", name: "Ghana", flag: "🇬🇭", dial: "+233", pattern: /^(?:\+?233|0)?[2-9]\d{8}$/, example: "24 123 4567", placeholder: "24 123 4567" },
+    { code: "TZ", name: "Tanzania", flag: "🇹🇿", dial: "+255", pattern: /^(?:\+?255|0)?[6-7]\d{8}$/, example: "71 234 5678", placeholder: "71 234 5678" },
+    { code: "UG", name: "Uganda", flag: "🇺🇬", dial: "+256", pattern: /^(?:\+?256|0)?[3-7]\d{8}$/, example: "71 234 5678", placeholder: "71 234 5678" },
+    { code: "RW", name: "Rwanda", flag: "🇷🇼", dial: "+250", pattern: /^(?:\+?250|0)?[7]\d{8}$/, example: "78 123 4567", placeholder: "78 123 4567" },
+    { code: "CN", name: "China", flag: "🇨🇳", dial: "+86", pattern: /^(?:\+?86)?[1]\d{10}$/, example: "138 1234 5678", placeholder: "138 1234 5678" },
+    { code: "JP", name: "Japan", flag: "🇯🇵", dial: "+81", pattern: /^(?:\+?81|0)?[0-9]\d{8,9}$/, example: "90 1234 5678", placeholder: "90 1234 5678" },
+    { code: "BR", name: "Brazil", flag: "🇧🇷", dial: "+55", pattern: /^(?:\+?55|0)?[1-9]\d{9,10}$/, example: "11 91234 5678", placeholder: "11 91234 5678" },
+    { code: "IT", name: "Italy", flag: "🇮🇹", dial: "+39", pattern: /^(?:\+?39)?[0-9]\d{8,10}$/, example: "312 345 6789", placeholder: "312 345 6789" },
+    { code: "ES", name: "Spain", flag: "🇪🇸", dial: "+34", pattern: /^(?:\+?34)?[6-9]\d{8}$/, example: "612 345 678", placeholder: "612 345 678" },
+    { code: "TR", name: "Turkey", flag: "🇹🇷", dial: "+90", pattern: /^(?:\+?90|0)?[5]\d{9}$/, example: "530 123 4567", placeholder: "530 123 4567" },
+    { code: "PK", name: "Pakistan", flag: "🇵🇰", dial: "+92", pattern: /^(?:\+?92|0)?[3]\d{9}$/, example: "300 123 4567", placeholder: "300 123 4567" },
+    { code: "BD", name: "Bangladesh", flag: "🇧🇩", dial: "+880", pattern: /^(?:\+?880|0)?[1]\d{9}$/, example: "171 234 5678", placeholder: "171 234 5678" },
+    { code: "MX", name: "Mexico", flag: "🇲🇽", dial: "+52", pattern: /^(?:\+?52)?[1-9]\d{9}$/, example: "55 1234 5678", placeholder: "55 1234 5678" },
+    { code: "OTHER", name: "Other", flag: "🌍", dial: "", pattern: /^\+?\d{7,15}$/, example: "912345678", placeholder: "Phone number" },
 ];
 
 function validatePhone(phone, countryCode) {
     const entry = COUNTRIES.find((c) => c.code === countryCode) || COUNTRIES[COUNTRIES.length - 1];
     const cleanPhone = phone.replace(/[\s\-().]/g, "");
     if (!cleanPhone) return "Phone number is required.";
-    if (cleanPhone.length < 7) return "Phone number must be at least 7 characters.";
-    if (!entry.pattern.test(cleanPhone)) return `Enter a valid ${entry.name} number (e.g. ${entry.example}).`;
+    if (cleanPhone.length < 7) return "Phone number must be at least 7 digits.";
+    if (!entry.pattern.test(cleanPhone)) {
+        if (countryCode === "ET") {
+            return "Enter a valid Ethiopian number starting with 9 or 7 (e.g. 912 345 678).";
+        }
+        return `Enter a valid ${entry.name} number (e.g. ${entry.example}).`;
+    }
     return "";
 }
 

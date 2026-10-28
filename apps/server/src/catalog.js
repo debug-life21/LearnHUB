@@ -9,11 +9,12 @@ const categoryData = [
     { name: "Secondary School · Grades 9–12", description: "High school language, mathematics, and subject-based science learning.", sortOrder: 4 },
     { name: "University & College", description: "Introductory university and college courses across computing, mathematics, and academic skills.", sortOrder: 5 },
     { name: "Web Development", description: "Build responsive websites and full-stack applications with modern tools.", sortOrder: 6 },
-    { name: "Programming", description: "Learn programming foundations, problem solving, and software development.", sortOrder: 7 },
-    { name: "Data, AI & Analytics", description: "Explore data analysis, artificial intelligence, and machine learning foundations.", sortOrder: 8 },
-    { name: "Cybersecurity & IT", description: "Build digital literacy, networking knowledge, and practical security awareness.", sortOrder: 9 },
-    { name: "Design & Multimedia", description: "Practice user experience, visual design, and digital media production.", sortOrder: 10 },
-    { name: "Business & Digital Marketing", description: "Develop entrepreneurship, communication, and digital marketing skills.", sortOrder: 11 },
+    { name: "Digital Marketing", description: "Master social media, SEO, content marketing, and online advertising to grow any business.", sortOrder: 7 },
+    { name: "Programming", description: "Learn programming foundations, problem solving, and software development.", sortOrder: 8 },
+    { name: "Data, AI & Analytics", description: "Explore data analysis, artificial intelligence, and machine learning foundations.", sortOrder: 9 },
+    { name: "Cybersecurity & IT", description: "Build digital literacy, networking knowledge, and practical security awareness.", sortOrder: 10 },
+    { name: "Design & Multimedia", description: "Practice user experience, visual design, and digital media production.", sortOrder: 11 },
+    { name: "Business & Entrepreneurship", description: "Develop entrepreneurship, business planning, and communication skills.", sortOrder: 12 },
 ];
 
 const courses = [];
@@ -122,11 +123,24 @@ const technologyCourses = [
     ["UI and UX Design Foundations", "Practice user research, information architecture, wireframing, and usability feedback.", ["Identify user needs", "Create a low-fidelity wireframe", "Improve a design using feedback"], "Design & Multimedia"],
     ["Graphic Design Fundamentals", "Explore visual hierarchy, typography, color, composition, and practical design workflows.", ["Apply visual hierarchy", "Choose effective type and color", "Create a simple visual asset"], "Design & Multimedia"],
     ["Video Editing Essentials", "Learn the foundations of planning, editing, and exporting clear short-form video.", ["Organize clips and media", "Build a clear edit sequence", "Export for a selected platform"], "Design & Multimedia"],
-    ["Digital Marketing Foundations", "Plan audience-focused digital campaigns across content, search, and social channels.", ["Define an audience and objective", "Plan a simple content calendar", "Measure basic campaign outcomes"], "Business & Digital Marketing"],
-    ["Entrepreneurship and Business Planning", "Develop an early business idea through customer needs, value propositions, and basic planning.", ["Identify a customer problem", "Describe a value proposition", "Draft a simple business model"], "Business & Digital Marketing"],
+    ["Entrepreneurship and Business Planning", "Develop an early business idea through customer needs, value propositions, and basic planning.", ["Identify a customer problem", "Describe a value proposition", "Draft a simple business model"], "Business & Entrepreneurship"],
 ];
 for (const [title, description, objectives, category] of technologyCourses) {
     addCourse(category, title, description, "Beginner", objectives);
+}
+
+// Dedicated Digital Marketing courses
+const digitalMarketingCourses = [
+    ["Digital Marketing Foundations", "Learn the core concepts of digital marketing — audiences, funnels, channels, and measurement — to launch effective online campaigns.", ["Explain key digital marketing channels", "Define a target audience and campaign goal", "Measure success with basic digital metrics"]],
+    ["Social Media Marketing & Strategy", "Build and manage social media presences on Instagram, TikTok, Facebook, and LinkedIn to grow an engaged audience.", ["Create a social media content calendar", "Write captions that drive engagement", "Analyze platform insights and metrics"]],
+    ["SEO & Search Engine Optimization", "Improve website visibility on Google and other search engines through on-page, off-page, and technical SEO techniques.", ["Conduct keyword research", "Optimize pages for search rankings", "Understand backlinks and domain authority"]],
+    ["Content Marketing & Copywriting", "Create compelling written, visual, and video content that attracts, educates, and converts your audience.", ["Write persuasive headlines and copy", "Plan a content strategy for a brand", "Repurpose content across channels"]],
+    ["Email Marketing & Automation", "Build email lists, design high-converting newsletters, and set up automated drip sequences that nurture leads.", ["Grow an email list with lead magnets", "Design effective email campaigns", "Set up basic email automation sequences"]],
+    ["Paid Advertising · Google & Meta Ads", "Run targeted pay-per-click campaigns on Google Search and Meta (Facebook/Instagram) to generate leads and sales.", ["Set up a Google Ads campaign", "Create a Meta Ads audience and creative", "Optimize ad spend based on ROAS"]],
+    ["E-Commerce & Online Sales", "Launch and grow an online store using platforms like Shopify, with strategies for driving traffic and increasing conversions.", ["Set up an online store", "Write product descriptions that sell", "Use paid and organic channels to drive sales"]],
+];
+for (const [title, description, objectives] of digitalMarketingCourses) {
+    addCourse("Digital Marketing", title, description, "Beginner", objectives);
 }
 
 export async function seedLearningCatalog() {
@@ -149,7 +163,7 @@ export async function seedLearningCatalog() {
             updateOne: {
                 filter: { slug: slugify(course.title) },
                 update: {
-                    $setOnInsert: {
+                    $set: {
                         title: course.title,
                         slug: slugify(course.title),
                         description: course.description,

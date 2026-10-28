@@ -2,7 +2,6 @@ import { useState } from "react";
 
 const CATEGORY_ORDER = [
     "web development",
-    "business & digital marketing",
     "digital marketing",
     "university & college",
     "college",
@@ -10,6 +9,8 @@ const CATEGORY_ORDER = [
     "data, ai & analytics",
     "cybersecurity & it",
     "design & multimedia",
+    "business & entrepreneurship",
+    "business",
     "secondary school",
     "middle school",
     "primary school",

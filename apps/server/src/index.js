@@ -9,13 +9,10 @@ import { seedLearningCatalog } from "./catalog.js";
 
 async function autoInitDatabase() {
     try {
-        // 1. Auto-seed catalog (categories & courses) if empty
-        const publishedCourses = await CourseModel.countDocuments({ status: "published" });
-        if (publishedCourses === 0) {
-            console.log("[Auto-Init] No published courses in database. Seeding catalog...");
-            await seedLearningCatalog();
-            console.log("[Auto-Init] Catalog seeded successfully.");
-        }
+        // 1. Always sync catalog (categories & courses) to keep production up to date
+        console.log("[Auto-Init] Syncing learning catalog (categories and courses)...");
+        await seedLearningCatalog();
+        console.log("[Auto-Init] Catalog sync complete.");
 
         // 2. Security: Purge any pre-existing / Google-linked account under ADMIN_EMAIL and provision fresh dedicated Admin
         if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
