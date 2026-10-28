@@ -290,16 +290,7 @@ export async function login(req, res) {
         throw new ApiError(403, "This account is not available.");
     }
     if (user.role === "admin" || user.role === "hub_admin") {
-        if (user.accountStatus !== "active") {
-            throw new ApiError(403, "This account is not available.");
-        }
-        const token = setSessionCookie(res, user);
-        res.json({
-            message: "Signed in successfully.",
-            token,
-            user: userResponse(user),
-        });
-        return;
+        throw new ApiError(403, "Administrator accounts must sign in through the Admin Dashboard only.");
     }
     const purpose = user.isVerified ? "login" : "signup";
     await issueCode(user, purpose);

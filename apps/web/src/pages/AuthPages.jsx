@@ -117,6 +117,20 @@ export function SignInPage() {
     return (
         <AuthShell title={t("signIn")} subtitle="Access your TedbabeLearnHUB (TLH) learning and management portal">
             <Feedback>{feedback}</Feedback>
+            {feedback && feedback.toLowerCase().includes("admin") && (
+                <div className="mb-5">
+                    <a
+                        href={typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+                            ? "http://localhost:5174"
+                            : "https://tedbabelearnhub-admin.vercel.app"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition"
+                    >
+                        Go to Admin Dashboard ↗
+                    </a>
+                </div>
+            )}
             <GoogleSignIn onCredential={continueWithGoogle} disabled={loading} />
             <div className="mb-5 flex items-center gap-3 text-xs font-semibold text-slate-400">
                 <span className="h-px flex-1 bg-slate-200" />OR CONTINUE WITH EMAIL<span className="h-px flex-1 bg-slate-200" />
