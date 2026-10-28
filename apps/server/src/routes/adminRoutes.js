@@ -579,6 +579,17 @@ adminRouter.get("/classes", asyncHandler(async (_req, res) => {
         .lean();
     res.json({ classes, sessions });
 }));
+adminRouter.get("/classes/:classId", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.classId)) throw new ApiError(400, "Invalid cohort ID.");
+    const classroom = await ClassroomModel.findById(req.params.classId)
+        .populate("course")
+        .populate("teacher", "fullName name email avatarUrl teacherProfile")
+        .populate("students", "fullName name email avatarUrl studentProfile")
+        .lean();
+    if (!classroom) throw new ApiError(404, "Cohort not found.");
+    const sessions = await ClassSessionModel.find({ classroom: classroom._id }).sort({ startsAt: 1 }).lean();
+    res.json({ classroom, sessions });
+}));
 adminRouter.patch("/classes/:classId", asyncHandler(async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.classId)) throw new ApiError(400, "Invalid cohort ID.");
     const data = z.object({
@@ -728,6 +739,117 @@ adminRouter.post("/classes/:classId/assign-teacher", asyncHandler(async (req, re
     });
     res.json({ message: "Teacher assigned successfully." });
 }));
+
+// ─── Admin Cohort Learning Space: Discussions & Oversight Tracking ───
+adminRouter.get("/classes/:classId/discussions", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.classId)) throw new ApiError(400, "Invalid cohort ID.");
+    const discussions = await DiscussionModel.find({ classroom: req.params.classId })
+        .populate("author", "fullName name email avatarUrl role")
+        .populate("replies.author", "fullName name email avatarUrl role")
+        .sort({ isPinned: -1, createdAt: -1 })
+        .lean();
+    res.json({ discussions });
+}));
+
+adminRouter.post("/classes/:classId/discussions", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.classId)) throw new ApiError(400, "Invalid cohort ID.");
+    const classroom = await ClassroomModel.findById(req.params.classId);
+    if (!classroom) throw new ApiError(404, "Cohort not found.");
+
+    const data = z.object({
+        title: z.string().trim().min(3).max(150),
+        content: z.string().trim().min(5).max(3000),
+        category: z.enum(["general", "assignment", "lesson", "question", "announcement"]).default("announcement"),
+    }).parse(req.body);
+
+    const discussion = await DiscussionModel.create({
+        classroom: req.params.classId,
+        author: req.user.id,
+        title: data.title,
+        content: data.content,
+        category: data.category,
+        isPinned: true,
+    });
+
+    const populated = await DiscussionModel.findById(discussion._id)
+        .populate("author", "fullName name email avatarUrl role")
+        .lean();
+
+    res.status(201).json({ message: "Admin announcement posted in cohort.", discussion: populated });
+}));
+
+adminRouter.post("/classes/:classId/discussions/:discussionId/reply", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.classId) || !mongoose.isValidObjectId(req.params.discussionId)) {
+        throw new ApiError(400, "Invalid IDs.");
+    }
+    const data = z.object({
+        content: z.string().trim().min(2).max(2000),
+    }).parse(req.body);
+
+    const discussion = await DiscussionModel.findOne({ _id: req.params.discussionId, classroom: req.params.classId });
+    if (!discussion) throw new ApiError(404, "Discussion not found.");
+
+    discussion.replies.push({
+        author: req.user.id,
+        content: data.content,
+        createdAt: new Date(),
+    });
+    await discussion.save();
+
+    const updated = await DiscussionModel.findById(discussion._id)
+        .populate("author", "fullName name email avatarUrl role")
+        .populate("replies.author", "fullName name email avatarUrl role")
+        .lean();
+
+    res.json({ message: "Reply added.", discussion: updated });
+}));
+
+adminRouter.delete("/classes/:classId/discussions/:discussionId", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.classId) || !mongoose.isValidObjectId(req.params.discussionId)) {
+        throw new ApiError(400, "Invalid IDs.");
+    }
+    await DiscussionModel.deleteOne({ _id: req.params.discussionId, classroom: req.params.classId });
+    res.json({ message: "Discussion topic removed by administrator." });
+}));
+
+adminRouter.get("/classes/:classId/tracking", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.classId)) throw new ApiError(400, "Invalid cohort ID.");
+    const classroom = await ClassroomModel.findById(req.params.classId)
+        .populate("course")
+        .populate("teacher", "fullName name email avatarUrl teacherProfile")
+        .populate("students", "fullName name email avatarUrl studentProfile")
+        .lean();
+    if (!classroom) throw new ApiError(404, "Cohort not found.");
+
+    const [sessions, attendance, assignments, resources, discussionsCount] = await Promise.all([
+        ClassSessionModel.find({ classroom: classroom._id }).sort({ startsAt: 1 }).lean(),
+        AttendanceRecordModel.find({ classroom: classroom._id }).lean(),
+        AssignmentModel.find({ classroom: classroom._id }).lean(),
+        LearningResourceModel.find({ classroom: classroom._id }).lean(),
+        DiscussionModel.countDocuments({ classroom: classroom._id }),
+    ]);
+
+    const completedSessions = sessions.filter((s) => s.status === "completed" || new Date(s.endsAt) < new Date()).length;
+    const fillRate = Math.round(((classroom.students.length || 0) / (classroom.capacity || 1)) * 100);
+
+    res.json({
+        cohort: classroom,
+        stats: {
+            totalSessions: sessions.length,
+            completedSessions,
+            totalStudents: classroom.students.length,
+            capacity: classroom.capacity,
+            fillRate,
+            totalResources: resources.length,
+            totalAssignments: assignments.length,
+            attendanceRecordsCount: attendance.length,
+            discussionsCount,
+        },
+        sessions,
+        resources,
+    });
+}));
+
 adminRouter.post("/sessions", asyncHandler(async (req, res) => {
     const data = z.object({
         classId: z.string().min(1),

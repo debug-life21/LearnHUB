@@ -244,7 +244,7 @@ export function TeacherDashboard({ user }) {
                     category: uploadForm.category,
                     originalFilename: uploadForm.originalFilename || "document.pdf",
                     mimeType: uploadForm.mimeType || "application/pdf",
-                    base64Data: uploadForm.base64Data || btoa("LearnHUB Sample Resource Content"),
+                    base64Data: uploadForm.base64Data || btoa("TedbabeLearnHUB Sample Resource Content"),
                     visibility: "class_only",
                 }),
             });

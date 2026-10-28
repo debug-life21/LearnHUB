@@ -34,7 +34,7 @@ export function DashboardSettings({ user, sessions = [], onSaved }) {
 
     return (
         <div className="grid max-w-3xl gap-6">
-            <DashboardCard title="Language preference" subtitle="Choose the language used by LearnHUB.">
+            <DashboardCard title="Language preference" subtitle="Choose the language used by TedbabeLearnHUB.">
                 <form onSubmit={saveLanguage} className="flex flex-wrap items-end gap-3">
                     <label className="min-w-48 flex-1 text-xs font-bold text-slate-700">Interface language
                         <select value={language} onChange={(event) => setLanguage(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm">

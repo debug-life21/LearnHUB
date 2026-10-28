@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { API_BASE_URL, apiRequest, loadPublicCourses } from "../lib/api";
+import { apiRequest, loadPublicCourses } from "../lib/api";
+import { TIME_ZONES } from "../lib/timezones";
 import { SessionSchedule } from "../components/SessionSchedule";
 import { LiveSessionButton } from "../components/LiveSessionButton";
 import { CategoryCoursePicker } from "../components/CategoryCoursePicker";
@@ -292,7 +293,7 @@ export function StudentDashboard({ user }) {
 
       {(!profileForm.preferredCourseIds.length || !profileForm.preferredSchedule) ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <p>Complete your course choices and preferred study times so the LearnHUB team can place you in a suitable cohort.</p>
+          <p>Complete your course choices and preferred study times so the TedbabeLearnHUB team can place you in a suitable cohort.</p>
           <button onClick={() => setActiveTab("profile")} className="rounded-xl bg-amber-800 px-4 py-2 text-xs font-bold text-white hover:bg-amber-900">Complete learning profile</button>
         </div>
       ) : null}
@@ -441,9 +442,16 @@ export function StudentDashboard({ user }) {
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
                     <span className="text-slate-400">{(res.fileSize / 1024).toFixed(1)} KB</span>
-                    <a href={`${API_BASE_URL}/api/resources/${res._id}/download`} className="font-bold text-blue-600 hover:underline">
-                      {t("download")} ↓
-                    </a>
+                    {res.classroom?._id || res.classroom || classrooms[0]?._id ? (
+                      <Link
+                        to={`/workspace/${res.classroom?._id || res.classroom || classrooms[0]?._id}?resourceId=${res._id}`}
+                        className="font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 hover:underline"
+                      >
+                        Open in Workspace →
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-slate-500">View only</span>
+                    )}
                   </div>
                 </div>)))}
           </div>
@@ -577,7 +585,11 @@ export function StudentDashboard({ user }) {
                   <input required type="number" min="1" max="80" value={profileForm.weeklyStudyHours} onChange={(e) => setProfileForm({ ...profileForm, weeklyStudyHours: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
                 </label>
                 <label className="block text-xs font-bold text-slate-700">Time zone
-                  <input required value={profileForm.timeZone} onChange={(e) => setProfileForm({ ...profileForm, timeZone: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+                  <select required value={profileForm.timeZone} onChange={(e) => setProfileForm({ ...profileForm, timeZone: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none">
+                      {TIME_ZONES.map((tz) => (
+                          <option key={tz.value} value={tz.value}>{tz.label}</option>
+                      ))}
+                  </select>
                 </label>
               </div>
 

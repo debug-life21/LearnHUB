@@ -69,7 +69,7 @@ function SocialIcon({ name }) {
 export function SocialLinks() {
   return (
     <nav
-      aria-label="LearnHUB social media"
+      aria-label="TedbabeLearnHUB social media"
       className="fixed bottom-4 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-1.5 rounded-full border border-white/15 bg-slate-950/90 p-2 shadow-xl shadow-slate-950/20 backdrop-blur-md print:hidden sm:bottom-6 sm:right-6 sm:gap-2 sm:p-2.5"
     >
       {socialLinks.map(({ name, url, icon }) => {
@@ -80,14 +80,14 @@ export function SocialLinks() {
         return (
           <span
             key={name}
-            title={url ? `LearnHUB on ${name}` : `${name} link not configured`}
+            title={url ? `TedbabeLearnHUB on ${name}` : `${name} link not configured`}
           >
             {url.trim() ? (
               <a
                 href={url.trim()}
                 target="_blank"
                 rel="noreferrer"
-                aria-label={`LearnHUB on ${name} (opens in a new tab)`}
+                aria-label={`TedbabeLearnHUB on ${name} (opens in a new tab)`}
                 className={`${className} hover:bg-white/15`}
               >
                 {content}

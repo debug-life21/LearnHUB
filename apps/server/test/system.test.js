@@ -98,15 +98,39 @@ test("Auth Registration: rejects invalid email", async () => {
 test("Auth Registration: requires onboarding details for students and teacher applicants", async () => {
     const studentRes = await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Student Without Preferences", email: `student.profile.${Date.now()}@example.com`, password: "Password123!", role: "student" },
+        body: { name: "Student Without Preferences", email: `student.profile.${Date.now()}@example.com`, password: "Password123!", role: "student", phone: "+251912345678", country: "ET" },
     });
     assert.equal(studentRes.status, 400);
 
     const teacherRes = await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Teacher Without Application", email: `teacher.application.${Date.now()}@example.com`, password: "Password123!", role: "teacher" },
+        body: { name: "Teacher Without Application", email: `teacher.application.${Date.now()}@example.com`, password: "Password123!", role: "teacher", phone: "+251912345678", country: "ET" },
     });
     assert.equal(teacherRes.status, 400);
+});
+
+test("Auth Registration: requires phone and country with validation", async () => {
+    const profile = await studentSignupProfile();
+    // Missing phone
+    const resNoPhone = await request("/api/auth/signup", {
+        method: "POST",
+        body: { name: "No Phone", email: `nophone.${Date.now()}@example.com`, password: "Password123!", role: "student", country: "ET", studentProfile: profile },
+    });
+    assert.equal(resNoPhone.status, 400);
+
+    // Missing country
+    const resNoCountry = await request("/api/auth/signup", {
+        method: "POST",
+        body: { name: "No Country", email: `nocountry.${Date.now()}@example.com`, password: "Password123!", role: "student", phone: "+251912345678", studentProfile: profile },
+    });
+    assert.equal(resNoCountry.status, 400);
+
+    // Invalid phone for Ethiopia
+    const resInvalidPhone = await request("/api/auth/signup", {
+        method: "POST",
+        body: { name: "Invalid Phone", email: `invphone.${Date.now()}@example.com`, password: "Password123!", role: "student", phone: "123", country: "ET", studentProfile: profile },
+    });
+    assert.equal(resInvalidPhone.status, 400);
 });
 
 test("Auth Registration: creates account with hashed verification code", async () => {
@@ -114,7 +138,7 @@ test("Auth Registration: creates account with hashed verification code", async (
     const profile = await studentSignupProfile();
     const res = await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Verified Student", email, password: "Password123!", role: "student", studentProfile: profile },
+        body: { name: "Verified Student", email, password: "Password123!", role: "student", phone: "+251912345678", country: "ET", studentProfile: profile },
     });
     assert.equal(res.status, 201, `Expected 201 but got ${res.status}: ${JSON.stringify(res.data)}`);
     assert.equal(res.data.purpose, "signup");
@@ -133,11 +157,11 @@ test("Auth Registration: rejects duplicate email with 409", async () => {
     const email = `dup.${Date.now()}@example.com`;
     await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "First User", email, password: "Password123!", role: "student", studentProfile: await studentSignupProfile() },
+        body: { name: "First User", email, password: "Password123!", role: "student", phone: "+251912345678", country: "ET", studentProfile: await studentSignupProfile() },
     });
     const res = await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Duplicate", email, password: "Password123!", role: "student", studentProfile: await studentSignupProfile() },
+        body: { name: "Duplicate", email, password: "Password123!", role: "student", phone: "+251912345678", country: "ET", studentProfile: await studentSignupProfile() },
     });
     assert.equal(res.status, 409, `Expected 409 conflict but got ${res.status}`);
 });
@@ -146,7 +170,7 @@ test("Auth Registration: rejects wrong verification code", async () => {
     const email = `verify.${Date.now()}@example.com`;
     await request("/api/auth/signup", {
         method: "POST",
-        body: { name: "Verifying Student", email, password: "Password123!", role: "student", studentProfile: await studentSignupProfile() },
+        body: { name: "Verifying Student", email, password: "Password123!", role: "student", phone: "+251912345678", country: "ET", studentProfile: await studentSignupProfile() },
     });
     const res = await request("/api/auth/verify-code", {
         method: "POST",
@@ -202,7 +226,7 @@ test("RBAC: student endpoint requires authentication", async () => {
 
 test("Certificate Verification: valid certificate lookup", async () => {
     const stubId = new mongoose.Types.ObjectId();
-    const certNumber = `LH-2026-E2E-${Date.now()}`;
+    const certNumber = `TLH-2026-E2E-${Date.now()}`;
     await Certificate.create({
         certificateNumber: certNumber,
         student: stubId,
@@ -213,7 +237,7 @@ test("Certificate Verification: valid certificate lookup", async () => {
         overallScore: 94,
         issueDate: new Date(),
         status: "valid",
-        verificationUrl: `https://learnhub.et/verify-certificate?id=${certNumber}`,
+        verificationUrl: `https://tedbabelearnhub.et/verify-certificate?id=${certNumber}`,
     });
 
     const res = await request(`/api/public/certificates/${certNumber}`);
@@ -223,6 +247,6 @@ test("Certificate Verification: valid certificate lookup", async () => {
 });
 
 test("Certificate Verification: returns 404 for unknown credential", async () => {
-    const res = await request("/api/public/certificates/LH-DOES-NOT-EXIST-0000");
+    const res = await request("/api/public/certificates/TLH-DOES-NOT-EXIST-0000");
     assert.equal(res.status, 404);
 });

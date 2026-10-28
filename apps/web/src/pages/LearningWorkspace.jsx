@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../lib/api";
+import { apiRequest, API_BASE_URL } from "../lib/api";
 import { Modal } from "../components/UIComponents";
 import { LiveSessionButton } from "../components/LiveSessionButton";
 import { formatSessionTime } from "../lib/sessionTime";
@@ -17,12 +17,20 @@ const isVideoResource = (resource) => (
 export function LearningWorkspace() {
     const { classroomId } = useParams();
     const { user } = useAuth();
+    const isAdmin = Boolean(user && (user.role === "admin" || user.role === "hub_admin"));
+    const isStudent = Boolean(user?.role === "student");
 
     const [classroom, setClassroom] = useState(null);
     const [sessions, setSessions] = useState([]);
     const [resources, setResources] = useState([]);
     const [discussions, setDiscussions] = useState([]);
-    const [activeTab, setActiveTab] = useState("player");
+    const [trackingStats, setTrackingStats] = useState(null);
+    const [trackingData, setTrackingData] = useState(null); // full tracking response
+    // Honour ?tab=tracking (admin deep-link from AdminDashboard)
+    const [activeTab, setActiveTab] = useState(() => {
+        const tab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null;
+        return tab || "player";
+    });
     const [loading, setLoading] = useState(true);
     const [feedback, setFeedback] = useState("");
     const [workspaceNow, setWorkspaceNow] = useState(() => Date.now());
@@ -53,7 +61,7 @@ export function LearningWorkspace() {
         try {
             setLoading(true);
             const isTeacher = user?.role === "teacher";
-            const apiPrefix = isTeacher ? "/api/teacher" : "/api/student";
+            const apiPrefix = isAdmin ? "/api/admin" : isTeacher ? "/api/teacher" : "/api/student";
 
             // Fetch classes list to find this classroom
             const classesRes = await apiRequest(`${apiPrefix}/classes`);
@@ -65,6 +73,18 @@ export function LearningWorkspace() {
                 return;
             }
             setClassroom(matchedClass);
+
+            if (isAdmin) {
+                try {
+                    const trackRes = await apiRequest(`/api/admin/classes/${classroomId}/tracking`);
+                    if (trackRes?.stats) {
+                        setTrackingStats(trackRes.stats);
+                    }
+                    setTrackingData(trackRes || null);
+                } catch {
+                    // Non-blocking for oversight view
+                }
+            }
 
             // Fetch classroom sessions if available
             if (classesRes.sessions) {
@@ -79,8 +99,20 @@ export function LearningWorkspace() {
                 (r) => r.classroom?._id === classroomId || r.classroom === classroomId
             );
             setResources(classResources);
-            setSelectedDoc((current) => current || classResources.find((resource) => !isVideoResource(resource)) || null);
-            setSelectedVideoResource((current) => current || classResources.find(isVideoResource) || null);
+            const targetResId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("resourceId") : null;
+            const targetRes = targetResId ? classResources.find((r) => r._id === targetResId) : null;
+            if (targetRes) {
+                if (isVideoResource(targetRes)) {
+                    setSelectedVideoResource(targetRes);
+                    setActiveTab("player");
+                } else {
+                    setSelectedDoc(targetRes);
+                    setActiveTab("documents");
+                }
+            } else {
+                setSelectedDoc((current) => current || classResources.find((resource) => !isVideoResource(resource)) || null);
+                setSelectedVideoResource((current) => current || classResources.find(isVideoResource) || null);
+            }
 
             // Fetch discussions
             const discRes = await apiRequest(`${apiPrefix}/classes/${classroomId}/discussions`);
@@ -102,7 +134,7 @@ export function LearningWorkspace() {
         } finally {
             setLoading(false);
         }
-    }, [classroomId, user?.role]);
+    }, [classroomId, user, isAdmin]);
 
     useEffect(() => {
         void loadWorkspace();
@@ -118,7 +150,7 @@ export function LearningWorkspace() {
         if (!videoRef.current) return;
         const progressId = selectedVideoResource?._id || currentLesson?.title;
         if (!progressId) return;
-        const savedTime = localStorage.getItem(`learnhub_video_progress_${progressId}`);
+        const savedTime = localStorage.getItem(`tlh_video_progress_${progressId}`);
         if (savedTime && parseFloat(savedTime) > 0) {
             videoRef.current.currentTime = parseFloat(savedTime);
         }
@@ -139,11 +171,16 @@ export function LearningWorkspace() {
         const progressId = selectedVideoResource?._id || currentLesson?.title;
         if (videoRef.current && progressId) {
             localStorage.setItem(
-                `learnhub_video_progress_${progressId}`,
+                `tlh_video_progress_${progressId}`,
                 String(videoRef.current.currentTime)
             );
         }
     };
+
+    // Helper to build an absolute API resource URL so browser-native requests
+    // (e.g. <a download>, <video src>, <iframe src>) always reach the backend
+    // regardless of whether a Vite proxy is active or not.
+    const resUrl = (path) => `${API_BASE_URL}${path}`;
 
     const handleSpeedChange = (rate) => {
         setPlaybackRate(rate);
@@ -156,7 +193,7 @@ export function LearningWorkspace() {
     const handleCreateThread = async (e) => {
         e.preventDefault();
         try {
-            const apiPrefix = user?.role === "teacher" ? "/api/teacher" : "/api/student";
+            const apiPrefix = isAdmin ? "/api/admin" : user?.role === "teacher" ? "/api/teacher" : "/api/student";
             const res = await apiRequest(`${apiPrefix}/classes/${classroomId}/discussions`, {
                 method: "POST",
                 body: JSON.stringify({
@@ -179,7 +216,7 @@ export function LearningWorkspace() {
         const text = replyContent[discussionId];
         if (!text || !text.trim()) return;
         try {
-            const apiPrefix = user?.role === "teacher" ? "/api/teacher" : "/api/student";
+            const apiPrefix = isAdmin ? "/api/admin" : user?.role === "teacher" ? "/api/teacher" : "/api/student";
             const res = await apiRequest(`${apiPrefix}/classes/${classroomId}/discussions/${discussionId}/reply`, {
                 method: "POST",
                 body: JSON.stringify({ content: text.trim() }),
@@ -188,6 +225,19 @@ export function LearningWorkspace() {
             setReplyContent({ ...replyContent, [discussionId]: "" });
         } catch (err) {
             setFeedback(err.message || "Could not post reply.");
+        }
+    };
+
+    const handleDeleteThread = async (discussionId) => {
+        if (!window.confirm("Remove this discussion topic as an administrator?")) return;
+        try {
+            await apiRequest(`/api/admin/classes/${classroomId}/discussions/${discussionId}`, {
+                method: "DELETE",
+            });
+            setDiscussions((prev) => prev.filter((d) => d._id !== discussionId));
+            setFeedback("Discussion topic removed by administrator.");
+        } catch (err) {
+            setFeedback(err.message || "Failed to remove discussion topic.");
         }
     };
 
@@ -226,6 +276,7 @@ export function LearningWorkspace() {
                     { id: "player", label: "Interactive Video", icon: "🎬" },
                     { id: "documents", label: `Course Materials (${courseMaterials.length})`, icon: "📄" },
                     { id: "discussions", label: `Cohort Discussions (${discussions.length})`, icon: "💬" },
+                    ...(isAdmin ? [{ id: "tracking", label: `Cohort Tracking (${classroom.students?.length || 0})`, icon: "📊" }] : []),
                 ]}
                 activeTab={activeTab}
                 onSelect={setActiveTab}
@@ -270,6 +321,39 @@ export function LearningWorkspace() {
             </div>
 
             <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+                {isAdmin && (
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100/60 p-4 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-800 text-xs font-black text-amber-200 shadow-sm">
+                                TLH
+                            </span>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-wider text-emerald-950">
+                                    Administrator Oversight Mode
+                                </p>
+                                <p className="text-xs text-emerald-800">
+                                    You have full administrative visibility to track live sessions, lesson media, student attendance, and discussions in this cohort.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab("tracking")}
+                                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${activeTab === "tracking" ? "bg-emerald-800 text-white shadow-sm" : "bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100"}`}
+                            >
+                                📊 Track Cohort Space
+                            </button>
+                            <Link
+                                to="/dashboard"
+                                className="rounded-xl border border-emerald-300 bg-white px-3.5 py-2 text-xs font-bold text-emerald-900 transition hover:bg-emerald-100"
+                            >
+                                ← Admin Dashboard
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
                 {feedback && (
                     <div className="mt-4 rounded-2xl bg-emerald-50 p-3.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 flex justify-between items-center">
                         <span>{feedback}</span>
@@ -295,8 +379,10 @@ export function LearningWorkspace() {
                                 ) : selectedVideoResource ? (
                                     <video
                                         ref={videoRef}
-                                        src={`/api/resources/${selectedVideoResource.storedKey}/file`}
+                                        src={resUrl(`/api/resources/${selectedVideoResource.storedKey}/file`)}
                                         controls
+                                        controlsList={isStudent ? "nodownload" : undefined}
+                                        onContextMenu={(e) => { if (isStudent) e.preventDefault(); }}
                                         onTimeUpdate={handleTimeUpdate}
                                         className="w-full aspect-video bg-black"
                                     />
@@ -305,6 +391,8 @@ export function LearningWorkspace() {
                                         ref={videoRef}
                                         src={currentLesson.videoUrl}
                                         controls
+                                        controlsList={isStudent ? "nodownload" : undefined}
+                                        onContextMenu={(e) => { if (isStudent) e.preventDefault(); }}
                                         onTimeUpdate={handleTimeUpdate}
                                         className="w-full aspect-video bg-black"
                                     />
@@ -447,13 +535,21 @@ export function LearningWorkspace() {
                                             <h3 className="font-bold text-stone-900 text-base">{selectedDoc.title}</h3>
                                             <p className="text-xs text-stone-500">{selectedDoc.description || selectedDoc.originalFilename}</p>
                                         </div>
-                                        <a
-                                            href={`/api/resources/${selectedDoc._id}/download`}
-                                            className={`rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-900 ${selectedDoc.sourceType !== "upload" ? "hidden" : ""}`}
-                                            download
-                                        >
-                                            ⬇ Download file
-                                        </a>
+                                        {!isStudent ? (
+                                            <a
+                                                href={resUrl(`/api/resources/${selectedDoc._id}/download`)}
+                                                className={`rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-900 ${selectedDoc.sourceType !== "upload" ? "hidden" : ""}`}
+                                                download
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                ⬇ Download file
+                                            </a>
+                                        ) : (
+                                            <span className="rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
+                                                🔒 Protected Workspace View
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* In-Browser PDF / Document Preview */}
@@ -468,7 +564,7 @@ export function LearningWorkspace() {
                                             />
                                         ) : selectedDoc.mimeType?.startsWith("video/") ? (
                                             <video
-                                                src={`/api/resources/${selectedDoc.storedKey}/file`}
+                                                src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
                                                 controls
                                                 preload="metadata"
                                                 className="h-full w-full bg-black"
@@ -476,13 +572,13 @@ export function LearningWorkspace() {
                                             />
                                         ) : selectedDoc.mimeType?.includes("pdf") ? (
                                             <iframe
-                                                src={`/api/resources/${selectedDoc.storedKey}/file`}
+                                                src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
                                                 title={selectedDoc.title}
                                                 className="w-full h-full border-0"
                                             />
                                         ) : selectedDoc.mimeType?.includes("image") ? (
                                             <img
-                                                src={`/api/resources/${selectedDoc.storedKey}/file`}
+                                                src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
                                                 alt={selectedDoc.title}
                                                 className="w-full h-full object-contain"
                                             />
@@ -493,15 +589,23 @@ export function LearningWorkspace() {
                                                 <span className="text-4xl mb-2">📁</span>
                                                 <h4 className="font-bold text-stone-800 text-sm">{selectedDoc.originalFilename || selectedDoc.title}</h4>
                                                 <p className="text-xs text-stone-500 mt-1">
-                                                    In-browser preview is optimized for PDF and images. Download file to view locally.
+                                                    In-browser preview is optimized for PDF and images.
                                                 </p>
-                                                <a
-                                                    href={`/api/resources/${selectedDoc._id}/download`}
-                                                    className="mt-4 rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white"
-                                                    download
-                                                >
-                                                    Download resource
-                                                </a>
+                                                {!isStudent ? (
+                                                    <a
+                                                        href={resUrl(`/api/resources/${selectedDoc._id}/download`)}
+                                                        className="mt-4 rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white"
+                                                        download
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        Download resource
+                                                    </a>
+                                                ) : (
+                                                    <span className="mt-4 inline-block rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
+                                                        🔒 In-Workspace View Only
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -513,31 +617,56 @@ export function LearningWorkspace() {
                             )}
                         </div>
 
-                        {/* Resources List Sidebar */}
+                        {/* Resources List Sidebar — all resource types */}
                         <div className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 shadow-sm space-y-3">
                             <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-2">
-                                Available Materials ({courseMaterials.length})
+                                Available Materials ({resources.length})
                             </h3>
-                            {courseMaterials.map((res) => {
-                                const isSelected = selectedDoc?._id === res._id;
+                            {resources.length === 0 && (
+                                <p className="text-xs text-stone-400">No materials have been added for this cohort yet.</p>
+                            )}
+                            {resources.map((res) => {
+                                const isVideo = isVideoResource(res);
+                                const isSelected = isVideo
+                                    ? selectedVideoResource?._id === res._id
+                                    : selectedDoc?._id === res._id;
+                                const fileIcon = res.sourceType === "youtube" ? "🎬"
+                                    : res.sourceType === "google_drive" ? "☁️"
+                                    : isVideo ? "📹"
+                                    : res.mimeType?.includes("pdf") ? "📕"
+                                    : res.mimeType?.includes("image") ? "🖼️"
+                                    : res.mimeType?.includes("spreadsheet") || res.category === "spreadsheet" ? "📊"
+                                    : "📄";
                                 return (
                                     <button
                                         key={res._id}
                                         type="button"
-                                        onClick={() => setSelectedDoc(res)}
+                                        onClick={() => {
+                                            if (isVideo) {
+                                                setSelectedVideoResource(res);
+                                                setActiveTab("player");
+                                            } else {
+                                                setSelectedDoc(res);
+                                                setActiveTab("documents");
+                                            }
+                                        }}
                                         className={`flex w-full items-start gap-3 rounded-2xl p-3 text-left transition ${
                                             isSelected
                                                 ? "bg-emerald-50 ring-1 ring-emerald-300"
                                                 : "bg-stone-50 hover:bg-stone-100"
                                         }`}
                                     >
-                                        <span className="text-lg">{res.sourceType === "youtube" ? "🎬" : "📄"}</span>
+                                        <span className="text-lg shrink-0">{fileIcon}</span>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-bold text-stone-900 line-clamp-1">{res.title}</p>
                                             <p className="text-[10px] text-stone-500">
-                                                {res.sourceType === "youtube" ? "YouTube video" : res.sourceType === "google_drive" ? `Google Drive ${res.category}` : `${(res.fileSize / 1024 / 1024).toFixed(1)} MB · ${res.category}`}
+                                                {res.sourceType === "youtube" ? "YouTube video"
+                                                    : res.sourceType === "google_drive" ? `Google Drive · ${res.category}`
+                                                    : res.fileSize ? `${(res.fileSize / 1024 / 1024).toFixed(1)} MB · ${res.category}`
+                                                    : res.category}
                                             </p>
                                         </div>
+                                        {isVideo && <span className="shrink-0 text-[9px] font-black uppercase tracking-wider rounded-md bg-emerald-100 text-emerald-800 px-1.5 py-0.5">Video</span>}
                                     </button>
                                 );
                             })}
@@ -585,6 +714,15 @@ export function LearningWorkspace() {
                                                         <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                                                             PINNED
                                                         </span>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteThread(disc._id)}
+                                                            className="ml-auto text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline"
+                                                        >
+                                                            ✕ Delete Topic (Admin)
+                                                        </button>
                                                     )}
                                                 </div>
                                                 <h3 className="font-bold text-stone-900 text-base mt-1.5">{disc.title}</h3>
@@ -642,6 +780,176 @@ export function LearningWorkspace() {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* TAB 4 (Admin only): Cohort Tracking */}
+                {isAdmin && activeTab === "tracking" && (
+                    <div className="mt-6 space-y-8">
+                        {/* ── KPI Cards ── */}
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                            {[
+                                { icon: "🎓", label: "Learners", value: trackingStats?.totalStudents ?? "—", sub: `of ${trackingStats?.capacity ?? "—"} capacity` },
+                                { icon: "📊", label: "Fill Rate", value: trackingStats?.fillRate != null ? `${trackingStats.fillRate}%` : "—", sub: "enrolled" },
+                                { icon: "📅", label: "Sessions", value: trackingStats?.totalSessions ?? "—", sub: `${trackingStats?.completedSessions ?? 0} completed` },
+                                { icon: "📁", label: "Resources", value: trackingStats?.totalResources ?? "—", sub: "uploaded" },
+                                { icon: "📝", label: "Assignments", value: trackingStats?.totalAssignments ?? "—", sub: "created" },
+                                { icon: "💬", label: "Discussions", value: trackingStats?.discussionsCount ?? "—", sub: "threads" },
+                            ].map((kpi) => (
+                                <div key={kpi.label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-200 flex flex-col gap-1">
+                                    <span className="text-xl">{kpi.icon}</span>
+                                    <p className="text-2xl font-black text-stone-900">{kpi.value}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">{kpi.label}</p>
+                                    <p className="text-[10px] text-stone-400">{kpi.sub}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* ── Fill-rate bar ── */}
+                        {trackingStats?.fillRate != null && (
+                            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-black uppercase tracking-wider text-stone-600">Cohort Capacity Fill</span>
+                                    <span className="text-xs font-bold text-emerald-800">{trackingStats.fillRate}%</span>
+                                </div>
+                                <div className="h-3 w-full rounded-full bg-stone-100 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
+                                        style={{ width: `${Math.min(trackingStats.fillRate, 100)}%` }}
+                                    />
+                                </div>
+                                <p className="mt-1.5 text-[11px] text-stone-500">
+                                    {trackingStats.totalStudents} learners enrolled out of {trackingStats.capacity} seats
+                                </p>
+                            </div>
+                        )}
+
+                        {/* ── Instructor Info ── */}
+                        {(trackingData?.cohort?.teacher) && (
+                            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+                                <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-3">Assigned Instructor</h3>
+                                <div className="flex items-center gap-3">
+                                    {trackingData.cohort.teacher.avatarUrl ? (
+                                        <img
+                                            src={trackingData.cohort.teacher.avatarUrl}
+                                            alt={trackingData.cohort.teacher.fullName}
+                                            className="h-11 w-11 rounded-xl object-cover ring-1 ring-stone-200"
+                                        />
+                                    ) : (
+                                        <div className="h-11 w-11 rounded-xl bg-emerald-800 flex items-center justify-center text-xs font-black text-amber-200">
+                                            {(trackingData.cohort.teacher.fullName || "T").slice(0, 2).toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="text-sm font-bold text-stone-900">{trackingData.cohort.teacher.fullName || trackingData.cohort.teacher.name}</p>
+                                        <p className="text-xs text-stone-500">{trackingData.cohort.teacher.email}</p>
+                                    </div>
+                                    <span className="ml-auto rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 ring-1 ring-emerald-200">
+                                        Instructor
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── Enrolled Learners Roster ── */}
+                        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-4">
+                                Enrolled Learners ({trackingData?.cohort?.students?.length || 0})
+                            </h3>
+                            {(trackingData?.cohort?.students?.length ?? 0) === 0 ? (
+                                <p className="text-xs text-stone-400">No learners enrolled yet.</p>
+                            ) : (
+                                <div className="divide-y divide-stone-100">
+                                    {trackingData.cohort.students.map((student, idx) => (
+                                        <div key={student._id || idx} className="flex items-center gap-3 py-3">
+                                            {student.avatarUrl ? (
+                                                <img
+                                                    src={student.avatarUrl}
+                                                    alt={student.fullName}
+                                                    className="h-9 w-9 rounded-xl object-cover ring-1 ring-stone-200"
+                                                />
+                                            ) : (
+                                                <div className="h-9 w-9 shrink-0 rounded-xl bg-stone-200 flex items-center justify-center text-[10px] font-black text-stone-600">
+                                                    {(student.fullName || student.name || "S").slice(0, 2).toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-bold text-stone-900 truncate">{student.fullName || student.name}</p>
+                                                <p className="text-[10px] text-stone-500 truncate">{student.email}</p>
+                                            </div>
+                                            <span className="rounded-lg bg-stone-100 px-2 py-0.5 text-[10px] font-bold text-stone-600 uppercase tracking-wider">
+                                                Enrolled
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Live Session Tracker ── */}
+                        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-4">
+                                Session Schedule ({trackingData?.sessions?.length || 0} sessions)
+                            </h3>
+                            {(trackingData?.sessions?.length ?? 0) === 0 ? (
+                                <p className="text-xs text-stone-400">No sessions scheduled for this cohort.</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {trackingData.sessions.map((sess) => {
+                                        const start = new Date(sess.startsAt);
+                                        const end = new Date(sess.endsAt);
+                                        const isLiveNow = Date.now() >= start.getTime() && Date.now() < end.getTime();
+                                        const isCompleted = sess.status === "completed" || end.getTime() < Date.now();
+                                        return (
+                                            <div key={sess._id} className={`flex items-center gap-3 rounded-xl p-3 ${
+                                                isLiveNow ? "bg-emerald-50 ring-1 ring-emerald-300" : isCompleted ? "bg-stone-50" : "bg-stone-50"
+                                            }`}>
+                                                <div className="flex flex-col items-center justify-center gap-1 w-12 shrink-0">
+                                                    {isLiveNow ? (
+                                                        <>
+                                                            <span className="relative flex h-3 w-3">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                                                            </span>
+                                                            <span className="text-[9px] font-black uppercase text-emerald-700">LIVE</span>
+                                                        </>
+                                                    ) : isCompleted ? (
+                                                        <span className="text-lg">✅</span>
+                                                    ) : (
+                                                        <span className="text-lg">📅</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold text-stone-900 truncate">{sess.title}</p>
+                                                    <p className="text-[10px] text-stone-500">
+                                                        {start.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} ·{" "}
+                                                        {start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} – {end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                        {classroom?.timeZone ? ` (${classroom.timeZone})` : ""}
+                                                    </p>
+                                                </div>
+                                                <div className="flex shrink-0 items-center gap-2">
+                                                    <span className={`rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                                                        isLiveNow ? "bg-emerald-700 text-white" : isCompleted ? "bg-stone-200 text-stone-600" : "bg-blue-100 text-blue-700"
+                                                    }`}>
+                                                        {isLiveNow ? "In Progress" : isCompleted ? "Completed" : "Scheduled"}
+                                                    </span>
+                                                    {sess.meetingUrl && (
+                                                        <a
+                                                            href={sess.meetingUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded-lg bg-emerald-800 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-emerald-700"
+                                                        >
+                                                            Inspect Meet →
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

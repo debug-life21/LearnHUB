@@ -15,6 +15,48 @@ const googleAuthClient = new OAuth2Client();
 const codeLifetimeMs = 10 * 60 * 1000;
 const resendCooldownMs = 60 * 1000;
 
+const COUNTRY_PHONE_PATTERNS = {
+    ET: { code: "+251", pattern: /^\+?251[1-9]\d{7,8}$/, example: "+251912345678", name: "Ethiopia" },
+    US: { code: "+1", pattern: /^\+?1[2-9]\d{9}$/, example: "+12025551234", name: "United States" },
+    GB: { code: "+44", pattern: /^\+?44[1-9]\d{9,10}$/, example: "+447911123456", name: "United Kingdom" },
+    KE: { code: "+254", pattern: /^\+?254[17]\d{8}$/, example: "+254712345678", name: "Kenya" },
+    NG: { code: "+234", pattern: /^\+?234[789]\d{9}$/, example: "+2348012345678", name: "Nigeria" },
+    ZA: { code: "+27", pattern: /^\+?27[1-9]\d{8}$/, example: "+27821234567", name: "South Africa" },
+    IN: { code: "+91", pattern: /^\+?91[6-9]\d{9}$/, example: "+919876543210", name: "India" },
+    AE: { code: "+971", pattern: /^\+?971[2-9]\d{7,8}$/, example: "+971501234567", name: "UAE" },
+    DE: { code: "+49", pattern: /^\+?49[1-9]\d{9,11}$/, example: "+4915112345678", name: "Germany" },
+    FR: { code: "+33", pattern: /^\+?33[1-9]\d{8}$/, example: "+33612345678", name: "France" },
+    CA: { code: "+1", pattern: /^\+?1[2-9]\d{9}$/, example: "+16135551234", name: "Canada" },
+    AU: { code: "+61", pattern: /^\+?61[2-9]\d{8}$/, example: "+61412345678", name: "Australia" },
+    SA: { code: "+966", pattern: /^\+?966[5]\d{8}$/, example: "+966512345678", name: "Saudi Arabia" },
+    EG: { code: "+20", pattern: /^\+?20[1]\d{9}$/, example: "+201012345678", name: "Egypt" },
+    GH: { code: "+233", pattern: /^\+?233[2-9]\d{8}$/, example: "+233241234567", name: "Ghana" },
+    TZ: { code: "+255", pattern: /^\+?255[6-7]\d{8}$/, example: "+255712345678", name: "Tanzania" },
+    UG: { code: "+256", pattern: /^\+?256[3-7]\d{8}$/, example: "+256712345678", name: "Uganda" },
+    RW: { code: "+250", pattern: /^\+?250[7]\d{8}$/, example: "+250781234567", name: "Rwanda" },
+    CN: { code: "+86", pattern: /^\+?86[1]\d{10}$/, example: "+8613812345678", name: "China" },
+    JP: { code: "+81", pattern: /^\+?81[0-9]\d{8,9}$/, example: "+819012345678", name: "Japan" },
+    BR: { code: "+55", pattern: /^\+?55[1-9]\d{9,10}$/, example: "+5511912345678", name: "Brazil" },
+    IT: { code: "+39", pattern: /^\+?39[0-9]\d{8,10}$/, example: "+393123456789", name: "Italy" },
+    ES: { code: "+34", pattern: /^\+?34[6-9]\d{8}$/, example: "+34612345678", name: "Spain" },
+    TR: { code: "+90", pattern: /^\+?90[5]\d{9}$/, example: "+905301234567", name: "Turkey" },
+    PK: { code: "+92", pattern: /^\+?92[3]\d{9}$/, example: "+923001234567", name: "Pakistan" },
+    BD: { code: "+880", pattern: /^\+?880[1]\d{9}$/, example: "+8801712345678", name: "Bangladesh" },
+    MX: { code: "+52", pattern: /^\+?52[1-9]\d{9}$/, example: "+525512345678", name: "Mexico" },
+    OTHER: { code: "", pattern: /^\+?\d{7,15}$/, example: "+1234567890", name: "Other" },
+};
+
+const validCountryCodes = Object.keys(COUNTRY_PHONE_PATTERNS);
+
+function validatePhoneForCountry(phone, country) {
+    const entry = COUNTRY_PHONE_PATTERNS[country] || COUNTRY_PHONE_PATTERNS.OTHER;
+    const cleanPhone = phone.replace(/[\s\-().]/g, "");
+    if (!entry.pattern.test(cleanPhone)) {
+        return { valid: false, message: `Enter a valid ${entry.name} phone number (e.g. ${entry.example}).` };
+    }
+    return { valid: true };
+}
+
 const studentProfileSchema = z.object({
     learningInterests: z.array(z.string().trim().min(1).max(80)).max(10).default([]),
     learningGoals: z.string().trim().max(1000).default(""),
@@ -30,7 +72,8 @@ const signupSchema = z.object({
     email: z.string().trim().email().max(254),
     password: z.string().min(8).max(128),
     role: z.enum(["student", "teacher"]),
-    phone: z.string().trim().max(30).default(""),
+    phone: z.string().trim().min(7, "Phone number must be at least 7 characters.").max(30),
+    country: z.string().trim().min(1, "Please select your country."),
     studentProfile: studentProfileSchema.optional(),
     teacherApplication: z.object({
         qualifications: z.string().trim().min(2).max(1000),
@@ -67,7 +110,9 @@ function userResponse(user) {
 }
 
 function setSessionCookie(res, user) {
-    setAuthCookie(res, signToken({ sub: user._id.toString(), role: user.role }));
+    const token = signToken({ sub: user._id.toString(), role: user.role });
+    setAuthCookie(res, token);
+    return token;
 }
 
 async function issueCode(user, purpose) {
@@ -93,8 +138,9 @@ export async function signup(req, res) {
     if (data.role === "student" && !data.studentProfile) {
         throw new ApiError(400, "Complete your learning preferences before registering.");
     }
-    if (data.role === "teacher" && data.phone.length < 7) {
-        throw new ApiError(400, "Enter a contact phone number with at least 7 characters.");
+    const phoneCheck = validatePhoneForCountry(data.phone, data.country);
+    if (!phoneCheck.valid) {
+        throw new ApiError(400, phoneCheck.message);
     }
     const applicationFiles = [];
     if (data.teacherApplication) {
@@ -152,6 +198,8 @@ export async function signup(req, res) {
             fullName: data.name,
             email,
             phone: data.phone,
+            country: data.country,
+            timeZone: data.studentProfile?.timeZone || "Africa/Addis_Ababa",
             password: await bcrypt.hash(data.password, 12),
             authProvider: "local",
             role: data.role,
@@ -229,9 +277,10 @@ export async function login(req, res) {
         if (user.accountStatus !== "active") {
             throw new ApiError(403, "This account is not available.");
         }
-        setSessionCookie(res, user);
+        const token = setSessionCookie(res, user);
         res.json({
             message: "Signed in successfully.",
+            token,
             user: userResponse(user),
         });
         return;
@@ -263,9 +312,10 @@ export async function adminLogin(req, res) {
     if (user.accountStatus !== "active") {
         throw new ApiError(403, "This administrator account is not active.");
     }
-    setSessionCookie(res, user);
+    const token = setSessionCookie(res, user);
     res.json({
         message: "Signed in successfully.",
+        token,
         user: userResponse(user),
     });
 }
@@ -315,9 +365,10 @@ export async function verifyCode(req, res) {
         user.accountStatus = "active";
     }
     await user.save();
-    setSessionCookie(res, user);
+    const token = setSessionCookie(res, user);
     res.json({
         message: "Email verified successfully.",
+        token,
         user: userResponse(user),
         purpose,
     });
@@ -348,6 +399,7 @@ export async function google(req, res) {
         credential: z.string().min(1),
         role: z.enum(["student", "teacher"]).optional(),
         phone: z.string().trim().max(30).default(""),
+        country: z.string().trim().default(""),
         studentProfile: studentProfileSchema.optional(),
     }).parse(req.body);
     if (!env.GOOGLE_CLIENT_ID) {
@@ -398,6 +450,8 @@ export async function google(req, res) {
             fullName: payload.name?.trim() || email.split("@")[0],
             email,
             phone: data.phone,
+            country: data.country,
+            timeZone: data.studentProfile?.timeZone || "Africa/Addis_Ababa",
             googleId: payload.sub,
             authProvider: "google",
             role: data.role,
@@ -423,8 +477,8 @@ export async function google(req, res) {
         user.emailVerified = true;
         await user.save();
     }
-    setSessionCookie(res, user);
-    res.json({ message: "Signed in successfully with Google.", user: userResponse(user) });
+    const token = setSessionCookie(res, user);
+    res.json({ message: "Signed in successfully with Google.", token, user: userResponse(user) });
 }
 
 export async function forgotPassword(req, res) {

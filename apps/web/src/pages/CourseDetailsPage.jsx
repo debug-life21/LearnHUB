@@ -248,7 +248,7 @@ export function CourseDetailsPage() {
                             </h3>
                             <p className="mt-2 text-xs leading-relaxed text-emerald-900/80 max-w-2xl">
                                 To ensure high learning quality and personal teacher guidance, students register their interest and schedule preferences.
-                                The LearnHUB administrator assigns you to an active cohort with an expert instructor.
+                                The TedbabeLearnHUB administrator assigns you to an active cohort with an expert instructor.
                             </p>
                         </div>
                         <Link

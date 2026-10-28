@@ -58,9 +58,9 @@ export function SessionNotificationControl({ sessions, userId }) {
                 <p className="text-sm font-bold text-cyan-950">10-minute class reminders</p>
                 <p className="mt-1 text-xs text-cyan-900">
                     {permission === "granted"
-                        ? "Device notifications are enabled while LearnHUB is open."
+                        ? "Device notifications are enabled while TedbabeLearnHUB is open."
                         : permission === "denied"
-                            ? "Notifications are blocked. Allow them for LearnHUB in your browser or device settings."
+                            ? "Notifications are blocked. Allow them for TedbabeLearnHUB in your browser or device settings."
                             : permission === "unsupported"
                                 ? "This browser does not support device notifications."
                                 : "Enable device notifications to be alerted shortly before a class."}

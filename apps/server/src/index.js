@@ -4,10 +4,10 @@ import { connectDatabase } from "./db.js";
 async function bootstrap() {
     await connectDatabase();
     app.listen(env.PORT, () => {
-        console.log(`LearnHUB API listening on http://localhost:${env.PORT}`);
+        console.log(`TedbabeLearnHUB (TLH) API listening on http://localhost:${env.PORT}`);
     });
 }
 bootstrap().catch((error) => {
-    console.error("Failed to start LearnHUB API", error);
+    console.error("Failed to start TedbabeLearnHUB (TLH) API", error);
     process.exit(1);
 });

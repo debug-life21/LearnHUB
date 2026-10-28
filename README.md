@@ -1,6 +1,6 @@
-# LearnHUB — Universal Online Learning & Education Management Platform
+# TedbabeLearnHUB (TLH) — Universal Online Learning & Education Management Platform
 
-LearnHUB is a modern, responsive, and secure full-stack education management platform built using the **MERN** stack (MongoDB, Express.js, React.js, Node.js) with JavaScript throughout.
+TedbabeLearnHUB (TLH) is a modern, responsive, and secure full-stack education management platform built using the **MERN** stack (MongoDB, Express.js, React.js, Node.js) with JavaScript throughout.
 
 ---
 

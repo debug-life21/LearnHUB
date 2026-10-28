@@ -55,8 +55,9 @@ body:has(.admin-login-page) {
   border-radius: 0.8rem;
   background: #285b45;
   color: #e7d5ad;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 .admin-account {

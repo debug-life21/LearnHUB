@@ -27,7 +27,7 @@ export function InstructorsPage() {
                         Learn from Verified Educators
                     </h1>
                     <p className="mx-auto mt-4 max-w-3xl text-base text-stone-600 sm:text-lg leading-relaxed">
-                        Every LearnHUB educator is vetted by our academic administration. Our teachers combine subject-matter depth with empathetic, interactive live guidance.
+                        Every TedbabeLearnHUB educator is vetted by our academic administration. Our teachers combine subject-matter depth with empathetic, interactive live guidance.
                     </p>
                     <div className="mt-8 flex justify-center gap-4">
                         <Link to="/courses" className="editorial-button text-xs font-black">
@@ -78,8 +78,8 @@ export function InstructorsPage() {
                             >
                                 <div>
                                     <div className="flex items-center gap-4 mb-4">
-                                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-800 text-lg font-black text-emerald-200 shadow-md">
-                                            {instructor.name ? instructor.name.slice(0, 2).toUpperCase() : "LH"}
+                                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-800 text-base font-black text-emerald-200 shadow-md">
+                                            {instructor.name ? instructor.name.slice(0, 2).toUpperCase() : "TLH"}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">

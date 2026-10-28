@@ -11,7 +11,7 @@ export function Footer() {
         <div className="mb-12 flex flex-col gap-6 rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
           <div className="max-w-xl">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-300">Your next step starts here</p>
-            <h2 className="mt-2 text-xl font-bold tracking-tight text-white sm:text-2xl">Ready to learn with LearnHUB?</h2>
+            <h2 className="mt-2 text-xl font-bold tracking-tight text-white sm:text-2xl">Ready to learn with TedbabeLearnHUB (TLH)?</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">Explore courses, build your skills, and find the support that fits your goals.</p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -74,7 +74,7 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col gap-3 pt-6 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {currentYear} LearnHUB. All rights reserved.</p>
+          <p>© {currentYear} TedbabeLearnHUB (TLH). All rights reserved.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link to="/cookies" className="footer-link">{t("cookies")}</Link>
             <Link to="/acceptable-use" className="footer-link">{t("acceptableUse")}</Link>

@@ -7,7 +7,7 @@ const certificateSchema = new Schema({
     certificateNumber: { type: String, required: true, unique: true, index: true },
     studentName: { type: String, required: true },
     courseTitle: { type: String, required: true },
-    instructorName: { type: String, default: "LearnHUB Academic Faculty" },
+    instructorName: { type: String, default: "TedbabeLearnHUB Academic Faculty" },
     issueDate: { type: Date, default: Date.now },
     overallScore: { type: Number, required: true }, // e.g. 88
     status: {

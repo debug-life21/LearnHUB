@@ -39,7 +39,7 @@ export function FAQPage() {
     const filtered = faqs.filter((f) => f.question.toLowerCase().includes(query.toLowerCase()) ||
         f.answer.toLowerCase().includes(query.toLowerCase()));
     return (<div className="editorial-page mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
-      <SectionHeading badge="HELP CENTER" title="Good questions. Clear answers." subtitle="Find out how LearnHUB works for learners and instructors, from getting started to joining your first live session." centered/>
+      <SectionHeading badge="HELP CENTER" title="Good questions. Clear answers." subtitle="Find out how TedbabeLearnHUB (TLH) works for learners and instructors, from getting started to joining your first live session." centered/>
 
       {/* Search Input */}
       <div className="relative">

@@ -160,7 +160,7 @@ async function seed() {
                     points: 1,
                 },
                 {
-                    prompt: "What is the primary role of MongoDB in the LearnHUB architecture?",
+                    prompt: "What is the primary role of MongoDB in the TedbabeLearnHUB architecture?",
                     options: [
                         "Frontend state management",
                         "Document database for storing users, courses, and resources",
@@ -172,7 +172,7 @@ async function seed() {
                     points: 1,
                 },
                 {
-                    prompt: "In LearnHUB, who has permission to approve teacher applications and place students?",
+                    prompt: "In TedbabeLearnHUB, who has permission to approve teacher applications and place students?",
                     options: [
                         "Students themselves",
                         "Any teacher",
@@ -187,12 +187,12 @@ async function seed() {
         });
     }
     // 9. Sample Resource
-    let resource = await LearningResourceModel.findOne({ title: "LearnHUB Course Syllabus & Guidelines" });
+    let resource = await LearningResourceModel.findOne({ title: "TedbabeLearnHUB Course Syllabus & Guidelines" });
     if (!resource) {
         resource = await LearningResourceModel.create({
-            title: "LearnHUB Course Syllabus & Guidelines",
+            title: "TedbabeLearnHUB Course Syllabus & Guidelines",
             description: "Official guide to course progression, schedule rules, and live Google Meet sessions.",
-            originalFilename: "learnhub-syllabus.pdf",
+            originalFilename: "tedbabelearnhub-syllabus.pdf",
             storedKey: "sample-syllabus.pdf",
             mimeType: "application/pdf",
             fileSize: 1024 * 250,
@@ -205,10 +205,10 @@ async function seed() {
         });
     }
     // 10. Sample Announcement
-    let announcement = await AnnouncementModel.findOne({ title: "Welcome to LearnHUB Cohort 1" });
+    let announcement = await AnnouncementModel.findOne({ title: "Welcome to TedbabeLearnHUB Cohort 1" });
     if (!announcement) {
         announcement = await AnnouncementModel.create({
-            title: "Welcome to LearnHUB Cohort 1",
+            title: "Welcome to TedbabeLearnHUB Cohort 1",
             content: "All students are reminded to check their upcoming class schedules and test their Google Meet connection prior to start time.",
             target: "all_students",
             classroom: classroom._id,

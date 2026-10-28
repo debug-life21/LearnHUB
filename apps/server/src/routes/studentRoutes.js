@@ -502,16 +502,16 @@ studentRouter.post("/classes/:classId/claim-certificate", asyncHandler(async (re
     }
 
     const certSuffix = randomBytes(4).toString("hex").toUpperCase();
-    const certificateNumber = `LH-${new Date().getFullYear()}-${certSuffix}`;
+    const certificateNumber = `TLH-${new Date().getFullYear()}-${certSuffix}`;
 
     const cert = await CertificateModel.create({
         student: studentId,
         classroom: classroom._id,
         course: classroom.course._id,
         certificateNumber,
-        studentName: studentUser?.fullName || studentUser?.name || "LearnHUB Scholar",
+        studentName: studentUser?.fullName || studentUser?.name || "TedbabeLearnHUB Scholar",
         courseTitle: classroom.course?.title || classroom.title,
-        instructorName: classroom.teacher?.fullName || classroom.teacher?.name || "LearnHUB Faculty",
+        instructorName: classroom.teacher?.fullName || classroom.teacher?.name || "TedbabeLearnHUB Faculty",
         issueDate: new Date(),
         overallScore: Math.min(100, overallProgress),
         status: "valid",

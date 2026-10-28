@@ -29,17 +29,20 @@ app.use(cors({
 app.use(express.json({ limit: "25mb" }));
 app.use(cookieParser());
 app.use(morgan("dev"));
+const isDev = env.NODE_ENV === "development";
 app.use("/api/auth", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 30,
+    max: isDev ? 1000 : 100,
     standardHeaders: true,
     legacyHeaders: false,
+    message: { message: "Too many requests. Please try again later." },
 }), authRouter);
 app.use("/api/public", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 120,
+    max: isDev ? 2000 : 300,
     standardHeaders: true,
     legacyHeaders: false,
+    message: { message: "Too many requests. Please try again later." },
 }), publicRouter);
 app.get("/api/health", (_req, res) => {
     res.json({

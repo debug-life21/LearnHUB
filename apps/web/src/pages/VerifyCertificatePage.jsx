@@ -44,10 +44,10 @@ export function VerifyCertificatePage() {
                         OFFICIAL CREDENTIAL VERIFICATION
                     </span>
                     <h1 className="editorial-display mt-3 text-4xl font-extrabold text-stone-900 sm:text-5xl">
-                        Verify a LearnHUB Certificate
+                        Verify a TedbabeLearnHUB Certificate
                     </h1>
                     <p className="mx-auto mt-3 max-w-2xl text-sm text-stone-600 sm:text-base">
-                        Institutions, employers, and academic bodies can independently authenticate LearnHUB certificates issued to students upon completing verified courses.
+                        Institutions, employers, and academic bodies can independently authenticate TedbabeLearnHUB (TLH) certificates issued to students upon completing verified courses.
                     </p>
 
                     {/* Lookup Input Form */}
@@ -57,7 +57,7 @@ export function VerifyCertificatePage() {
                                 type="text"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Enter ID e.g. LH-2026-XXXX"
+                                placeholder="Enter ID e.g. TLH-2026-XXXX"
                                 className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-mono tracking-wider text-stone-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
                             />
                             <button
@@ -89,7 +89,7 @@ export function VerifyCertificatePage() {
                         <h3 className="font-bold text-rose-900 text-lg">Verification Failed</h3>
                         <p className="mt-1 text-xs text-rose-700">{error}</p>
                         <p className="mt-3 text-[11px] text-stone-500">
-                            Please verify that the certificate identifier was typed correctly with prefixes (e.g. LH-2026-...).
+                            Please verify that the certificate identifier was typed correctly with prefixes (e.g. TLH-2026-...).
                         </p>
                     </div>
                 )}
@@ -120,11 +120,11 @@ export function VerifyCertificatePage() {
                             <div className="rounded-2xl border border-amber-600/30 p-8 sm:p-12 relative bg-radial-gradient">
                                 {/* Watermark Brand Seal */}
                                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#285b45] text-xl font-black text-[#e7d5ad] shadow-lg mb-6 ring-2 ring-amber-500/30">
-                                    LH
+                                    TLH
                                 </div>
 
                                 <p className="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-900">
-                                    LEARNHUB ONLINE LEARNING PLATFORM
+                                    TEDBABELEARNHUB (TLH) ONLINE LEARNING PLATFORM
                                 </p>
                                 <h2 className="editorial-display mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
                                     Certificate of Course Completion

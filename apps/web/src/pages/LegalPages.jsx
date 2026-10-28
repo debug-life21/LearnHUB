@@ -4,7 +4,7 @@ function LegalShell({ title, lastUpdated, children, }) {
     return (<div className="editorial-page mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-8">
       {/* Notice Alert */}
       <div className="rounded-2xl border border-[#ded9ce] bg-[#eeece3] p-4 text-xs text-stone-700 leading-relaxed">
-        <strong>Notice:</strong> This document represents the operational compliance and service agreement framework of the LearnHUB platform. All policies are actively enforced across all student, educator, and administrative interactions.
+        <strong>Notice:</strong> This document represents the operational compliance and service agreement framework of the TedbabeLearnHUB (TLH) platform. All policies are actively enforced across all student, educator, and administrative interactions.
       </div>
 
       <div className="border-b border-slate-200 pb-4">
@@ -31,7 +31,7 @@ export function PrivacyPolicyPage() {
     return (<LegalShell title="Privacy Policy" lastUpdated="October 20, 2026">
       <h3 className="text-lg font-bold text-slate-900">1. Information We Collect</h3>
       <p>
-        LearnHUB collects personal profile details including full name, verified email address, schedule availability, current skill level, and educational background for students. For teachers, we collect academic credentials, degrees, and prior instructional experience. These details are used exclusively for administrative cohort placement, scheduling, and pedagogical verification.
+        TedbabeLearnHUB (TLH) collects personal profile details including full name, verified email address, schedule availability, current skill level, and educational background for students. For teachers, we collect academic credentials, degrees, and prior instructional experience. These details are used exclusively for administrative cohort placement, scheduling, and pedagogical verification.
       </p>
 
       <h3 className="text-lg font-bold text-slate-900">2. Security & Data Storage</h3>
@@ -41,7 +41,7 @@ export function PrivacyPolicyPage() {
 
       <h3 className="text-lg font-bold text-slate-900">3. Non-Disclosure & Third Parties</h3>
       <p>
-        LearnHUB never sells, monetizes, or shares user profile data with third-party advertisers. Google Meet links are utilized strictly for scheduled live classroom transmission between assigned cohort members and their verified educator.
+        TedbabeLearnHUB never sells, monetizes, or shares user profile data with third-party advertisers. Google Meet links are utilized strictly for scheduled live classroom transmission between assigned cohort members and their verified educator.
       </p>
     </LegalShell>);
 }
@@ -49,7 +49,7 @@ export function TermsOfServicePage() {
     return (<LegalShell title="Terms of Service" lastUpdated="October 20, 2026">
       <h3 className="text-lg font-bold text-slate-900">1. Platform Governance & Placement Rules</h3>
       <p>
-        By accessing LearnHUB, users agree to adhere to core platform business rules. Student class assignments and schedule allocations are determined strictly by Hub Administrators to prevent teacher overbooking, ensure balanced cohort sizes, and uphold educational quality. Students submit preferences but cannot self-assign to unapproved cohorts.
+        By accessing TedbabeLearnHUB, users agree to adhere to core platform business rules. Student class assignments and schedule allocations are determined strictly by Hub Administrators to prevent teacher overbooking, ensure balanced cohort sizes, and uphold educational quality. Students submit preferences but cannot self-assign to unapproved cohorts.
       </p>
 
       <h3 className="text-lg font-bold text-slate-900">2. Educator Responsibilities</h3>
@@ -67,7 +67,7 @@ export function CookiePolicyPage() {
     return (<LegalShell title="Cookie Policy" lastUpdated="October 20, 2026">
       <h3 className="text-lg font-bold text-slate-900">1. Essential Platform Cookies</h3>
       <p>
-        LearnHUB uses an essential HttpOnly session cookie (`learnhub_token`) to maintain your signed-in session. The site currently uses English and does not store a language preference. No advertising cookies are used by the application.
+        TedbabeLearnHUB uses an essential HttpOnly session cookie (`learnhub_token`) to maintain your signed-in session. The site currently uses English and does not store a language preference. No advertising cookies are used by the application.
       </p>
     </LegalShell>);
 }

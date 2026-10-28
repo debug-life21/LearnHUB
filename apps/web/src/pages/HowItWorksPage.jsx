@@ -12,7 +12,7 @@ export function HowItWorksPage() {
         {
             number: "02",
             title: "Hub Administrator Placement",
-            description: "To prevent overcrowded classrooms and ensure balanced groups, a LearnHUB Administrator reviews your profile and matches you to an active cohort led by an approved, specialized instructor.",
+            description: "To prevent overcrowded classrooms and ensure balanced groups, a TedbabeLearnHUB Administrator reviews your profile and matches you to an active cohort led by an approved, specialized instructor.",
             tag: "CURATED COHORTS",
         },
         {
@@ -44,7 +44,7 @@ export function HowItWorksPage() {
         {
             number: "02",
             title: "Administrative Review & Approval",
-            description: "LearnHUB administrators thoroughly review qualifications before approving accounts, guaranteeing exceptional instruction.",
+            description: "TedbabeLearnHUB administrators thoroughly review qualifications before approving accounts, guaranteeing exceptional instruction.",
         },
         {
             number: "03",
@@ -62,10 +62,10 @@ export function HowItWorksPage() {
                         LEARNING ARCHITECTURE
                     </span>
                     <h1 className="editorial-display mt-3 text-4xl font-extrabold text-stone-900 sm:text-5xl">
-                        How LearnHUB Works
+                        How TedbabeLearnHUB Works
                     </h1>
                     <p className="mx-auto mt-4 max-w-3xl text-base text-stone-600 sm:text-lg leading-relaxed">
-                        LearnHUB bridges self-paced online materials with real teacher accountability, structured cohort placement,
+                        TedbabeLearnHUB (TLH) bridges self-paced online materials with real teacher accountability, structured cohort placement,
                         live interactive classes, and verified credentials.
                     </p>
                     <div className="mt-8 flex justify-center gap-4">
@@ -73,7 +73,7 @@ export function HowItWorksPage() {
                             Join as a Student →
                         </Link>
                         <Link to="/apply/teacher" className="editorial-button-secondary text-xs font-bold">
-                            Teach with LearnHUB
+                            Teach with TedbabeLearnHUB
                         </Link>
                     </div>
                 </div>
@@ -126,7 +126,7 @@ export function HowItWorksPage() {
                             Vetted, Dedicated Educators
                         </h2>
                         <p className="mt-3 text-xs text-stone-300 leading-relaxed">
-                            Unlike open marketplace platforms where anyone can post courses, LearnHUB instructors are vetted and approved by our academic administrators. Every class is actively guided by a passionate educator.
+                            Unlike open marketplace platforms where anyone can post courses, TedbabeLearnHUB instructors are vetted and approved by our academic administrators. Every class is actively guided by a passionate educator.
                         </p>
                     </div>
 
@@ -147,7 +147,7 @@ export function HowItWorksPage() {
                             to="/apply/teacher"
                             className="inline-flex rounded-xl bg-emerald-500 px-6 py-3 text-xs font-extrabold text-stone-950 transition hover:bg-emerald-400"
                         >
-                            Apply to Teach on LearnHUB →
+                            Apply to Teach on TedbabeLearnHUB →
                         </Link>
                     </div>
                 </div>

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { API_BASE_URL, apiRequest } from "../lib/api";
 import { dateTimeInputToISOString, formatDateTimeInput, formatSessionTime } from "../lib/sessionTime";
+import { TIME_ZONES } from "../lib/timezones";
 import { ProfilePhotoField } from "../components/ProfilePhotoField";
 import { DashboardSettings } from "../components/DashboardSettings";
 import { DashboardSidebar } from "../components/DashboardSidebar";
@@ -713,7 +714,7 @@ export function AdminDashboard({ user }) {
         <div className="relative flex flex-wrap items-center justify-between gap-6">
         <div>
           <span className="admin-eyebrow text-xs font-bold uppercase tracking-[0.16em]">
-            LearnHUB · {t("adminOverview")}
+            TedbabeLearnHUB · {t("adminOverview")}
           </span>
           <div className="flex items-center gap-4">
             {adminProfile.avatarUrl ? <img src={adminProfile.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-stone-200"/> : null}
@@ -1137,6 +1138,13 @@ export function AdminDashboard({ user }) {
                   <p><strong>Learners:</strong> {cls.students?.length || 0} / {cls.capacity} (capacity)</p>
                   <p><strong>Time zone:</strong> {cls.timeZone}</p>
                 </div>
+                <a
+                  href={`${(import.meta.env.VITE_PUBLIC_URL || "").replace(/\/$/, "")}/workspace/${cls._id}?tab=tracking`}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-800 to-teal-800 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-emerald-950/15 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99]"
+                >
+                  <span>🎓 Enter Learning Space & Track Cohort</span>
+                  <span className="text-sm">→</span>
+                </a>
                 <button
                   type="button"
                   onClick={() => setTeacherAssignmentModal({
@@ -1239,9 +1247,9 @@ export function AdminDashboard({ user }) {
             }} className="rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900">+ Add resource</button>
           </div>
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
-            <strong>YouTube:</strong> Copy the video URL and add it here. LearnHUB embeds the video using YouTube&apos;s privacy-enhanced player and limits related videos to the same channel when YouTube supports it.
-            <br/><strong>Google Drive documents:</strong> Add PDF, Word, Excel, or PowerPoint files in Drive, choose <em>Share → General access → Anyone with the link → Viewer</em>, then paste the sharing link here. The selected file previews inside the learning space. Anyone with the link may also open it outside LearnHUB.
-            <br/><strong>Privacy:</strong> Use public or unlisted YouTube videos only. YouTube may still show creator-added end screens or recommendations; YouTube does not let LearnHUB remove every YouTube overlay.
+            <strong>YouTube:</strong> Copy the video URL and add it here. TedbabeLearnHUB embeds the video using YouTube&apos;s privacy-enhanced player and limits related videos to the same channel when YouTube supports it.
+            <br/><strong>Google Drive documents:</strong> Add PDF, Word, Excel, or PowerPoint files in Drive, choose <em>Share → General access → Anyone with the link → Viewer</em>, then paste the sharing link here. The selected file previews inside the learning space. Anyone with the link may also open it outside TedbabeLearnHUB.
+            <br/><strong>Privacy:</strong> Use public or unlisted YouTube videos only. YouTube may still show creator-added end screens or recommendations; YouTube does not let TedbabeLearnHUB remove every YouTube overlay.
           </div>
           <div className="grid gap-3">
             {learningResources.map((resource) => {
@@ -1257,7 +1265,7 @@ export function AdminDashboard({ user }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <a href={resource.sourceUrl || `/api/resources/${resource._id}/download`} target={resource.sourceType === "upload" ? undefined : "_blank"} rel={resource.sourceType === "upload" ? undefined : "noopener noreferrer"} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" download={resource.sourceType === "upload" || undefined}>{resource.sourceType === "upload" ? "Download" : "Open link"}</a>
+                    <a href={resource.sourceUrl || `${API_BASE_URL}/api/resources/${resource._id}/download`} target={resource.sourceType === "upload" ? "_blank" : "_blank"} rel="noopener noreferrer" className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" download={resource.sourceType === "upload" || undefined}>{resource.sourceType === "upload" ? "Download" : "Open link"}</a>
                     <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/resources/${resource._id}`, label: `Resource “${resource.title}”` })} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
                   </div>
                 </article>
@@ -1732,7 +1740,11 @@ export function AdminDashboard({ user }) {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700">Time zone</label>
-            <input value={classForm.timeZone} onChange={(e) => setClassForm({ ...classForm, timeZone: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+            <select value={classForm.timeZone} onChange={(e) => setClassForm({ ...classForm, timeZone: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none">
+                {TIME_ZONES.map((tz) => (
+                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700">Description</label>
@@ -1836,7 +1848,7 @@ export function AdminDashboard({ user }) {
               <input required type="url" value={resourceForm.sourceUrl} onChange={(event) => setResourceForm({ ...resourceForm, sourceUrl: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal" placeholder={resourceForm.sourceType === "youtube" ? "https://www.youtube.com/watch?v=..." : "https://drive.google.com/file/d/.../view"}/>
               <span className="mt-1 block font-normal leading-5 text-slate-500">
                 {resourceForm.sourceType === "youtube"
-                    ? "Use a public or unlisted YouTube video. Related-video suggestions are limited by YouTube, not fully controlled by LearnHUB."
+                    ? "Use a public or unlisted YouTube video. Related-video suggestions are limited by YouTube, not fully controlled by TedbabeLearnHUB."
                     : "Supports PDF, Word, Excel, and PowerPoint. In Drive, set General access to Anyone with the link and Viewer. Anyone with that link can open the file."}
               </span>
             </label>

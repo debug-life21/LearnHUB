@@ -49,6 +49,7 @@ const userSchema = new Schema({
     avatarUrl: { type: String, default: "" },
     bio: { type: String, default: "" },
     phone: { type: String, default: "" },
+    country: { type: String, default: "" },
     languagePreference: { type: String, enum: ["am", "en"], default: "am" },
     accountStatus: {
         type: String,

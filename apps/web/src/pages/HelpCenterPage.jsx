@@ -20,7 +20,7 @@ export function HelpCenterPage() {
             },
             {
                 q: "How is my course progress and certificate eligibility calculated?",
-                a: "LearnHUB uses a transparent weighted evaluation formula: 40% Session Attendance + 40% Completed Assignments + 20% Quiz/Assessment Scores. Achieving an overall score of 70% or higher unlocks your official verified Certificate of Course Completion.",
+                a: "TedbabeLearnHUB (TLH) uses a transparent weighted evaluation formula: 40% Session Attendance + 40% Completed Assignments + 20% Quiz/Assessment Scores. Achieving an overall score of 70% or higher unlocks your official verified Certificate of Course Completion.",
             },
             {
                 q: "Can I download class resources and slides for offline study?",
@@ -29,7 +29,7 @@ export function HelpCenterPage() {
         ],
         teachers: [
             {
-                q: "How do I become an approved LearnHUB educator?",
+                q: "How do I become an approved TedbabeLearnHUB educator?",
                 a: "Submit a teaching application at /apply/teacher with your academic qualifications and teaching expertise. After verification, an administrator will review and activate your teacher portal.",
             },
             {
@@ -38,7 +38,7 @@ export function HelpCenterPage() {
             },
             {
                 q: "Can I create custom multiple-choice assessments?",
-                a: "Yes. Teachers can create timed quizzes with custom questions and answer options. LearnHUB automatically grades student attempts server-side and provides instant score reporting.",
+                a: "Yes. Teachers can create timed quizzes with custom questions and answer options. TedbabeLearnHUB automatically grades student attempts server-side and provides instant score reporting.",
             },
         ],
         technical: [
@@ -92,7 +92,7 @@ export function HelpCenterPage() {
             <div className="editorial-hero border-b border-stone-200/80 px-4 py-16 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-4xl text-center">
                     <span className="editorial-kicker text-emerald-800">
-                        LEARNHUB SUPPORT & KNOWLEDGE BASE
+                        TEDBABELEARNHUB (TLH) SUPPORT & KNOWLEDGE BASE
                     </span>
                     <h1 className="editorial-display mt-3 text-4xl font-extrabold text-stone-900 sm:text-5xl">
                         Help & Support Center

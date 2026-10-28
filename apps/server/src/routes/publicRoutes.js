@@ -24,7 +24,7 @@ publicRouter.get("/home", asyncHandler(async (_req, res) => {
     ]);
     res.json({
         brand: {
-            name: "LearnHUB",
+            name: "TedbabeLearnHUB(TLH)",
             tagline: "Structured online learning with real teacher guidance and clear student placement.",
         },
         categories,
@@ -135,7 +135,7 @@ publicRouter.get("/instructors", asyncHandler(async (_req, res) => {
             id: t._id.toString(),
             name: t.fullName || t.name,
             avatarUrl: t.avatarUrl || "",
-            bio: t.bio || t.teacherProfile?.bio || "Certified LearnHUB Instructor passionate about guided student success.",
+            bio: t.bio || t.teacherProfile?.bio || "Certified TedbabeLearnHUB Instructor passionate about guided student success.",
             expertise: t.teacherProfile?.expertise || ["Interactive Teaching", "Curriculum Mastery"],
             qualifications: t.teacherProfile?.qualifications || "Verified Educator",
         })),

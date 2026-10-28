@@ -9,7 +9,13 @@ export const api = axios.create({
 
 api.interceptors.response.use(
     (response) => response,
-    (error) => Promise.reject(new Error(error.response?.data?.message || "Request failed. Please try again.")),
+    (error) => {
+        const message = error.response?.data?.message
+            || (typeof error.response?.data === "string" && error.response.data.trim() ? error.response.data.trim() : "")
+            || error.message
+            || "Request failed. Please try again.";
+        return Promise.reject(new Error(message));
+    },
 );
 
 export async function apiRequest(path, options = {}) {

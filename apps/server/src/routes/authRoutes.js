@@ -63,6 +63,7 @@ authRouter.get("/me", protect, asyncHandler(async (req, res) => {
             role: user.role,
             isVerified: user.isVerified,
             phone: user.phone || "",
+            country: user.country || "",
             bio: user.bio || "",
             avatarUrl: user.avatarUrl || "",
             teacherStatus: user.teacherStatus,

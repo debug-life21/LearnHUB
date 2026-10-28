@@ -1,36 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useAuth } from "../../web/src/context/AuthContext.jsx";
 import { apiRequest } from "../../web/src/lib/api.js";
 import { AdminDashboard } from "../../web/src/pages/AdminDashboard.jsx";
 
 const publicAppUrl = import.meta.env.VITE_PUBLIC_URL ?? "/";
 
 export function AdminApp() {
-    const [user, setUser] = useState(null);
-    const [checkingSession, setCheckingSession] = useState(true);
+    const { user, refreshUser, loading: checkingSession, logout } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState("");
 
-    const refreshSession = useCallback(async () => {
-        try {
-            const response = await apiRequest("/api/auth/me");
-            if (response.user.role !== "admin" && response.user.role !== "hub_admin") {
-                setUser(null);
-                setMessage("This portal is for LearnHUB administrators only.");
-                return;
-            }
-            setUser(response.user);
-        } catch {
-            setUser(null);
-        } finally {
-            setCheckingSession(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        void refreshSession();
-    }, [refreshSession]);
+    const isAdmin = Boolean(user && (user.role === "admin" || user.role === "hub_admin"));
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -41,7 +23,7 @@ export function AdminApp() {
                 method: "POST",
                 body: JSON.stringify({ email, password }),
             });
-            await refreshSession();
+            await refreshUser();
             setPassword("");
         } catch (error) {
             setMessage(error instanceof Error ? error.message : "Unable to sign in. Please try again.");
@@ -54,8 +36,7 @@ export function AdminApp() {
         setSubmitting(true);
         setMessage("");
         try {
-            await apiRequest("/api/auth/logout", { method: "POST" });
-            setUser(null);
+            await logout();
         } catch (error) {
             setMessage(error instanceof Error ? error.message : "Unable to sign out. Please try again.");
         } finally {
@@ -67,13 +48,34 @@ export function AdminApp() {
         return <main className="admin-login-page"><p role="status">Checking administrator session…</p></main>;
     }
 
-    if (user) {
+    if (user && !isAdmin) {
+        return (
+            <main className="admin-login-page">
+                <section className="admin-login-card" aria-labelledby="admin-login-title">
+                    <a className="admin-app-brand" href={publicAppUrl} aria-label="TedbabeLearnHUB home">
+                        <span className="admin-brand-mark">TLH</span>
+                        <span><strong>TedbabeLearnHUB</strong><small>Administrator portal</small></span>
+                    </a>
+                    <p className="admin-login-eyebrow">ACCESS RESTRICTED</p>
+                    <h1 id="admin-login-title">Unauthorized Account</h1>
+                    <p className="admin-login-description">
+                        You are currently signed in as <strong>{user.email}</strong>, which does not have administrator privileges.
+                    </p>
+                    <button type="button" onClick={handleSignOut} disabled={submitting}>
+                        {submitting ? "Signing out…" : "Sign out & Switch account"}
+                    </button>
+                </section>
+            </main>
+        );
+    }
+
+    if (user && isAdmin) {
         return (
             <div className="admin-app-shell">
                 <header className="admin-app-header">
-                    <a className="admin-app-brand" href={publicAppUrl} aria-label="LearnHUB administration">
-                        <span className="admin-brand-mark">LH</span>
-                        <span><strong>LearnHUB</strong><small>Administration</small></span>
+                    <a className="admin-app-brand" href={publicAppUrl} aria-label="TedbabeLearnHUB administration">
+                        <span className="admin-brand-mark">TLH</span>
+                        <span><strong>TedbabeLearnHUB</strong><small>Administration</small></span>
                     </a>
                     <div className="admin-account">
                         <span>{user.fullName || user.email}</span>
@@ -91,13 +93,13 @@ export function AdminApp() {
     return (
         <main className="admin-login-page">
             <section className="admin-login-card" aria-labelledby="admin-login-title">
-                <a className="admin-app-brand" href={publicAppUrl} aria-label="LearnHUB home">
-                    <span className="admin-brand-mark">LH</span>
-                    <span><strong>LearnHUB</strong><small>Administrator portal</small></span>
+                <a className="admin-app-brand" href={publicAppUrl} aria-label="TedbabeLearnHUB home">
+                    <span className="admin-brand-mark">TLH</span>
+                    <span><strong>TedbabeLearnHUB</strong><small>Administrator portal</small></span>
                 </a>
                 <p className="admin-login-eyebrow">PRIVATE WORKSPACE</p>
                 <h1 id="admin-login-title">Administrator sign in</h1>
-                <p className="admin-login-description">Use your provisioned administrator account to manage the LearnHUB learning community.</p>
+                <p className="admin-login-description">Use your provisioned administrator account to manage the TedbabeLearnHUB learning community.</p>
                 {message && <p role="alert" className="admin-login-error">{message}</p>}
                 <form onSubmit={handleSubmit}>
                     <label>
@@ -124,7 +126,7 @@ export function AdminApp() {
                         {submitting ? "Signing in…" : "Sign in securely"}
                     </button>
                 </form>
-                <p className="admin-login-footnote">Administrator accounts are provisioned by LearnHUB. Public sign-up is not available here.</p>
+                <p className="admin-login-footnote">Administrator accounts are provisioned by TedbabeLearnHUB. Public sign-up is not available here.</p>
             </section>
         </main>
     );

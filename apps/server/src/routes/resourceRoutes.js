@@ -134,6 +134,9 @@ resourceRouter.get("/:id/download", asyncHandler(async (req, res) => {
         throw new ApiError(404, "Resource not found.");
     }
     await authorizeResourceAccess(req, resource);
+    if (req.user?.role === "student") {
+        throw new ApiError(403, "Students cannot download resources directly. Please access and view them inside the learning workspace.");
+    }
     if (["youtube", "google_drive"].includes(resource.sourceType)) {
         return res.redirect(303, resource.sourceUrl);
     }

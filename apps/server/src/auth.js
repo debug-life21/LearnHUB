@@ -22,17 +22,28 @@ export function signToken(payload) {
 export function setAuthCookie(res, token) {
     res.cookie(cookieName, token, {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: isProduction ? "none" : "lax",
         secure: isProduction,
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 }
 export function clearAuthCookie(res) {
-    res.clearCookie(cookieName, { httpOnly: true, sameSite: "lax", secure: isProduction, path: "/" });
+    res.clearCookie(cookieName, {
+        httpOnly: true,
+        sameSite: isProduction ? "none" : "lax",
+        secure: isProduction,
+        path: "/",
+    });
 }
 export function requireAuth(req, _res, next) {
-    const token = req.cookies?.[cookieName];
+    let token = req.cookies?.[cookieName];
+    if (!token && req.headers.authorization) {
+        const parts = req.headers.authorization.split(" ");
+        if (parts.length === 2 && parts[0].toLowerCase() === "bearer") {
+            token = parts[1].trim();
+        }
+    }
     if (!token) {
         return next(new ApiError(401, "Authentication required."));
     }

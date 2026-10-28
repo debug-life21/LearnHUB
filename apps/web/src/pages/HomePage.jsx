@@ -204,7 +204,7 @@ export function HomePage() {
 
       {/* 3. Modern Bento Grid: Architectural Pillars */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading badge="THE LEARNHUB DIFFERENCE" title="A more human way to build real-world skills" subtitle="LearnHUB combines expert instruction, hands-on practice, and steady support to help you keep moving forward." centered/>
+        <SectionHeading badge="THE TEDBABELEARNHUB (TLH) DIFFERENCE" title="A more human way to build real-world skills" subtitle="TedbabeLearnHUB (TLH) combines expert instruction, hands-on practice, and steady support to help you keep moving forward." centered/>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Bento Card 1: Placement */}

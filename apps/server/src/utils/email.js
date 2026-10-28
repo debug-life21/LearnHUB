@@ -39,7 +39,7 @@ function emailWrapper(title, content) {
   <div style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
     <div style="background:linear-gradient(135deg,#091a2f 0%,#0f2942 100%);padding:28px 32px;text-align:center;">
       <div style="display:inline-block;padding:8px 16px;background:rgba(255,255,255,0.12);border-radius:10px;color:#38bdf8;font-weight:900;font-size:18px;letter-spacing:1px;">
-        LearnHUB
+        TedbabeLearnHUB (TLH)
       </div>
       <p style="margin:8px 0 0;color:#94a3b8;font-size:12px;letter-spacing:0.5px;">Learn Anything. Grow Everywhere.</p>
     </div>
@@ -47,7 +47,7 @@ function emailWrapper(title, content) {
       ${content}
     </div>
     <div style="padding:20px 32px;background:#f1f5f9;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#64748b;">
-      <p style="margin:0;">&copy; ${new Date().getFullYear()} LearnHUB Education Platform. All rights reserved.</p>
+      <p style="margin:0;">&copy; ${new Date().getFullYear()} TedbabeLearnHUB (TLH) Education Platform. All rights reserved.</p>
       <p style="margin:4px 0 0;">This is an automated system email. Please do not reply directly.</p>
     </div>
   </div>
@@ -59,19 +59,19 @@ export async function sendVerificationCode({ email, name, code }) {
     const escapedName = escapeHtml(name);
     const client = getTransporter();
     if (!client) {
-        console.log(`[LearnHUB Dev Mailer] Verification code for ${email} (${escapedName}): ${code}`);
+        console.log(`[TedbabeLearnHUB Dev Mailer] Verification code for ${email} (${escapedName}): ${code}`);
         return;
     }
     try {
         await client.sendMail({
-            from: `"LearnHUB" <${env.SMTP_USER}>`,
+            from: `"TedbabeLearnHUB" <${env.SMTP_USER}>`,
             to: email,
-            subject: "Verify your LearnHUB account",
+            subject: "Verify your TedbabeLearnHUB account",
             text: `Hello ${name}, your verification code is ${code}. It expires in 10 minutes.`,
             html: emailWrapper("Account Verification", `
               <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:0;">Verify your account</h1>
               <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">Welcome to LearnHUB. Enter the 6-digit verification code below to verify your email address. This code expires in <strong>10 minutes</strong>.</p>
+              <p style="font-size:14px;color:#334155;line-height:1.6;">Welcome to TedbabeLearnHUB. Enter the 6-digit verification code below to verify your email address. This code expires in <strong>10 minutes</strong>.</p>
               <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
                 <div style="font-size:36px;font-weight:900;letter-spacing:12px;color:#1d4ed8;font-family:monospace;">${code}</div>
               </div>
@@ -88,19 +88,19 @@ export async function sendPasswordResetEmail({ email, name, resetUrl, code }) {
     const escapedName = escapeHtml(name);
     const client = getTransporter();
     if (!client) {
-        console.log(`[LearnHUB Dev Mailer] Password reset link for ${email}: ${resetUrl} (Code: ${code})`);
+        console.log(`[TedbabeLearnHUB Dev Mailer] Password reset link for ${email}: ${resetUrl} (Code: ${code})`);
         return;
     }
     try {
         await client.sendMail({
-            from: `"LearnHUB Security" <${env.SMTP_USER}>`,
+            from: `"TedbabeLearnHUB Security" <${env.SMTP_USER}>`,
             to: email,
-            subject: "Reset your LearnHUB password",
-            text: `Hello ${name}, reset your LearnHUB password by visiting: ${resetUrl} or using code ${code}. Valid for 15 minutes.`,
+            subject: "Reset your TedbabeLearnHUB password",
+            text: `Hello ${name}, reset your TedbabeLearnHUB password by visiting: ${resetUrl} or using code ${code}. Valid for 15 minutes.`,
             html: emailWrapper("Password Reset Request", `
               <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:0;">Reset your password</h1>
               <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">We received a request to reset the password for your LearnHUB account. Click the button below or enter the reset code on the reset page. This link expires in <strong>15 minutes</strong>.</p>
+              <p style="font-size:14px;color:#334155;line-height:1.6;">We received a request to reset the password for your TedbabeLearnHUB account. Click the button below or enter the reset code on the reset page. This link expires in <strong>15 minutes</strong>.</p>
               <div style="text-align:center;margin:28px 0;">
                 <a href="${resetUrl}" style="background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;display:inline-block;box-shadow:0 4px 6px -1px rgba(37,99,235,0.2);">Reset My Password</a>
               </div>
@@ -121,14 +121,14 @@ export async function sendSecurityAlertEmail({ email, name, action }) {
     const escapedName = escapeHtml(name);
     const client = getTransporter();
     if (!client) {
-        console.log(`[LearnHUB Dev Mailer] Security alert for ${email}: ${action}`);
+        console.log(`[TedbabeLearnHUB Dev Mailer] Security alert for ${email}: ${action}`);
         return;
     }
     try {
         await client.sendMail({
-            from: `"LearnHUB Security" <${env.SMTP_USER}>`,
+            from: `"TedbabeLearnHUB Security" <${env.SMTP_USER}>`,
             to: email,
-            subject: "Security Alert: LearnHUB Account Update",
+            subject: "Security Alert: TedbabeLearnHUB Account Update",
             text: `Hello ${name}, an important security action was performed: ${action}.`,
             html: emailWrapper("Security Alert", `
               <h1 style="font-size:20px;font-weight:800;color:#991b1b;margin-top:0;">Account Security Update</h1>

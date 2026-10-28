@@ -5,14 +5,15 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest, loadPublicCourses } from "../lib/api";
 import { CategoryCoursePicker } from "../components/CategoryCoursePicker";
+import { TIME_ZONES } from "../lib/timezones";
 
 function AuthShell({ title, subtitle, children }) {
     return (
         <div className="editorial-page auth-page mx-auto max-w-lg px-4 py-12 sm:px-6 sm:py-16">
             <div className="rounded-3xl bg-white p-7 shadow-xl ring-1 ring-slate-200/90 sm:p-10">
                 <div className="mb-7 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#285b45] text-lg font-black text-[#e7d5ad] shadow-md shadow-emerald-950/20 ring-1 ring-white/20">
-                        LH
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#285b45] text-base font-black text-[#e7d5ad] shadow-md shadow-emerald-950/20 ring-1 ring-white/20">
+                        TLH
                     </div>
                     <h1 className="editorial-display mt-4 text-3xl tracking-tight text-stone-900 sm:text-4xl">{title}</h1>
                     <p className="mt-1.5 text-sm font-medium text-slate-500">{subtitle}</p>
@@ -114,7 +115,7 @@ export function SignInPage() {
     };
 
     return (
-        <AuthShell title={t("signIn")} subtitle="Access your LearnHUB learning and management portal">
+        <AuthShell title={t("signIn")} subtitle="Access your TedbabeLearnHUB (TLH) learning and management portal">
             <Feedback>{feedback}</Feedback>
             <GoogleSignIn onCredential={continueWithGoogle} disabled={loading} />
             <div className="mb-5 flex items-center gap-3 text-xs font-semibold text-slate-400">
@@ -139,11 +140,51 @@ export function SignInPage() {
                 </button>
             </form>
             <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-600">
-                New to LearnHUB? <Link to="/signup" className="font-bold text-blue-600 hover:underline">Create an account</Link>
+                New to TedbabeLearnHUB? <Link to="/signup" className="font-bold text-blue-600 hover:underline">Create an account</Link>
             </p>
         </AuthShell>
     );
 }
+const COUNTRIES = [
+    { code: "ET", name: "Ethiopia", flag: "🇪🇹", dial: "+251", pattern: /^\+?251[1-9]\d{7,8}$/, example: "+251912345678" },
+    { code: "US", name: "United States", flag: "🇺🇸", dial: "+1", pattern: /^\+?1[2-9]\d{9}$/, example: "+12025551234" },
+    { code: "GB", name: "United Kingdom", flag: "🇬🇧", dial: "+44", pattern: /^\+?44[1-9]\d{9,10}$/, example: "+447911123456" },
+    { code: "KE", name: "Kenya", flag: "🇰🇪", dial: "+254", pattern: /^\+?254[17]\d{8}$/, example: "+254712345678" },
+    { code: "NG", name: "Nigeria", flag: "🇳🇬", dial: "+234", pattern: /^\+?234[789]\d{9}$/, example: "+2348012345678" },
+    { code: "ZA", name: "South Africa", flag: "🇿🇦", dial: "+27", pattern: /^\+?27[1-9]\d{8}$/, example: "+27821234567" },
+    { code: "IN", name: "India", flag: "🇮🇳", dial: "+91", pattern: /^\+?91[6-9]\d{9}$/, example: "+919876543210" },
+    { code: "AE", name: "UAE", flag: "🇦🇪", dial: "+971", pattern: /^\+?971[2-9]\d{7,8}$/, example: "+971501234567" },
+    { code: "DE", name: "Germany", flag: "🇩🇪", dial: "+49", pattern: /^\+?49[1-9]\d{9,11}$/, example: "+4915112345678" },
+    { code: "FR", name: "France", flag: "🇫🇷", dial: "+33", pattern: /^\+?33[1-9]\d{8}$/, example: "+33612345678" },
+    { code: "CA", name: "Canada", flag: "🇨🇦", dial: "+1", pattern: /^\+?1[2-9]\d{9}$/, example: "+16135551234" },
+    { code: "AU", name: "Australia", flag: "🇦🇺", dial: "+61", pattern: /^\+?61[2-9]\d{8}$/, example: "+61412345678" },
+    { code: "SA", name: "Saudi Arabia", flag: "🇸🇦", dial: "+966", pattern: /^\+?966[5]\d{8}$/, example: "+966512345678" },
+    { code: "EG", name: "Egypt", flag: "🇪🇬", dial: "+20", pattern: /^\+?20[1]\d{9}$/, example: "+201012345678" },
+    { code: "GH", name: "Ghana", flag: "🇬🇭", dial: "+233", pattern: /^\+?233[2-9]\d{8}$/, example: "+233241234567" },
+    { code: "TZ", name: "Tanzania", flag: "🇹🇿", dial: "+255", pattern: /^\+?255[6-7]\d{8}$/, example: "+255712345678" },
+    { code: "UG", name: "Uganda", flag: "🇺🇬", dial: "+256", pattern: /^\+?256[3-7]\d{8}$/, example: "+256712345678" },
+    { code: "RW", name: "Rwanda", flag: "🇷🇼", dial: "+250", pattern: /^\+?250[7]\d{8}$/, example: "+250781234567" },
+    { code: "CN", name: "China", flag: "🇨🇳", dial: "+86", pattern: /^\+?86[1]\d{10}$/, example: "+8613812345678" },
+    { code: "JP", name: "Japan", flag: "🇯🇵", dial: "+81", pattern: /^\+?81[0-9]\d{8,9}$/, example: "+819012345678" },
+    { code: "BR", name: "Brazil", flag: "🇧🇷", dial: "+55", pattern: /^\+?55[1-9]\d{9,10}$/, example: "+5511912345678" },
+    { code: "IT", name: "Italy", flag: "🇮🇹", dial: "+39", pattern: /^\+?39[0-9]\d{8,10}$/, example: "+393123456789" },
+    { code: "ES", name: "Spain", flag: "🇪🇸", dial: "+34", pattern: /^\+?34[6-9]\d{8}$/, example: "+34612345678" },
+    { code: "TR", name: "Turkey", flag: "🇹🇷", dial: "+90", pattern: /^\+?90[5]\d{9}$/, example: "+905301234567" },
+    { code: "PK", name: "Pakistan", flag: "🇵🇰", dial: "+92", pattern: /^\+?92[3]\d{9}$/, example: "+923001234567" },
+    { code: "BD", name: "Bangladesh", flag: "🇧🇩", dial: "+880", pattern: /^\+?880[1]\d{9}$/, example: "+8801712345678" },
+    { code: "MX", name: "Mexico", flag: "🇲🇽", dial: "+52", pattern: /^\+?52[1-9]\d{9}$/, example: "+525512345678" },
+    { code: "OTHER", name: "Other", flag: "🌍", dial: "", pattern: /^\+?\d{7,15}$/, example: "+1234567890" },
+];
+
+function validatePhone(phone, countryCode) {
+    const entry = COUNTRIES.find((c) => c.code === countryCode) || COUNTRIES[COUNTRIES.length - 1];
+    const cleanPhone = phone.replace(/[\s\-().]/g, "");
+    if (!cleanPhone) return "Phone number is required.";
+    if (cleanPhone.length < 7) return "Phone number must be at least 7 characters.";
+    if (!entry.pattern.test(cleanPhone)) return `Enter a valid ${entry.name} number (e.g. ${entry.example}).`;
+    return "";
+}
+
 export function SignupPage({ initialRole = "student" }) {
     const { t } = useTranslation();
     const { refreshUser } = useAuth();
@@ -156,6 +197,11 @@ export function SignupPage({ initialRole = "student" }) {
     const [feedback, setFeedback] = useState("");
     const [courses, setCourses] = useState([]);
     const [contactPhone, setContactPhone] = useState("");
+    const [country, setCountry] = useState("ET");
+    const [phoneError, setPhoneError] = useState("");
+
+    const selectedCountry = COUNTRIES.find((c) => c.code === country) || COUNTRIES[0];
+
     const [studentForm, setStudentForm] = useState({
         learningGoals: "",
         learningInterests: "",
@@ -199,6 +245,11 @@ export function SignupPage({ initialRole = "student" }) {
             setFeedback("Choose at least one course and add your preferred study times before creating your student account.");
             return;
         }
+        const phoneErr = validatePhone(contactPhone, country);
+        if (phoneErr) {
+            setFeedback(phoneErr);
+            return;
+        }
         setLoading(true);
         setFeedback("");
         try {
@@ -208,6 +259,7 @@ export function SignupPage({ initialRole = "student" }) {
                     credential,
                     role,
                     phone: contactPhone,
+                    country,
                     studentProfile: {
                         learningGoals: studentForm.learningGoals,
                         learningInterests: studentForm.learningInterests
@@ -227,7 +279,7 @@ export function SignupPage({ initialRole = "student" }) {
         } finally {
             setLoading(false);
         }
-    }, [contactPhone, navigate, refreshUser, role, studentForm]);
+    }, [contactPhone, country, navigate, refreshUser, role, studentForm]);
 
     const handleTeacherDocuments = async (event) => {
         const files = Array.from(event.target.files || []);
@@ -264,6 +316,13 @@ export function SignupPage({ initialRole = "student" }) {
             setFeedback("Upload your CV to submit a teacher application.");
             return;
         }
+        const phoneErr = validatePhone(contactPhone, country);
+        if (phoneErr) {
+            setPhoneError(phoneErr);
+            setFeedback(phoneErr);
+            return;
+        }
+        setPhoneError("");
         setLoading(true);
         setFeedback("");
         try {
@@ -275,6 +334,7 @@ export function SignupPage({ initialRole = "student" }) {
                     password,
                     role,
                     phone: contactPhone,
+                    country,
                     ...(role === "student" ? {
                         studentProfile: {
                             learningGoals: studentForm.learningGoals,
@@ -319,10 +379,10 @@ export function SignupPage({ initialRole = "student" }) {
               <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-300/10 blur-3xl"/>
               <div className="relative">
                 <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-sm text-amber-200">LH</span>
-                  LearnHUB
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-xs font-black text-amber-200">TLH</span>
+                  TedbabeLearnHUB
                 </Link>
-                <p className="mt-10 text-xs font-bold uppercase tracking-[0.2em] text-amber-200">{role === "student" ? "Your learning journey" : "Teach with LearnHUB"}</p>
+                <p className="mt-10 text-xs font-bold uppercase tracking-[0.2em] text-amber-200">{role === "student" ? "Your learning journey" : "Teach with TedbabeLearnHUB"}</p>
                 <h1 className="editorial-display mt-3 text-4xl leading-tight sm:text-5xl">
                   {role === "student" ? "Build skills for what comes next." : "Help learners move forward."}
                 </h1>
@@ -343,7 +403,7 @@ export function SignupPage({ initialRole = "student" }) {
                   ))}
                 </div>
                 <div className="mt-8 rounded-2xl border border-white/10 bg-black/10 p-4 text-xs leading-5 text-emerald-50/70">
-                  Your information is used to set up your LearnHUB account and support your learning or teaching application.
+                  Your information is used to set up your TedbabeLearnHUB account and support your learning or teaching application.
                 </div>
               </div>
             </aside>
@@ -352,7 +412,7 @@ export function SignupPage({ initialRole = "student" }) {
             <div className="mb-7">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-800">Create account</p>
               <h2 className="editorial-display mt-2 text-3xl tracking-tight text-slate-950 sm:text-4xl">Let’s get started.</h2>
-              <p className="mt-2 text-sm text-slate-500">First choose how you want to use LearnHUB, then complete your account details.</p>
+              <p className="mt-2 text-sm text-slate-500">First choose how you want to use TedbabeLearnHUB, then complete your account details.</p>
             </div>
             <Feedback>{feedback}</Feedback>
             {role === "student" ? <GoogleSignIn onCredential={continueWithGoogle} disabled={loading} /> : (
@@ -405,6 +465,40 @@ export function SignupPage({ initialRole = "student" }) {
                     {t("password")}
                     <input required minLength={8} maxLength={128} autoComplete="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass} placeholder="At least 8 characters" />
                 </label>
+                <label className="block text-xs font-bold text-slate-700 sm:col-span-2">
+                    Country <span className="text-rose-500">*</span>
+                    <select required value={country} onChange={(event) => { setCountry(event.target.value); setPhoneError(""); }} className={fieldClass}>
+                        {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>{c.flag} {c.name} {c.dial ? `(${c.dial})` : ""}</option>
+                        ))}
+                    </select>
+                </label>
+                <label className="block text-xs font-bold text-slate-700 sm:col-span-2">
+                    Phone number <span className="text-rose-500">*</span>
+                    <div className="mt-1.5 flex items-stretch rounded-xl border border-slate-200 bg-white transition focus-within:border-emerald-700 focus-within:ring-4 focus-within:ring-emerald-700/10">
+                        <span className="flex shrink-0 items-center gap-1.5 border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-600 rounded-l-xl">
+                            <span className="text-base">{selectedCountry.flag}</span> {selectedCountry.dial || "—"}
+                        </span>
+                        <input
+                            required
+                            type="tel"
+                            autoComplete="tel"
+                            minLength={7}
+                            maxLength={30}
+                            value={contactPhone}
+                            onChange={(event) => {
+                                setContactPhone(event.target.value);
+                                if (phoneError) setPhoneError("");
+                            }}
+                            onBlur={() => {
+                                if (contactPhone) setPhoneError(validatePhone(contactPhone, country));
+                            }}
+                            className="w-full rounded-r-xl px-4 py-3 text-sm font-medium outline-none"
+                            placeholder={selectedCountry.example || "Phone number"}
+                        />
+                    </div>
+                    {phoneError && <p className="mt-1.5 text-xs font-semibold text-rose-600">{phoneError}</p>}
+                </label>
                   </div>
                 </section>
                 {role === "student" ? (
@@ -447,13 +541,13 @@ export function SignupPage({ initialRole = "student" }) {
                             </label>
                             <label className="block text-xs font-bold text-slate-700">
                                 Time zone
-                                <input required value={studentForm.timeZone} onChange={(event) => setStudentForm({ ...studentForm, timeZone: event.target.value })} className={fieldClass}/>
+                                <select required value={studentForm.timeZone} onChange={(event) => setStudentForm({ ...studentForm, timeZone: event.target.value })} className={fieldClass}>
+                                    {TIME_ZONES.map((tz) => (
+                                        <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                    ))}
+                                </select>
                             </label>
                         </div>
-                        <label className="block text-xs font-bold text-slate-700">
-                            Contact phone number (optional)
-                            <input type="tel" autoComplete="tel" value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} className={fieldClass}/>
-                        </label>
                     </div>
                 ) : (
                     <div className="space-y-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/80 to-white p-4 sm:p-5">
@@ -482,12 +576,8 @@ export function SignupPage({ initialRole = "student" }) {
                             <textarea required minLength={2} maxLength={500} value={teacherForm.availability} onChange={(event) => setTeacherForm({ ...teacherForm, availability: event.target.value })} rows={2} className={fieldClass} placeholder="Days, times, and time zone"/>
                         </label>
                         <label className="block text-xs font-bold text-slate-700">
-                            Why do you want to teach with LearnHUB?
-                            <textarea required minLength={20} maxLength={1000} value={teacherForm.teachingStatement} onChange={(event) => setTeacherForm({ ...teacherForm, teachingStatement: event.target.value })} rows={3} className={fieldClass} placeholder="Describe how you support learners and what you would bring to LearnHUB."/>
-                        </label>
-                        <label className="block text-xs font-bold text-slate-700">
-                            Contact phone number
-                            <input required type="tel" autoComplete="tel" minLength={7} maxLength={30} value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} className={fieldClass}/>
+                            Why do you want to teach with TedbabeLearnHUB?
+                            <textarea required minLength={20} maxLength={1000} value={teacherForm.teachingStatement} onChange={(event) => setTeacherForm({ ...teacherForm, teachingStatement: event.target.value })} rows={3} className={fieldClass} placeholder="Describe how you support learners and what you would bring to TedbabeLearnHUB."/>
                         </label>
                         <label className="block text-xs font-bold text-slate-700">
                             CV / Resume (required, PDF, Word, or image; max 5MB)
@@ -509,7 +599,7 @@ export function SignupPage({ initialRole = "student" }) {
             <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-600">
                 Already have an account? <Link to="/sign-in" className="font-bold text-blue-600 hover:underline">Sign in</Link>
             </p>
-            <p className="mt-3 text-center text-xs text-slate-400">By continuing, you agree to LearnHUB&apos;s <Link to="/terms" className="font-semibold text-slate-600 hover:underline">Terms</Link> and <Link to="/privacy" className="font-semibold text-slate-600 hover:underline">Privacy Policy</Link>.</p>
+            <p className="mt-3 text-center text-xs text-slate-400">By continuing, you agree to TedbabeLearnHUB&apos;s <Link to="/terms" className="font-semibold text-slate-600 hover:underline">Terms</Link> and <Link to="/privacy" className="font-semibold text-slate-600 hover:underline">Privacy Policy</Link>.</p>
             </main>
           </div>
         </div>
@@ -719,7 +809,7 @@ export function ResetPasswordPage() {
     };
 
     return (
-        <AuthShell title="Set new password" subtitle="Choose a strong password for your LearnHUB account">
+        <AuthShell title="Set new password" subtitle="Choose a strong password for your TedbabeLearnHUB account">
             <Feedback>{feedback}</Feedback>
             {success ? (
                 <div className="space-y-4 text-center">

@@ -28,7 +28,7 @@ export function OfficeDocumentPreview({ resource }) {
                 }
                 const [{ OfficeParser }, response] = await Promise.all([
                     import("officeparser"),
-                    api.get(`/api/resources/${resource._id}/file`, { responseType: "arraybuffer" }),
+                    api.get(`/api/resources/${resource.storedKey}/file`, { responseType: "arraybuffer" }),
                 ]);
                 if (!active) return;
                 const file = new File(
