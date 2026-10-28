@@ -669,7 +669,13 @@ export function TeacherDashboard({ user }) {
         </div>
       ) : null}
 
-      {activeTab === "settings" ? <DashboardSettings user={user} sessions={upcomingLessons}/> : null}
+      {activeTab === "settings" ? (
+        <DashboardSettings
+          user={user}
+          sessions={upcomingLessons}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+        />
+      ) : null}
 
       {/* MODAL: Create Assignment */}
       <Modal title={t("createAssignment")} isOpen={createAssignModal} onClose={() => setCreateAssignModal(false)}>

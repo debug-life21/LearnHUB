@@ -606,7 +606,13 @@ export function StudentDashboard({ user }) {
           </div>
         </div>) : null}
 
-      {activeTab === "settings" ? <DashboardSettings user={user} sessions={upcomingLessons}/> : null}
+      {activeTab === "settings" ? (
+        <DashboardSettings
+          user={user}
+          sessions={upcomingLessons}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+        />
+      ) : null}
 
       {/* 8. CERTIFICATES */}
       {activeTab === "certificates" ? (

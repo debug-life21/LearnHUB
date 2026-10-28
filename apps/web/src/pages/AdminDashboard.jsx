@@ -1445,7 +1445,13 @@ export function AdminDashboard({ user }) {
         </div>
       ) : null}
 
-      {activeTab === "settings" ? <DashboardSettings user={user} sessions={sessions.filter((session) => session.status === "scheduled")}/> : null}
+      {activeTab === "settings" ? (
+        <DashboardSettings
+          user={user}
+          sessions={sessions.filter((session) => session.status === "scheduled")}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+        />
+      ) : null}
 
       {activeTab === "security" ? (
         <div className="max-w-xl">
