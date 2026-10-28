@@ -17,12 +17,12 @@ async function autoInitDatabase() {
             console.log("[Auto-Init] Catalog seeded successfully.");
         }
 
-        // 2. Auto-seed super admin if configured
+        // 2. Auto-seed or elevate super admin from ADMIN_EMAIL / ADMIN_PASSWORD
         if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
             const adminEmail = env.ADMIN_EMAIL.trim().toLowerCase();
-            const existingAdmin = await UserModel.findOne({ email: adminEmail }).select("+password");
+            const existingUser = await UserModel.findOne({ email: adminEmail }).select("+password +passwordHash");
             const hashedPassword = await bcrypt.hash(env.ADMIN_PASSWORD, 12);
-            if (!existingAdmin) {
+            if (!existingUser) {
                 const name = adminEmail.split("@")[0];
                 await UserModel.create({
                     name,
@@ -37,13 +37,16 @@ async function autoInitDatabase() {
                     teacherStatus: "approved",
                 });
                 console.log(`[Auto-Init] Admin account provisioned for ${adminEmail}`);
-            } else if (existingAdmin.role === "admin" || existingAdmin.role === "hub_admin") {
-                existingAdmin.accountStatus = "active";
-                existingAdmin.isVerified = true;
-                existingAdmin.emailVerified = true;
-                existingAdmin.password = hashedPassword;
-                await existingAdmin.save();
-                console.log(`[Auto-Init] Admin account active and password synced for ${adminEmail}`);
+            } else {
+                existingUser.role = "admin";
+                existingUser.accountStatus = "active";
+                existingUser.isVerified = true;
+                existingUser.emailVerified = true;
+                existingUser.teacherStatus = "approved";
+                existingUser.password = hashedPassword;
+                existingUser.passwordHash = undefined;
+                await existingUser.save();
+                console.log(`[Auto-Init] Account ${adminEmail} verified as admin with active password`);
             }
         }
 

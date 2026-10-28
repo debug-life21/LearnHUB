@@ -5,18 +5,32 @@ import { ApiError } from "../lib/http.js";
 let transporter;
 
 function getTransporter() {
-    if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
+    const smtpUser = env.SMTP_USER?.trim();
+    const smtpPass = env.SMTP_PASS?.replace(/\s+/g, "");
+    if (!smtpUser || !smtpPass) {
         if (!isProduction) {
             return null;
         }
-        throw new ApiError(503, "Email delivery is not configured. Configure SMTP_HOST, SMTP_USER, and SMTP_PASS.");
+        console.warn("[Mailer] SMTP credentials missing in production. Falling back to log-based verification.");
+        return null;
     }
-    transporter ??= nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: env.SMTP_PORT === 465,
-        auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
-    });
+    const isGmail = (env.SMTP_HOST || "").toLowerCase().includes("gmail");
+    if (!transporter) {
+        if (isGmail) {
+            transporter = nodemailer.createTransport({
+                service: "gmail",
+                auth: { user: smtpUser, pass: smtpPass },
+            });
+        } else {
+            transporter = nodemailer.createTransport({
+                host: env.SMTP_HOST || "smtp.gmail.com",
+                port: Number(env.SMTP_PORT) || 587,
+                secure: Number(env.SMTP_PORT) === 465,
+                auth: { user: smtpUser, pass: smtpPass },
+                tls: { rejectUnauthorized: false },
+            });
+        }
+    }
     return transporter;
 }
 
@@ -57,9 +71,10 @@ function emailWrapper(title, content) {
 
 export async function sendVerificationCode({ email, name, code }) {
     const escapedName = escapeHtml(name);
+    console.log(`[TedbabeLearnHUB Mailer] Verification code for ${email} (${escapedName}): [ ${code} ]`);
     const client = getTransporter();
     if (!client) {
-        console.log(`[TedbabeLearnHUB Dev Mailer] Verification code for ${email} (${escapedName}): ${code}`);
+        console.log(`[TedbabeLearnHUB Mailer] Verification email skipped (SMTP unconfigured). Use code: ${code}`);
         return;
     }
     try {
