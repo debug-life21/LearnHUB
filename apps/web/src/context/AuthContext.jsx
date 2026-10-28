@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { apiRequest } from "../lib/api";
+import { apiRequest, clearAuthToken } from "../lib/api";
 const AuthContext = createContext(undefined);
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -23,10 +23,16 @@ export function AuthProvider({ children }) {
         });
     }, []);
     async function logout() {
-        await apiRequest("/api/auth/logout", {
-            method: "POST",
-        });
-        setUser(null);
+        try {
+            await apiRequest("/api/auth/logout", {
+                method: "POST",
+            });
+        } catch {
+            // ignore logout error
+        } finally {
+            clearAuthToken();
+            setUser(null);
+        }
     }
     useEffect(() => {
         void refreshUser();

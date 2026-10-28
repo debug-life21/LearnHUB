@@ -1,3 +1,4 @@
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -13,12 +14,35 @@ import { publicRouter } from "./routes/publicRoutes.js";
 import { studentRouter } from "./routes/studentRoutes.js";
 import { teacherRouter } from "./routes/teacherRoutes.js";
 import { resourceRouter } from "./routes/resourceRoutes.js";
+
 export const app = express();
-app.use(helmet());
+
+// Trust reverse proxy for accurate client IP identification on Render, Vercel, Cloudflare
+app.set("trust proxy", 1);
+
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+app.use(compression());
+
+const rawOrigins = [
+    env.CLIENT_URL,
+    env.ADMIN_CLIENT_URL,
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+];
+const allowedOrigins = new Set(
+    rawOrigins
+        .flatMap((item) => (item ? item.split(",") : []))
+        .map((url) => url.trim().replace(/\/+$/, ""))
+        .filter(Boolean),
+);
+
 app.use(cors({
     origin(origin, callback) {
-        const allowedOrigins = [env.CLIENT_URL, env.ADMIN_CLIENT_URL];
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.has(origin.replace(/\/+$/, ""))) {
             callback(null, true);
             return;
         }

@@ -7,9 +7,56 @@ export const api = axios.create({
     headers: { "Content-Type": "application/json" },
 });
 
+const TOKEN_KEY = "learnhub_token";
+
+export function getAuthToken() {
+    try {
+        return localStorage.getItem(TOKEN_KEY);
+    } catch {
+        return null;
+    }
+}
+
+export function setAuthToken(token) {
+    try {
+        if (token) {
+            localStorage.setItem(TOKEN_KEY, token);
+        } else {
+            localStorage.removeItem(TOKEN_KEY);
+        }
+    } catch {
+        // localStorage not available
+    }
+}
+
+export function clearAuthToken() {
+    try {
+        localStorage.removeItem(TOKEN_KEY);
+    } catch {
+        // localStorage not available
+    }
+}
+
+api.interceptors.request.use((config) => {
+    const token = getAuthToken();
+    if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        if (response.data && typeof response.data === "object" && response.data.token) {
+            setAuthToken(response.data.token);
+        }
+        return response;
+    },
     (error) => {
+        if (error.response?.status === 401) {
+            // If session expired or invalid, clear stored token
+            clearAuthToken();
+        }
         const message = error.response?.data?.message
             || (typeof error.response?.data === "string" && error.response.data.trim() ? error.response.data.trim() : "")
             || error.message
