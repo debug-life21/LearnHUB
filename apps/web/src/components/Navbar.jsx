@@ -13,10 +13,10 @@ const navigationItems = [
 ];
 
 function navLinkClass({ isActive }) {
-    return `rounded-xl px-3 py-2 text-[13px] font-semibold transition-all whitespace-nowrap ${
+    return `rounded-xl px-4 py-2.5 text-sm sm:text-[15px] font-bold transition-all whitespace-nowrap tracking-wide ${
         isActive
-            ? "bg-white text-emerald-950 shadow-sm ring-1 ring-emerald-900/5"
-            : "text-slate-600 hover:bg-white/70 hover:text-slate-950"
+            ? "bg-white text-emerald-950 shadow-md ring-1 ring-emerald-900/10 font-extrabold"
+            : "text-slate-700 hover:bg-white/80 hover:text-slate-950"
     }`;
 }
 
@@ -33,8 +33,8 @@ function NavigationLinks({ onNavigate, mobile = false }) {
                 end={end}
                 onClick={onNavigate}
                 className={({ isActive }) => mobile
-                    ? `flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
-                        isActive ? "bg-emerald-50 text-emerald-900" : "text-slate-700 hover:bg-slate-50"
+                    ? `flex items-center justify-between rounded-xl px-4 py-3.5 text-base font-bold transition-colors ${
+                        isActive ? "bg-emerald-50 text-emerald-900 font-extrabold" : "text-slate-700 hover:bg-slate-50"
                     }`
                     : navLinkClass({ isActive })}
             >
@@ -91,28 +91,28 @@ export function Navbar() {
             : "Student";
     return (
         <header className="editorial-nav sticky top-0 z-40 border-b border-emerald-950/10 bg-[#fffdf8]/95 shadow-[0_8px_30px_rgba(27,43,33,0.07)] backdrop-blur-xl">
-            <div className="mx-auto flex min-h-[4.5rem] max-w-[88rem] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+            <div className="mx-auto flex min-h-[5.25rem] sm:min-h-[5.75rem] max-w-[90rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
                 <Link
                     to="/"
-                    className="nav-brand shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700"
+                    className="nav-brand shrink-0 rounded-xl transition-transform hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700"
                     aria-label="TedbabeLearnHUB home"
                 >
                     <BrandLogo />
                 </Link>
 
-                <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-2xl border border-slate-200/70 bg-slate-100/80 p-1 lg:flex">
+                <nav aria-label="Main navigation" className="hidden items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1.5 lg:flex shadow-inner">
                     <NavigationLinks />
                 </nav>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2.5">
                     {user ? (
-                        <div className="hidden items-center gap-2 lg:flex">
+                        <div className="hidden items-center gap-2.5 lg:flex">
                             <Link
                                 to="/dashboard"
-                                className="inline-flex items-center gap-2 rounded-xl bg-[#25362d] px-3.5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                                className="inline-flex items-center gap-2.5 rounded-xl bg-[#25362d] px-4 py-2.5 text-sm sm:text-[15px] font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
-                                <span className="max-w-32 truncate">{user.fullName || t("dashboard")}</span>
-                                <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-100">
+                                <span className="max-w-36 truncate">{user.fullName || t("dashboard")}</span>
+                                <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-blue-100">
                                     {roleLabel}
                                 </span>
                             </Link>
@@ -130,16 +130,16 @@ export function Navbar() {
                             </button>
                         </div>
                     ) : (
-                        <div className="hidden items-center gap-1.5 lg:flex">
+                        <div className="hidden items-center gap-2 lg:flex">
                             <Link
                                 to="/sign-in"
-                                className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                                className="rounded-xl px-4 py-2.5 text-sm sm:text-[15px] font-bold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950"
                             >
                                 {t("signIn")}
                             </Link>
                             <Link
                                 to="/register/student"
-                                className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white shadow-[0_5px_14px_rgba(6,78,59,0.2)] transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                                className="rounded-xl bg-emerald-800 px-5 py-2.5 text-sm sm:text-[15px] font-extrabold text-white shadow-[0_5px_14px_rgba(6,78,59,0.25)] transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
                                 {t("studentSignUp")}
                             </Link>
@@ -149,7 +149,7 @@ export function Navbar() {
                     <button
                         onClick={() => setMobileMenuState({ pathname: location.pathname, open: !mobileMenuOpen })}
                         type="button"
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 lg:hidden"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 lg:hidden"
                         aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
                         aria-expanded={mobileMenuOpen}
                         aria-controls="mobile-navigation"
@@ -194,7 +194,7 @@ export function Navbar() {
                                 <Link
                                     to="/dashboard"
                                     onClick={closeMobileMenu}
-                                    className="rounded-xl bg-[#25362d] px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-emerald-900"
+                                    className="rounded-xl bg-[#25362d] px-4 py-3 text-center text-base font-bold text-white hover:bg-emerald-900 shadow-sm"
                                 >
                                     {t("dashboard")}
                                 </Link>
@@ -202,7 +202,7 @@ export function Navbar() {
                                     onClick={handleLogout}
                                     type="button"
                                     disabled={loggingOut}
-                                    className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-700 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-wait disabled:opacity-60"
+                                    className="rounded-xl border border-slate-200 px-4 py-3 text-center text-base font-bold text-slate-700 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-wait disabled:opacity-60"
                                 >
                                     {loggingOut ? t("loading") : t("signOut")}
                                 </button>
@@ -213,14 +213,14 @@ export function Navbar() {
                             <Link
                                 to="/sign-in"
                                 onClick={closeMobileMenu}
-                                className="rounded-xl border border-slate-200 px-3 py-2.5 text-center text-sm font-bold text-slate-700 hover:bg-slate-50"
+                                className="rounded-xl border border-slate-200 px-4 py-3 text-center text-base font-bold text-slate-700 hover:bg-slate-50 shadow-sm"
                             >
                                 {t("signIn")}
                             </Link>
                             <Link
                                 to="/register/student"
                                 onClick={closeMobileMenu}
-                                className="rounded-xl bg-emerald-800 px-3 py-2.5 text-center text-sm font-bold text-white hover:bg-emerald-900"
+                                className="rounded-xl bg-emerald-800 px-4 py-3 text-center text-base font-bold text-white hover:bg-emerald-900 shadow-md shadow-emerald-900/20"
                             >
                                 {t("studentSignUp")}
                             </Link>
