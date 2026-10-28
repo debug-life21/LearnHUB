@@ -17,12 +17,20 @@ async function autoInitDatabase() {
             console.log("[Auto-Init] Catalog seeded successfully.");
         }
 
-        // 2. Auto-seed or elevate super admin from ADMIN_EMAIL / ADMIN_PASSWORD
+        // 2. Security: Purge any pre-existing / Google-linked account under ADMIN_EMAIL and provision fresh dedicated Admin
         if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
             const adminEmail = env.ADMIN_EMAIL.trim().toLowerCase();
             const existingUser = await UserModel.findOne({ email: adminEmail }).select("+password +passwordHash");
             const hashedPassword = await bcrypt.hash(env.ADMIN_PASSWORD, 12);
-            if (!existingUser) {
+
+            // If the account was previously registered via Google or as a student, delete it completely for security
+            if (existingUser && (existingUser.role !== "admin" || existingUser.googleId || existingUser.authProvider !== "local")) {
+                console.log(`[Security Reset] Purging stale/compromised account for ${adminEmail} (role was: ${existingUser.role}, auth: ${existingUser.authProvider})...`);
+                await UserModel.deleteMany({ email: adminEmail });
+            }
+
+            const currentAdmin = await UserModel.findOne({ email: adminEmail });
+            if (!currentAdmin) {
                 const name = adminEmail.split("@")[0];
                 await UserModel.create({
                     name,
@@ -36,17 +44,19 @@ async function autoInitDatabase() {
                     accountStatus: "active",
                     teacherStatus: "approved",
                 });
-                console.log(`[Auto-Init] Admin account provisioned for ${adminEmail}`);
+                console.log(`[Security Reset] Fresh dedicated Administrator provisioned for ${adminEmail}`);
             } else {
-                existingUser.role = "admin";
-                existingUser.accountStatus = "active";
-                existingUser.isVerified = true;
-                existingUser.emailVerified = true;
-                existingUser.teacherStatus = "approved";
-                existingUser.password = hashedPassword;
-                existingUser.passwordHash = undefined;
-                await existingUser.save();
-                console.log(`[Auto-Init] Account ${adminEmail} verified as admin with active password`);
+                currentAdmin.role = "admin";
+                currentAdmin.authProvider = "local";
+                currentAdmin.googleId = undefined; // Disallow any Google OAuth takeover
+                currentAdmin.accountStatus = "active";
+                currentAdmin.isVerified = true;
+                currentAdmin.emailVerified = true;
+                currentAdmin.teacherStatus = "approved";
+                currentAdmin.password = hashedPassword;
+                currentAdmin.passwordHash = undefined;
+                await currentAdmin.save();
+                console.log(`[Security Reset] Clean dedicated admin credentials verified for ${adminEmail}`);
             }
         }
 
