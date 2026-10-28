@@ -250,17 +250,8 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 2. Platform Real-Time Statistics */}
-      {data?.stats ? (<section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-16 relative z-20">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <MetricCard label={t("students")} value={data.stats.activeStudents} subtext="Learners building new skills" icon="🎓"/>
-            <MetricCard label={t("teachers")} value={data.stats.activeTeachers} subtext="Instructors guiding learners" icon="👨‍🏫"/>
-            <MetricCard label={t("classes")} value={data.stats.activeClasses} subtext="Learning together in cohorts" icon="📚"/>
-          </div>
-        </section>) : null}
-
-      {/* 3. Modern Bento Grid: Architectural Pillars */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* 2. Modern Bento Grid: Architectural Pillars */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
         <SectionHeading badge="THE TEDBABELEARNHUB (TLH) DIFFERENCE" title="A more human way to build real-world skills" subtitle="TedbabeLearnHUB (TLH) combines expert instruction, hands-on practice, and steady support to help you keep moving forward." centered/>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -715,7 +706,78 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 8. Modern Call-to-Action Banner */}
+      {/* 8. Standalone Community & Impact Statistics Section */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/70 to-slate-100/50 p-8 sm:p-12 shadow-sm ring-1 ring-slate-200/60">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-200 shadow-sm">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              OUR GROWING COMMUNITY
+            </span>
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+              Proven Learning Milestones
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
+              Real engagement, expert mentorship, and supportive cohort-based environments driving measurable growth.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            {/* Active Learners */}
+            <div className="group relative overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-7 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:border-blue-400">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400" />
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl shadow-inner border border-blue-100">
+                🎓
+              </div>
+              <div className="mt-5 font-mono text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">
+                200+
+              </div>
+              <h3 className="mt-2 text-base font-bold text-slate-900">
+                Active Learners
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                Students actively acquiring modern digital & technical capabilities.
+              </p>
+            </div>
+
+            {/* Instructors */}
+            <div className="group relative overflow-hidden rounded-2xl border border-teal-200/80 bg-white p-7 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:border-teal-400">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-400" />
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-2xl shadow-inner border border-teal-100">
+                👨‍🏫
+              </div>
+              <div className="mt-5 font-mono text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">
+                50+
+              </div>
+              <h3 className="mt-2 text-base font-bold text-slate-900">
+                Instructors
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                Industry veterans, certified mentors, and passionate subject educators.
+              </p>
+            </div>
+
+            {/* Cohorts */}
+            <div className="group relative overflow-hidden rounded-2xl border border-indigo-200/80 bg-white p-7 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-lg hover:border-indigo-400">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-400" />
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-2xl shadow-inner border border-indigo-100">
+                📚
+              </div>
+              <div className="mt-5 font-mono text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">
+                20+
+              </div>
+              <h3 className="mt-2 text-base font-bold text-slate-900">
+                Cohorts
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                Interactive live classroom groups learning and practicing together.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 9. Modern Call-to-Action Banner */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-3xl bg-slate-950 px-8 py-16 sm:px-16 text-center text-white ring-1 ring-white/10 shadow-2xl">
           <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-600/30 blur-3xl pointer-events-none"></div>
