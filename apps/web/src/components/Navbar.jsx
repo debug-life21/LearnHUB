@@ -4,6 +4,32 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { BrandLogo } from "./BrandLogo";
 
+function LanguageToggle({ compact = false }) {
+    const { i18n } = useTranslation();
+    const isAmharic = i18n.language === "am";
+
+    const toggle = () => {
+        const next = isAmharic ? "en" : "am";
+        i18n.changeLanguage(next);
+        localStorage.setItem("i18nextLng", next);
+    };
+
+    return (
+        <button
+            type="button"
+            onClick={toggle}
+            title={isAmharic ? "Switch to English" : "ወደ አማርኛ ቀይር"}
+            aria-label={isAmharic ? "Switch to English" : "Switch to Amharic"}
+            className={`flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white font-bold text-slate-700 shadow-sm transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${
+                compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-[13px]"
+            }`}
+        >
+            <span className="text-base leading-none" aria-hidden="true">{isAmharic ? "🇺🇸" : "🇪🇹"}</span>
+            <span>{isAmharic ? "EN" : "አማ"}</span>
+        </button>
+    );
+}
+
 const navigationItems = [
     { to: "/courses", label: "Courses", i18nKey: "courses" },
     { to: "/how-it-works", label: "How it works", i18nKey: "navHowItWorks" },
@@ -46,7 +72,7 @@ function NavigationLinks({ onNavigate, mobile = false }) {
 }
 
 export function Navbar() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -146,6 +172,9 @@ export function Navbar() {
                         </div>
                     )}
 
+                    {/* Desktop Language Toggle */}
+                    <LanguageToggle />
+
                     <button
                         onClick={() => setMobileMenuState({ pathname: location.pathname, open: !mobileMenuOpen })}
                         type="button"
@@ -226,6 +255,15 @@ export function Navbar() {
                             </Link>
                         </div>
                     )}
+                    {/* Mobile Language Toggle */}
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-semibold text-slate-500">
+                                {i18n.language === "am" ? "ቋንቋ" : "Language"}
+                            </span>
+                            <LanguageToggle compact />
+                        </div>
+                    </div>
                 </div>
             )}
         </header>

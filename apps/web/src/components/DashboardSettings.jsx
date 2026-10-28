@@ -10,7 +10,7 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
     const { refreshUser, logout } = useAuth();
 
     // ─── 1. Language & Locale ──────────────────────────────────────────────
-    const [language, setLanguage] = useState(user.languagePreference || i18n.language || "am");
+    const [language, setLanguage] = useState(user.languagePreference || localStorage.getItem("i18nextLng") || i18n.language || "en");
     const [timeZone, setTimeZone] = useState(
         localStorage.getItem("learnhub_timezone") ||
         Intl.DateTimeFormat().resolvedOptions().timeZone ||
