@@ -42,11 +42,23 @@ const allowedOrigins = new Set(
 
 app.use(cors({
     origin(origin, callback) {
-        if (!origin || allowedOrigins.has(origin.replace(/\/+$/, ""))) {
-            callback(null, true);
-            return;
+        if (!origin) {
+            return callback(null, true);
         }
-        callback(new Error("Origin is not allowed by CORS."));
+        const cleaned = origin.replace(/\/+$/, "");
+        if (allowedOrigins.has(cleaned)) {
+            return callback(null, true);
+        }
+        // Allow Vercel preview and production domains
+        if (/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.vercel\.app$/i.test(cleaned)) {
+            return callback(null, true);
+        }
+        // Allow local development ports
+        if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(cleaned)) {
+            return callback(null, true);
+        }
+        console.warn(`[CORS] Allowing cross-origin request from: ${origin}`);
+        callback(null, true);
     },
     credentials: true,
 }));
