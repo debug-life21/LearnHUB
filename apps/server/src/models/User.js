@@ -8,7 +8,7 @@ const studentProfileSchema = new Schema({
     preferredCourseIds: [{ type: Schema.Types.ObjectId, ref: "Course" }],
     weeklyStudyHours: { type: Number, default: 0 },
     timeZone: { type: String, default: "Africa/Addis_Ababa" },
-    preferredLanguage: { type: String, default: "am" },
+    preferredLanguage: { type: String, default: "en" },
     placementStatus: {
         type: String,
         enum: ["pending", "assigned"],
@@ -50,7 +50,7 @@ const userSchema = new Schema({
     bio: { type: String, default: "" },
     phone: { type: String, default: "" },
     country: { type: String, default: "" },
-    languagePreference: { type: String, enum: ["am", "en"], default: "am" },
+    languagePreference: { type: String, enum: ["am", "en"], default: "en" },
     accountStatus: {
         type: String,
         enum: ["pending_approval", "active", "suspended"],

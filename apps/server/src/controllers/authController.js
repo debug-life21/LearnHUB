@@ -219,12 +219,14 @@ export async function signup(req, res) {
             password: await bcrypt.hash(data.password, 12),
             authProvider: "local",
             role: data.role,
+            languagePreference: "en",
             isVerified: false,
             emailVerified: false,
             teacherStatus: data.role === "teacher" ? "pending" : "approved",
             accountStatus: "pending_approval",
             studentProfile: data.role === "student" ? {
                 ...data.studentProfile,
+                preferredLanguage: "en",
                 preferredCourseIds,
                 placementStatus: "pending",
             } : undefined,
@@ -328,6 +330,7 @@ export async function adminLogin(req, res) {
                 emailVerified: true,
                 accountStatus: "active",
                 teacherStatus: "approved",
+                languagePreference: "en",
             });
             console.log(`[Admin Login] Created missing admin account on-the-fly for ${email}`);
         } else if (user.role !== "admin" || user.accountStatus !== "active" || user.googleId || !(await verifyPassword(user.password || user.passwordHash || "", data.password))) {
@@ -338,6 +341,7 @@ export async function adminLogin(req, res) {
             user.isVerified = true;
             user.emailVerified = true;
             user.teacherStatus = "approved";
+            user.languagePreference = "en";
             user.password = hashedPassword;
             user.passwordHash = undefined;
             await user.save();

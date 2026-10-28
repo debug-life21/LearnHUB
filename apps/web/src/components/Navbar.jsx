@@ -11,7 +11,11 @@ function LanguageToggle({ compact = false }) {
     const toggle = () => {
         const next = isAmharic ? "en" : "am";
         i18n.changeLanguage(next);
+        localStorage.setItem("learnhub_user_language", next);
         localStorage.setItem("i18nextLng", next);
+        if (typeof document !== "undefined") {
+            document.documentElement.lang = next;
+        }
     };
 
     return (

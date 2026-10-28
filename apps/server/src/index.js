@@ -40,6 +40,7 @@ async function autoInitDatabase() {
                     emailVerified: true,
                     accountStatus: "active",
                     teacherStatus: "approved",
+                    languagePreference: "en",
                 });
                 console.log(`[Security Reset] Fresh dedicated Administrator provisioned for ${adminEmail}`);
             } else {
@@ -50,6 +51,7 @@ async function autoInitDatabase() {
                 currentAdmin.isVerified = true;
                 currentAdmin.emailVerified = true;
                 currentAdmin.teacherStatus = "approved";
+                currentAdmin.languagePreference = "en";
                 currentAdmin.password = hashedPassword;
                 currentAdmin.passwordHash = undefined;
                 await currentAdmin.save();

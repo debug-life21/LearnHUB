@@ -325,7 +325,7 @@ studentRouter.patch("/profile", asyncHandler(async (req, res) => {
             learningGoals: "",
             currentSkillLevel: "",
             preferredSchedule: "",
-            preferredLanguage: "am",
+            preferredLanguage: "en",
             placementStatus: "pending",
         };
     }

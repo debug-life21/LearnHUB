@@ -75,7 +75,11 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
                 body: JSON.stringify({ languagePreference: newLang }),
             });
             await i18n.changeLanguage(newLang);
+            localStorage.setItem("learnhub_user_language", newLang);
             localStorage.setItem("i18nextLng", newLang);
+            if (typeof document !== "undefined") {
+                document.documentElement.lang = newLang;
+            }
             await refreshUser();
             setLangFeedback(newLang === "am" ? "ቋንቋው በተሳካ ሁኔታ ተቀምጧል!" : "Language updated successfully!");
             onSaved?.();

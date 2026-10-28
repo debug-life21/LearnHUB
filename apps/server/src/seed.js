@@ -62,7 +62,7 @@ async function seed() {
             email: "teacher@learnhub.et",
             passwordHash: defaultPasswordHash,
             role: "teacher",
-            languagePreference: "am",
+            languagePreference: "en",
             accountStatus: "active",
             emailVerified: true,
             teacherProfile: {

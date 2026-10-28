@@ -302,7 +302,19 @@ i18n.use(initReactI18next).init({
             },
         },
     },
-    lng: localStorage.getItem("i18nextLng") || "en",
+    lng: (function () {
+        if (typeof window === "undefined") return "en";
+        try {
+            const userChoice = localStorage.getItem("learnhub_user_language");
+            if (userChoice === "am" || userChoice === "en") {
+                return userChoice;
+            }
+            localStorage.setItem("i18nextLng", "en");
+            return "en";
+        } catch {
+            return "en";
+        }
+    })(),
     fallbackLng: "en",
     interpolation: { escapeValue: false },
 });
