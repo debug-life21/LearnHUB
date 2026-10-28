@@ -8,6 +8,99 @@ import { formatSessionTime } from "../lib/sessionTime";
 import { OfficeDocumentPreview } from "../components/OfficeDocumentPreview";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 
+export function getYouTubeVideoId(url) {
+    if (!url) return null;
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname.includes("youtu.be")) {
+            return parsed.pathname.slice(1).split(/[?#]/)[0];
+        }
+        if (parsed.pathname.includes("/embed/")) {
+            return parsed.pathname.split("/embed/")[1]?.split(/[?#]/)[0];
+        }
+        if (parsed.pathname.includes("/shorts/")) {
+            return parsed.pathname.split("/shorts/")[1]?.split(/[?#]/)[0];
+        }
+        return parsed.searchParams.get("v");
+    } catch {
+        const match = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([A-Za-z0-9_-]{11})/);
+        return match ? match[1] : null;
+    }
+}
+
+function VideoThumbnail({ resource, lesson, className = "", aspect = "aspect-video" }) {
+    const [imgFailed, setImgFailed] = useState(false);
+    const ytUrl = resource?.sourceUrl || resource?.externalUrl || lesson?.videoUrl;
+    const isYouTube = resource?.sourceType === "youtube" || (ytUrl && (ytUrl.includes("youtube.com") || ytUrl.includes("youtu.be")));
+    const ytId = isYouTube ? getYouTubeVideoId(ytUrl) : null;
+    const directVideoUrl = resource?.storedKey
+        ? `${API_BASE_URL}/api/resources/${resource.storedKey}/file`
+        : lesson?.videoUrl && !isYouTube
+            ? lesson.videoUrl
+            : null;
+
+    if (ytId && !imgFailed) {
+        return (
+            <div className={`relative overflow-hidden rounded-xl bg-slate-900 ${aspect} ${className}`}>
+                <img
+                    src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+                    alt={resource?.title || lesson?.title || "Video thumbnail"}
+                    onError={() => setImgFailed(true)}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-center justify-center">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-600/90 text-white shadow-md transition group-hover:scale-110">
+                        <svg className="h-3 w-3 fill-current ml-0.5" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </span>
+                </div>
+                <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[8px] font-bold text-white tracking-wider">
+                    YouTube
+                </span>
+            </div>
+        );
+    }
+
+    if (directVideoUrl) {
+        return (
+            <div className={`relative overflow-hidden rounded-xl bg-slate-950 ${aspect} ${className}`}>
+                <video
+                    src={`${directVideoUrl}#t=1`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-center justify-center">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-700/90 text-white shadow-md transition group-hover:scale-110">
+                        <svg className="h-3 w-3 fill-current ml-0.5" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </span>
+                </div>
+                <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[8px] font-bold text-emerald-300">
+                    VIDEO
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`relative flex items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-white ${aspect} ${className}`}>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-emerald-400">
+                <svg className="h-3 w-3 fill-current ml-0.5" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                </svg>
+            </span>
+            <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[8px] font-bold text-slate-300">
+                VIDEO
+            </span>
+        </div>
+    );
+}
+
 const isVideoResource = (resource) => (
     resource.sourceType === "youtube" ||
     resource.category === "video" ||
@@ -452,26 +545,52 @@ export function LearningWorkspace() {
                         {/* Lessons Syllabus Sidebar */}
                         <div className="space-y-4">
                             {videoResources.length > 0 && (
-                                <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
-                                    <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 mb-4">
-                                        Interactive Videos ({videoResources.length})
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {videoResources.map((resource) => (
-                                            <button
-                                                key={resource._id}
-                                                type="button"
-                                                onClick={() => setSelectedVideoResource(resource)}
-                                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs transition ${
-                                                    selectedVideoResource?._id === resource._id
-                                                        ? "bg-emerald-800 text-white font-bold"
-                                                        : "bg-stone-50 text-stone-700 hover:bg-stone-100"
-                                                }`}
-                                            >
-                                                <span aria-hidden="true">▶</span>
-                                                <span className="line-clamp-2">{resource.title}</span>
-                                            </button>
-                                        ))}
+                                <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-xs font-black uppercase tracking-wider text-stone-500">
+                                            Interactive Videos ({videoResources.length})
+                                        </h3>
+                                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                                            Lessons
+                                        </span>
+                                    </div>
+                                    <div className="space-y-2.5 max-h-[30rem] overflow-y-auto pr-1">
+                                        {videoResources.map((resource) => {
+                                            const isSelected = selectedVideoResource?._id === resource._id;
+                                            return (
+                                                <button
+                                                    key={resource._id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedVideoResource(resource);
+                                                        setCurrentLesson(null);
+                                                    }}
+                                                    className={`group flex w-full items-center gap-3 rounded-2xl p-2 text-left transition-all ${
+                                                        isSelected
+                                                            ? "bg-emerald-800 text-white shadow-md ring-2 ring-emerald-700/40"
+                                                            : "bg-stone-50 text-stone-800 hover:bg-stone-100"
+                                                    }`}
+                                                >
+                                                    <div className="w-24 shrink-0 sm:w-28">
+                                                        <VideoThumbnail resource={resource} aspect="aspect-video" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className={`line-clamp-2 text-xs font-bold ${isSelected ? "text-white" : "text-stone-900 group-hover:text-emerald-950"}`}>
+                                                            {resource.title}
+                                                        </p>
+                                                        <p className={`mt-1 text-[10px] ${isSelected ? "text-emerald-200" : "text-stone-500"}`}>
+                                                            {resource.sourceType === "youtube" ? "YouTube Stream" : "Uploaded Lesson"}
+                                                        </p>
+                                                        {isSelected && (
+                                                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300">
+                                                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                                Now Playing
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -486,7 +605,7 @@ export function LearningWorkspace() {
                                                 <div className="text-xs font-bold text-stone-800 uppercase tracking-wider">
                                                     {mod.title}
                                                 </div>
-                                                <div className="space-y-1">
+                                                <div className="space-y-1.5">
                                                     {mod.lessons.map((les, lIdx) => {
                                                         const isSelected = currentLesson?.title === les.title;
                                                         return (
@@ -497,16 +616,27 @@ export function LearningWorkspace() {
                                                                     setCurrentLesson(les);
                                                                     setSelectedVideoResource(null);
                                                                 }}
-                                                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition ${
+                                                                className={`group flex w-full items-center gap-3 rounded-2xl p-2 text-left text-xs transition ${
                                                                     isSelected
                                                                         ? "bg-emerald-800 text-white font-bold"
                                                                         : "bg-stone-50 text-stone-700 hover:bg-stone-100"
                                                                 }`}
                                                             >
-                                                                <span className="line-clamp-1">{les.title}</span>
-                                                                <span className="text-[10px] opacity-75 font-mono">
-                                                                    {les.durationMinutes}m
-                                                                </span>
+                                                                {les.videoUrl ? (
+                                                                    <div className="w-16 shrink-0">
+                                                                        <VideoThumbnail lesson={les} aspect="aspect-video" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/60 text-xs text-stone-500 shadow-2xs">
+                                                                        📄
+                                                                    </span>
+                                                                )}
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="line-clamp-1">{les.title}</p>
+                                                                    <span className={`text-[10px] font-mono ${isSelected ? "text-emerald-200" : "text-stone-400"}`}>
+                                                                        {les.durationMinutes}m
+                                                                    </span>
+                                                                </div>
                                                             </button>
                                                         );
                                                     })}
@@ -630,9 +760,7 @@ export function LearningWorkspace() {
                                 const isSelected = isVideo
                                     ? selectedVideoResource?._id === res._id
                                     : selectedDoc?._id === res._id;
-                                const fileIcon = res.sourceType === "youtube" ? "🎬"
-                                    : res.sourceType === "google_drive" ? "☁️"
-                                    : isVideo ? "📹"
+                                const fileIcon = res.sourceType === "google_drive" ? "☁️"
                                     : res.mimeType?.includes("pdf") ? "📕"
                                     : res.mimeType?.includes("image") ? "🖼️"
                                     : res.mimeType?.includes("spreadsheet") || res.category === "spreadsheet" ? "📊"
@@ -650,15 +778,23 @@ export function LearningWorkspace() {
                                                 setActiveTab("documents");
                                             }
                                         }}
-                                        className={`flex w-full items-start gap-3 rounded-2xl p-3 text-left transition ${
+                                        className={`group flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition ${
                                             isSelected
-                                                ? "bg-emerald-50 ring-1 ring-emerald-300"
+                                                ? "bg-emerald-50 ring-2 ring-emerald-400"
                                                 : "bg-stone-50 hover:bg-stone-100"
                                         }`}
                                     >
-                                        <span className="text-lg shrink-0">{fileIcon}</span>
+                                        {isVideo ? (
+                                            <div className="w-20 sm:w-24 shrink-0">
+                                                <VideoThumbnail resource={res} aspect="aspect-video" />
+                                            </div>
+                                        ) : (
+                                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg shadow-xs ring-1 ring-stone-200">
+                                                {fileIcon}
+                                            </span>
+                                        )}
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-bold text-stone-900 line-clamp-1">{res.title}</p>
+                                            <p className="text-xs font-bold text-stone-900 line-clamp-1 group-hover:text-emerald-950">{res.title}</p>
                                             <p className="text-[10px] text-stone-500">
                                                 {res.sourceType === "youtube" ? "YouTube video"
                                                     : res.sourceType === "google_drive" ? `Google Drive · ${res.category}`
@@ -666,7 +802,11 @@ export function LearningWorkspace() {
                                                     : res.category}
                                             </p>
                                         </div>
-                                        {isVideo && <span className="shrink-0 text-[9px] font-black uppercase tracking-wider rounded-md bg-emerald-100 text-emerald-800 px-1.5 py-0.5">Video</span>}
+                                        {isVideo && (
+                                            <span className="shrink-0 text-[9px] font-black uppercase tracking-wider rounded-md bg-emerald-100 text-emerald-800 px-1.5 py-0.5">
+                                                Watch
+                                            </span>
+                                        )}
                                     </button>
                                 );
                             })}
