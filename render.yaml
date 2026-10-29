@@ -30,6 +30,6 @@ services:
       - key: SMTP_PORT
         value: 465
       - key: SMTP_USER
-        sync: false
+        value: debuglife1221@gmail.com
       - key: SMTP_PASS
-        sync: false
+        value: iobnqacmewazsrzk

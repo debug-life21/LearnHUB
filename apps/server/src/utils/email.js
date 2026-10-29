@@ -5,8 +5,8 @@ import { ApiError } from "../lib/http.js";
 let transporter;
 
 function getTransporter() {
-    const smtpUser = env.SMTP_USER?.trim();
-    const smtpPass = env.SMTP_PASS?.replace(/\s+/g, "");
+    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
+    const smtpPass = (env.SMTP_PASS?.trim() || "iobnqacmewazsrzk").replace(/\s+/g, "");
     if (!smtpUser || !smtpPass) {
         if (!isProduction) {
             return null;
@@ -18,7 +18,7 @@ function getTransporter() {
         const isGmail = (env.SMTP_HOST || "").toLowerCase().includes("gmail") || smtpUser.endsWith("@gmail.com");
         transporter = nodemailer.createTransport({
             host: isGmail ? "smtp.gmail.com" : (env.SMTP_HOST || "smtp.gmail.com"),
-            port: isGmail ? 465 : (Number(env.SMTP_PORT) || 587),
+            port: isGmail ? 465 : (Number(env.SMTP_PORT) || 465),
             secure: isGmail ? true : (Number(env.SMTP_PORT) === 465),
             family: 4, // CRITICAL: Forces IPv4 to bypass 30-40s system IPv6 DNS timeout
             pool: true, // Keeps connection pool alive for instant subsequent sends
@@ -96,6 +96,7 @@ export async function sendVerificationCode({ email, name, code }) {
         });
         console.log(`[TedbabeLearnHUB Mailer] Verification email successfully delivered to ${email}`);
     } catch (error) {
+        transporter = null;
         console.error("[TedbabeLearnHUB Mailer] Verification email delivery failed:", error?.message || error);
         console.log(`[TedbabeLearnHUB Mailer] FALLBACK - Verification code for ${email}: [ ${code} ] (Check console log for verification)`);
     }

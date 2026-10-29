@@ -682,6 +682,9 @@ export function VerifyCodePage() {
     return (
         <AuthShell title="Verify your email" subtitle="Enter the 6-digit code sent to your inbox">
             <Feedback>{feedback}</Feedback>
+            <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900 leading-relaxed">
+                Verification code sent to <strong className="font-semibold text-blue-700">{email || "your email"}</strong>. If you don't see it within a minute, check your <span className="font-bold underline">Spam / Junk</span> folder.
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     {t("email")}
