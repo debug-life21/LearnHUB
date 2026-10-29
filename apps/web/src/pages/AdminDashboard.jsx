@@ -606,9 +606,16 @@ export function AdminDashboard({ user }) {
     const handleCreateAnnouncement = async (e) => {
         e.preventDefault();
         try {
+            const payload = {
+                title: announcementForm.title.trim(),
+                content: announcementForm.content.trim(),
+                target: announcementForm.target,
+                priority: announcementForm.priority,
+                classroomId: announcementForm.target === "classroom" && announcementForm.classroomId ? announcementForm.classroomId : null,
+            };
             await apiRequest(editingAnnouncementId ? `/api/admin/announcements/${editingAnnouncementId}` : "/api/admin/announcements", {
                 method: editingAnnouncementId ? "PATCH" : "POST",
-                body: JSON.stringify(announcementForm),
+                body: JSON.stringify(payload),
             });
             setCreateAnnouncementModal(false);
             setEditingAnnouncementId("");
@@ -1279,7 +1286,7 @@ export function AdminDashboard({ user }) {
       {activeTab === "announcements" ? (<div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold text-slate-900">Announcements</h3>
-            <button onClick={() => setCreateAnnouncementModal(true)} className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
+            <button onClick={() => setCreateAnnouncementModal(true)} className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:from-[#0052cc] hover:to-[#0088e6]">
               + New announcement
             </button>
           </div>
@@ -1963,7 +1970,7 @@ export function AdminDashboard({ user }) {
               {classes.map((classroom) => <option key={classroom._id} value={classroom._id}>{classroom.title}</option>)}
             </select>
           </div>}
-          <button type="submit" className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white">
+          <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-2.5 text-xs font-bold text-white shadow-sm hover:from-[#0052cc] hover:to-[#0088e6]">
             {editingAnnouncementId ? "Save announcement" : "Send announcement"}
           </button>
         </form>

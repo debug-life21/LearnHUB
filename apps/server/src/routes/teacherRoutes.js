@@ -12,6 +12,7 @@ import { AssessmentModel } from "../models/Assessment.js";
 import { AttendanceRecordModel } from "../models/AttendanceRecord.js";
 import { UserModel } from "../models/User.js";
 import { DiscussionModel } from "../models/Discussion.js";
+import { AnnouncementModel } from "../models/Announcement.js";
 export const teacherRouter = Router();
 teacherRouter.use(requireAuth, requireRole("teacher"));
 // 1. Teacher Dashboard
@@ -356,6 +357,19 @@ teacherRouter.post("/classes/:classId/discussions", asyncHandler(async (req, res
         .populate("author", "fullName name email avatarUrl role")
         .lean();
 
+    const classroom = await ClassroomModel.findById(req.params.classId).select("title students").lean();
+    if (classroom && classroom.students?.length > 0) {
+        await NotificationModel.insertMany(classroom.students.map((studentId) => ({
+            user: studentId,
+            title: data.category === "announcement"
+                ? `📢 Cohort Announcement: ${data.title}`
+                : `New Discussion in ${classroom.title}: ${data.title}`,
+            message: data.content.length > 200 ? `${data.content.slice(0, 200)}…` : data.content,
+            kind: data.category === "announcement" ? "announcement" : "general",
+            link: `/learn/${req.params.classId}`,
+        })));
+    }
+
     res.status(201).json({ message: "Discussion topic created.", discussion: populated });
 }));
 
@@ -393,4 +407,23 @@ teacherRouter.post("/classes/:classId/discussions/:discussionId/reply", asyncHan
 teacherRouter.patch("/notifications/read-all", asyncHandler(async (req, res) => {
     await NotificationModel.updateMany({ user: req.user.id, isRead: false }, { isRead: true });
     res.json({ message: "All notifications marked as read." });
+}));
+
+// 15. View announcements
+teacherRouter.get("/announcements", asyncHandler(async (req, res) => {
+    const teacherId = req.user.id;
+    const taughtClasses = await ClassroomModel.find({ teacher: teacherId }).select("_id").lean();
+    const classIds = taughtClasses.map((c) => c._id);
+    const announcements = await AnnouncementModel.find({
+        $or: [
+            { target: "all" },
+            { target: "all_teachers" },
+            { target: "classroom", classroom: { $in: classIds } },
+        ],
+    })
+        .populate("author", "fullName")
+        .populate("classroom", "title")
+        .sort({ createdAt: -1 })
+        .lean();
+    res.json({ announcements });
 }));

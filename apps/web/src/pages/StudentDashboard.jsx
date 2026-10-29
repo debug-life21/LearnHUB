@@ -26,6 +26,7 @@ export function StudentDashboard({ user }) {
     const [progressData, setProgressData] = useState(null);
     const [certificates, setCertificates] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [announcements, setAnnouncements] = useState([]);
     const [feedback, setFeedback] = useState("");
     // Password change state
     const [securityForm, setSecurityForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -61,7 +62,7 @@ export function StudentDashboard({ user }) {
     });
     const loadStudentData = useCallback(async () => {
         try {
-            const [dash, classesRes, assignRes, quizRes, resRes, attendRes, progRes, certRes] = await Promise.all([
+            const [dash, classesRes, assignRes, quizRes, resRes, attendRes, progRes, certRes, annRes] = await Promise.all([
                 apiRequest("/api/student/dashboard"),
                 apiRequest("/api/student/classes"),
                 apiRequest("/api/student/assignments"),
@@ -70,6 +71,7 @@ export function StudentDashboard({ user }) {
                 apiRequest("/api/student/attendance"),
                 apiRequest("/api/student/progress"),
                 apiRequest("/api/student/certificates").catch(() => ({ certificates: [] })),
+                apiRequest("/api/student/announcements").catch(() => ({ announcements: [] })),
             ]);
             setClasses(classesRes.classes || []);
             setUpcomingLessons(dash.upcomingLessons || []);
@@ -80,6 +82,7 @@ export function StudentDashboard({ user }) {
             setProgressData(progRes.progress || null);
             setCertificates(certRes.certificates || []);
             setNotifications(dash.notifications || []);
+            setAnnouncements(annRes.announcements || []);
             if (dash.student?.studentProfile) {
                 setProfileForm({
                     learningGoals: dash.student.studentProfile.learningGoals || "",
@@ -340,6 +343,33 @@ export function StudentDashboard({ user }) {
               </div>
             </DashboardCard>
           </div>
+
+          {announcements.length > 0 && (
+            <div className="rounded-3xl border border-sky-200 bg-sky-50/60 p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📢</span>
+                <h3 className="font-bold text-slate-900 text-base">Announcements & Updates</h3>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {announcements.slice(0, 4).map((ann) => (
+                  <div key={ann._id} className="rounded-2xl bg-white p-4 shadow-sm border border-sky-100/80 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-bold text-slate-900 text-sm">{ann.title}</h4>
+                      <Badge variant={ann.priority === "urgent" ? "rose" : ann.priority === "high" ? "amber" : "blue"}>
+                        {ann.priority}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{ann.content}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400 pt-1 border-t border-slate-50">
+                      <span>{ann.author?.fullName ? `By ${ann.author.fullName}` : "Academy"}</span>
+                      {ann.classroom ? <span>• Cohort: {ann.classroom.title}</span> : null}
+                      <span>• {new Date(ann.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>) : null}
 
       {/* 2. CLASSES */}

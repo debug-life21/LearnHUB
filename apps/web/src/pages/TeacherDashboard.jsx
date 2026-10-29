@@ -20,6 +20,7 @@ export function TeacherDashboard({ user }) {
     const [assessments, setAssessments] = useState([]);
     const [resources, setResources] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [announcements, setAnnouncements] = useState([]);
     const [feedback, setFeedback] = useState("");
     const [profileForm, setProfileForm] = useState({
         fullName: user.fullName || "",
@@ -87,12 +88,13 @@ export function TeacherDashboard({ user }) {
     });
     const loadTeacherData = useCallback(async () => {
         try {
-            const [dash, classesRes, assignRes, quizRes, resRes] = await Promise.all([
+            const [dash, classesRes, assignRes, quizRes, resRes, annRes] = await Promise.all([
                 apiRequest("/api/teacher/dashboard"),
                 apiRequest("/api/teacher/classes"),
                 apiRequest("/api/teacher/assignments"),
                 apiRequest("/api/teacher/assessments"),
                 apiRequest("/api/resources"),
+                apiRequest("/api/teacher/announcements").catch(() => ({ announcements: [] })),
             ]);
             setClasses(classesRes.classes || []);
             setUpcomingLessons(dash.upcomingLessons || []);
@@ -100,6 +102,7 @@ export function TeacherDashboard({ user }) {
             setAssessments(quizRes.assessments || []);
             setResources(resRes.resources || []);
             setNotifications(dash.notifications || []);
+            setAnnouncements(annRes.announcements || []);
             if (dash.upcomingLessons?.[0] && !selectedSessionId) {
                 setSelectedSessionId(dash.upcomingLessons[0]._id);
             }
@@ -388,6 +391,33 @@ export function TeacherDashboard({ user }) {
               </div>
             </DashboardCard>
           </div>
+
+          {announcements.length > 0 && (
+            <div className="rounded-3xl border border-sky-200 bg-sky-50/60 p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📢</span>
+                <h3 className="font-bold text-slate-900 text-base">Announcements & Updates</h3>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {announcements.slice(0, 4).map((ann) => (
+                  <div key={ann._id} className="rounded-2xl bg-white p-4 shadow-sm border border-sky-100/80 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-bold text-slate-900 text-sm">{ann.title}</h4>
+                      <Badge variant={ann.priority === "urgent" ? "rose" : ann.priority === "high" ? "amber" : "blue"}>
+                        {ann.priority}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{ann.content}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400 pt-1 border-t border-slate-50">
+                      <span>{ann.author?.fullName ? `By ${ann.author.fullName}` : "Academy"}</span>
+                      {ann.classroom ? <span>• Cohort: {ann.classroom.title}</span> : null}
+                      <span>• {new Date(ann.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>) : null}
 
       {/* 2. CLASSES */}

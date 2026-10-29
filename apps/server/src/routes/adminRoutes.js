@@ -537,8 +537,12 @@ adminRouter.post("/classes", asyncHandler(async (req, res) => {
     if (!mongoose.isValidObjectId(data.courseId) || !(await CourseModel.exists({ _id: data.courseId }))) {
         throw new ApiError(400, "Select a valid course.");
     }
-    if (data.teacherId) {
-        const teacher = await UserModel.findOne({ _id: data.teacherId, role: "teacher", accountStatus: "active" });
+    const assignedTeacherId = (data.teacherId && data.teacherId.trim() !== "") ? data.teacherId.trim() : null;
+    if (assignedTeacherId) {
+        if (!mongoose.isValidObjectId(assignedTeacherId)) {
+            throw new ApiError(400, "Invalid teacher ID.");
+        }
+        const teacher = await UserModel.findOne({ _id: assignedTeacherId, role: "teacher", accountStatus: "active" });
         if (!teacher) {
             throw new ApiError(400, "Assigned teacher must be an active teacher.");
         }
@@ -546,7 +550,7 @@ adminRouter.post("/classes", asyncHandler(async (req, res) => {
     const classroom = await ClassroomModel.create({
         title: data.title,
         course: data.courseId,
-        teacher: data.teacherId ?? null,
+        teacher: assignedTeacherId,
         capacity: data.capacity,
         status: data.status,
         timeZone: data.timeZone,
@@ -554,9 +558,9 @@ adminRouter.post("/classes", asyncHandler(async (req, res) => {
         startDate: data.startDate ? new Date(data.startDate) : null,
         endDate: data.endDate ? new Date(data.endDate) : null,
     });
-    if (data.teacherId) {
+    if (assignedTeacherId) {
         await NotificationModel.create({
-            user: data.teacherId,
+            user: assignedTeacherId,
             title: "New class assignment",
             message: `You have been assigned to class "${data.title}".`,
             kind: "class_assignment",
@@ -609,13 +613,16 @@ adminRouter.patch("/classes/:classId", asyncHandler(async (req, res) => {
         }
         classroom.course = data.courseId;
     }
-    if (data.teacherId !== undefined && data.teacherId !== null) {
-        if (!mongoose.isValidObjectId(data.teacherId)) throw new ApiError(400, "Invalid teacher ID.");
-        const teacher = await UserModel.findOne({ _id: data.teacherId, role: "teacher", accountStatus: "active", isDeleted: { $ne: true } });
-        if (!teacher) throw new ApiError(400, "Assigned teacher must be an active teacher.");
-        classroom.teacher = teacher._id;
-    } else if (data.teacherId === null) {
-        classroom.teacher = null;
+    if (data.teacherId !== undefined) {
+        const cleanedTeacherId = (data.teacherId && data.teacherId.trim() !== "") ? data.teacherId.trim() : null;
+        if (cleanedTeacherId) {
+            if (!mongoose.isValidObjectId(cleanedTeacherId)) throw new ApiError(400, "Invalid teacher ID.");
+            const teacher = await UserModel.findOne({ _id: cleanedTeacherId, role: "teacher", accountStatus: "active", isDeleted: { $ne: true } });
+            if (!teacher) throw new ApiError(400, "Assigned teacher must be an active teacher.");
+            classroom.teacher = teacher._id;
+        } else {
+            classroom.teacher = null;
+        }
     }
     if (data.capacity !== undefined) {
         if (data.capacity < classroom.students.length) throw new ApiError(400, "Capacity cannot be lower than current enrollment.");
@@ -774,6 +781,20 @@ adminRouter.post("/classes/:classId/discussions", asyncHandler(async (req, res) 
     const populated = await DiscussionModel.findById(discussion._id)
         .populate("author", "fullName name email avatarUrl role")
         .lean();
+
+    const discussionRecipients = [
+        ...(classroom.teacher ? [classroom.teacher.toString()] : []),
+        ...classroom.students.map((s) => s.toString()),
+    ].filter((id) => id !== req.user.id);
+    if (discussionRecipients.length > 0) {
+        await NotificationModel.insertMany(discussionRecipients.map((recipientId) => ({
+            user: recipientId,
+            title: `Cohort Update: ${data.title}`,
+            message: data.content.length > 200 ? `${data.content.slice(0, 200)}…` : data.content,
+            kind: "announcement",
+            link: `/learn/${classroom._id}`,
+        })));
+    }
 
     res.status(201).json({ message: "Admin announcement posted in cohort.", discussion: populated });
 }));
@@ -1055,29 +1076,70 @@ adminRouter.get("/announcements", asyncHandler(async (_req, res) => {
 }));
 adminRouter.post("/announcements", asyncHandler(async (req, res) => {
     const data = z.object({
-        title: z.string().min(3),
-        content: z.string().min(5),
+        title: z.string().trim().min(3),
+        content: z.string().trim().min(5),
         target: z.enum(["all", "all_students", "all_teachers", "classroom"]),
-        classroomId: z.string().optional(),
+        classroomId: z.string().nullable().optional(),
         priority: z.enum(["normal", "high", "urgent"]).default("normal"),
     }).parse(req.body);
-    if (data.target === "classroom" && !data.classroomId) {
+
+    const validClassroomId = (data.target === "classroom" && data.classroomId && data.classroomId.trim() !== "")
+        ? data.classroomId.trim()
+        : null;
+
+    if (data.target === "classroom" && !validClassroomId) {
         throw new ApiError(400, "Select a cohort for a cohort-specific announcement.");
     }
-    if (data.classroomId && !mongoose.isValidObjectId(data.classroomId)) {
-        throw new ApiError(400, "Select a valid cohort.");
+    if (validClassroomId) {
+        if (!mongoose.isValidObjectId(validClassroomId)) {
+            throw new ApiError(400, "Select a valid cohort.");
+        }
+        if (!(await ClassroomModel.exists({ _id: validClassroomId }))) {
+            throw new ApiError(404, "Cohort not found.");
+        }
     }
-    if (data.classroomId && !(await ClassroomModel.exists({ _id: data.classroomId }))) {
-        throw new ApiError(404, "Cohort not found.");
-    }
+
     const announcement = await AnnouncementModel.create({
         title: data.title,
         content: data.content,
         target: data.target,
-        classroom: data.classroomId ?? null,
+        classroom: validClassroomId,
         author: req.user.id,
         priority: data.priority,
     });
+
+    // Notify targeted users
+    let recipientIds = [];
+    if (data.target === "all") {
+        const users = await UserModel.find({ role: { $in: ["student", "teacher"] }, accountStatus: "active" }).select("_id").lean();
+        recipientIds = users.map((u) => u._id);
+    } else if (data.target === "all_students") {
+        const users = await UserModel.find({ role: "student", accountStatus: "active" }).select("_id").lean();
+        recipientIds = users.map((u) => u._id);
+    } else if (data.target === "all_teachers") {
+        const users = await UserModel.find({ role: "teacher", accountStatus: "active" }).select("_id").lean();
+        recipientIds = users.map((u) => u._id);
+    } else if (data.target === "classroom" && validClassroomId) {
+        const classroom = await ClassroomModel.findById(validClassroomId).select("teacher students").lean();
+        if (classroom) {
+            recipientIds = [
+                ...(classroom.teacher ? [classroom.teacher] : []),
+                ...(classroom.students || []),
+            ];
+        }
+    }
+
+    if (recipientIds.length > 0) {
+        const uniqueRecipients = [...new Set(recipientIds.map((id) => id.toString()))];
+        await NotificationModel.insertMany(uniqueRecipients.map((recipientId) => ({
+            user: recipientId,
+            title: `📢 Announcement: ${announcement.title}`,
+            message: announcement.content.length > 200 ? `${announcement.content.slice(0, 200)}…` : announcement.content,
+            kind: "announcement",
+            link: "/dashboard",
+        })));
+    }
+
     await writeAudit(req.user.id, "announcement_created", "Announcement", announcement._id.toString());
     res.status(201).json({ announcement });
 }));
@@ -1090,24 +1152,26 @@ adminRouter.patch("/announcements/:announcementId", asyncHandler(async (req, res
         classroomId: z.string().nullable().optional(),
         priority: z.enum(["normal", "high", "urgent"]).optional(),
     }).refine((value) => Object.keys(value).length > 0, "Provide at least one field to update.").parse(req.body);
+
     const announcement = await AnnouncementModel.findById(req.params.announcementId);
     if (!announcement) throw new ApiError(404, "Announcement not found.");
+
     if (data.title !== undefined) announcement.title = data.title;
     if (data.content !== undefined) announcement.content = data.content;
     if (data.target !== undefined) announcement.target = data.target;
     if (data.priority !== undefined) announcement.priority = data.priority;
-    if (data.classroomId !== undefined) {
-        if (data.classroomId === null) announcement.classroom = null;
-        else {
-            if (!mongoose.isValidObjectId(data.classroomId) || !(await ClassroomModel.exists({ _id: data.classroomId }))) {
-                throw new ApiError(400, "Select a valid cohort.");
-            }
-            announcement.classroom = data.classroomId;
+
+    if (announcement.target === "classroom") {
+        const rawClassId = data.classroomId !== undefined ? data.classroomId : announcement.classroom?.toString();
+        const validClassroomId = rawClassId && rawClassId.trim() !== "" ? rawClassId.trim() : null;
+        if (!validClassroomId || !mongoose.isValidObjectId(validClassroomId) || !(await ClassroomModel.exists({ _id: validClassroomId }))) {
+            throw new ApiError(400, "Select a valid cohort for a cohort-specific announcement.");
         }
+        announcement.classroom = validClassroomId;
+    } else {
+        announcement.classroom = null;
     }
-    if (announcement.target === "classroom" && !announcement.classroom) {
-        throw new ApiError(400, "Select a cohort for a cohort-specific announcement.");
-    }
+
     await announcement.save();
     await writeAudit(req.user.id, "announcement_updated", "Announcement", announcement._id.toString());
     res.json({ announcement });
