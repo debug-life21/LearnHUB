@@ -1,6 +1,9 @@
 import dotenv from "dotenv";
 import { z } from "zod";
 dotenv.config();
+if (process.env["JWT-SECRET"] && !process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = process.env["JWT-SECRET"];
+}
 const envSchema = z.object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.coerce.number().default(4000),

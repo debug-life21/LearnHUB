@@ -69,6 +69,19 @@ function emailWrapper(title, content) {
 </html>`;
 }
 
+function formatFromAddress(label, smtpUser) {
+    const raw = (env.SMTP_FROM || "").trim();
+    if (!raw) return `"${label}" <${smtpUser}>`;
+    if (/<[^>]+>/.test(raw)) return raw;
+    const emailMatch = raw.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch) {
+        const foundEmail = emailMatch[1];
+        const namePart = raw.replace(foundEmail, "").trim() || label;
+        return `"${namePart}" <${foundEmail}>`;
+    }
+    return `"${raw}" <${smtpUser}>`;
+}
+
 export async function sendVerificationCode({ email, name, code }) {
     const escapedName = escapeHtml(name || "Learner");
     console.log(`[TedbabeLearnHUB Mailer] Verification code for ${email} (${escapedName}): [ ${code} ]`);
@@ -78,7 +91,7 @@ export async function sendVerificationCode({ email, name, code }) {
         return;
     }
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
-    const fromAddress = env.SMTP_FROM || `"TedbabeLearnHUB" <${smtpUser}>`;
+    const fromAddress = formatFromAddress("TedbabeLearnHUB", smtpUser);
     try {
         await client.sendMail({
             from: fromAddress,
@@ -111,7 +124,7 @@ export async function sendPasswordResetEmail({ email, name, resetUrl, code }) {
         return;
     }
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
-    const fromAddress = env.SMTP_FROM || `"TedbabeLearnHUB Security" <${smtpUser}>`;
+    const fromAddress = formatFromAddress("TedbabeLearnHUB Security", smtpUser);
     try {
         await client.sendMail({
             from: fromAddress,
@@ -146,7 +159,7 @@ export async function sendSecurityAlertEmail({ email, name, action }) {
         return;
     }
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
-    const fromAddress = env.SMTP_FROM || `"TedbabeLearnHUB Security" <${smtpUser}>`;
+    const fromAddress = formatFromAddress("TedbabeLearnHUB Security", smtpUser);
     try {
         await client.sendMail({
             from: fromAddress,
