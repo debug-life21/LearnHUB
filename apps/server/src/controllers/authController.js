@@ -139,7 +139,10 @@ async function issueCode(user, purpose) {
     user.codeAttempts = 0;
     user.codeSentAt = new Date();
     await user.save();
-    await sendVerificationCode({ email: user.email, name: user.name || user.fullName, code });
+    // Non-blocking dispatch: user receives immediate HTTP response without waiting for SMTP network handshake
+    sendVerificationCode({ email: user.email, name: user.name || user.fullName, code }).catch((err) => {
+        console.error("[TedbabeLearnHUB Mailer] Async verification send error:", err?.message || err);
+    });
 }
 
 function normalizedEmail(email) {
@@ -216,7 +219,7 @@ export async function signup(req, res) {
             phone: normalizePhoneForCountry(data.phone, data.country),
             country: data.country,
             timeZone: data.studentProfile?.timeZone || "Africa/Addis_Ababa",
-            password: await bcrypt.hash(data.password, 12),
+            password: await bcrypt.hash(data.password, 10),
             authProvider: "local",
             role: data.role,
             languagePreference: "en",
@@ -566,11 +569,13 @@ export async function forgotPassword(req, res) {
     const clientBaseUrl = env.CLIENT_URL || "http://localhost:5173";
     const resetUrl = `${clientBaseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-    await sendPasswordResetEmail({
+    sendPasswordResetEmail({
         email: user.email,
         name: user.name || user.fullName,
         resetUrl,
         code: numericCode,
+    }).catch((err) => {
+        console.error("[TedbabeLearnHUB Mailer] Async password reset email failed:", err?.message || err);
     });
 
     res.json({

@@ -14,22 +14,22 @@ function getTransporter() {
         console.warn("[Mailer] SMTP credentials missing in production. Falling back to log-based verification.");
         return null;
     }
-    const isGmail = (env.SMTP_HOST || "").toLowerCase().includes("gmail");
     if (!transporter) {
-        if (isGmail) {
-            transporter = nodemailer.createTransport({
-                service: "gmail",
-                auth: { user: smtpUser, pass: smtpPass },
-            });
-        } else {
-            transporter = nodemailer.createTransport({
-                host: env.SMTP_HOST || "smtp.gmail.com",
-                port: Number(env.SMTP_PORT) || 587,
-                secure: Number(env.SMTP_PORT) === 465,
-                auth: { user: smtpUser, pass: smtpPass },
-                tls: { rejectUnauthorized: false },
-            });
-        }
+        const isGmail = (env.SMTP_HOST || "").toLowerCase().includes("gmail") || smtpUser.endsWith("@gmail.com");
+        transporter = nodemailer.createTransport({
+            host: isGmail ? "smtp.gmail.com" : (env.SMTP_HOST || "smtp.gmail.com"),
+            port: isGmail ? 465 : (Number(env.SMTP_PORT) || 587),
+            secure: isGmail ? true : (Number(env.SMTP_PORT) === 465),
+            family: 4, // CRITICAL: Forces IPv4 to bypass 30-40s system IPv6 DNS timeout
+            pool: true, // Keeps connection pool alive for instant subsequent sends
+            maxConnections: 5,
+            maxMessages: 100,
+            connectionTimeout: 10000,
+            greetingTimeout: 8000,
+            socketTimeout: 15000,
+            auth: { user: smtpUser, pass: smtpPass },
+            tls: { rejectUnauthorized: false },
+        });
     }
     return transporter;
 }
@@ -70,19 +70,20 @@ function emailWrapper(title, content) {
 }
 
 export async function sendVerificationCode({ email, name, code }) {
-    const escapedName = escapeHtml(name);
+    const escapedName = escapeHtml(name || "Learner");
     console.log(`[TedbabeLearnHUB Mailer] Verification code for ${email} (${escapedName}): [ ${code} ]`);
     const client = getTransporter();
     if (!client) {
         console.log(`[TedbabeLearnHUB Mailer] Verification email skipped (SMTP unconfigured). Use code: ${code}`);
         return;
     }
+    const smtpUser = env.SMTP_USER?.trim();
     try {
         await client.sendMail({
-            from: `"TedbabeLearnHUB" <${env.SMTP_USER}>`,
+            from: `"TedbabeLearnHUB" <${smtpUser}>`,
             to: email,
-            subject: "Verify your TedbabeLearnHUB account",
-            text: `Hello ${name}, your verification code is ${code}. It expires in 10 minutes.`,
+            subject: `${code} is your TedbabeLearnHUB verification code`,
+            text: `Hello ${name || "Learner"},\n\nYour TedbabeLearnHUB verification code is: ${code}\n\nThis code expires in 10 minutes.\n\n— TedbabeLearnHUB Team`,
             html: emailWrapper("Account Verification", `
               <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:0;">Verify your account</h1>
               <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
@@ -93,9 +94,10 @@ export async function sendVerificationCode({ email, name, code }) {
               <p style="font-size:13px;color:#64748b;line-height:1.5;">If you did not initiate this request, you can safely ignore this email.</p>
             `),
         });
+        console.log(`[TedbabeLearnHUB Mailer] Verification email successfully delivered to ${email}`);
     } catch (error) {
         console.error("[TedbabeLearnHUB Mailer] Verification email delivery failed:", error?.message || error);
-        console.log(`[TedbabeLearnHUB Mailer] FALLBACK - Verification code for ${email}: [ ${code} ] (SMTP delivery failed, code saved in logs)`);
+        console.log(`[TedbabeLearnHUB Mailer] FALLBACK - Verification code for ${email}: [ ${code} ] (Check console log for verification)`);
     }
 }
 

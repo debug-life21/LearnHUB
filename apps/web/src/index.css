@@ -285,6 +285,15 @@
   transition: color 160ms ease;
 }
 
+@media (max-width: 639px) {
+  .editorial-footer .footer-link {
+    min-height: 1.25rem;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+}
+
 .editorial-footer .footer-link:hover {
   color: #a7d6b7;
 }
