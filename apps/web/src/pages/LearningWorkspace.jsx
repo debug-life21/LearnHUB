@@ -474,8 +474,8 @@ export function LearningWorkspace() {
                                         ref={videoRef}
                                         src={resUrl(`/api/resources/${selectedVideoResource.storedKey}/file`)}
                                         controls
-                                        controlsList={isStudent ? "nodownload" : undefined}
-                                        onContextMenu={(e) => { if (isStudent) e.preventDefault(); }}
+                                        controlsList="nodownload"
+                                        onContextMenu={(e) => e.preventDefault()}
                                         onTimeUpdate={handleTimeUpdate}
                                         className="w-full aspect-video bg-black"
                                     />
@@ -484,8 +484,8 @@ export function LearningWorkspace() {
                                         ref={videoRef}
                                         src={currentLesson.videoUrl}
                                         controls
-                                        controlsList={isStudent ? "nodownload" : undefined}
-                                        onContextMenu={(e) => { if (isStudent) e.preventDefault(); }}
+                                        controlsList="nodownload"
+                                        onContextMenu={(e) => e.preventDefault()}
                                         onTimeUpdate={handleTimeUpdate}
                                         className="w-full aspect-video bg-black"
                                     />
@@ -665,21 +665,9 @@ export function LearningWorkspace() {
                                             <h3 className="font-bold text-stone-900 text-base">{selectedDoc.title}</h3>
                                             <p className="text-xs text-stone-500">{selectedDoc.description || selectedDoc.originalFilename}</p>
                                         </div>
-                                        {!isStudent ? (
-                                            <a
-                                                href={resUrl(`/api/resources/${selectedDoc._id}/download`)}
-                                                className={`rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6] ${selectedDoc.sourceType !== "upload" ? "hidden" : ""}`}
-                                                download
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                ⬇ Download file
-                                            </a>
-                                        ) : (
-                                            <span className="rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
-                                                🔒 Protected Workspace View
-                                            </span>
-                                        )}
+                                        <span className="rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
+                                            🔒 Protected Workspace View
+                                        </span>
                                     </div>
 
                                     {/* In-Browser PDF / Document Preview */}
@@ -721,21 +709,9 @@ export function LearningWorkspace() {
                                                 <p className="text-xs text-stone-500 mt-1">
                                                     In-browser preview is optimized for PDF and images.
                                                 </p>
-                                                {!isStudent ? (
-                                                    <a
-                                                        href={resUrl(`/api/resources/${selectedDoc._id}/download`)}
-                                                        className="mt-4 rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white"
-                                                        download
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                    >
-                                                        Download resource
-                                                    </a>
-                                                ) : (
-                                                    <span className="mt-4 inline-block rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
-                                                        🔒 In-Workspace View Only
-                                                    </span>
-                                                )}
+                                                <span className="mt-4 inline-block rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
+                                                    🔒 In-Workspace View Only
+                                                </span>
                                             </div>
                                         )}
                                     </div>
