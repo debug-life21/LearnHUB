@@ -23,13 +23,13 @@ export function SectionHeading({ title, subtitle, badge, centered = false }) {
 
 export function MetricCard({ label, value, subtext, icon, trend }) {
     return (
-        <div className="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 hover:shadow-lg hover:ring-[#1d5a38]/25 transition-all duration-300">
-            {/* Top accent bar */}
-            <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-[#1d5a38] via-emerald-400 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-t-3xl" />
+        <div className="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 hover:shadow-lg hover:ring-blue-500/25 transition-all duration-300">
+            {/* Top accent bar matching logo gradient */}
+            <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-[#0066ff] via-[#00d2ff] to-[#6366f1] opacity-0 group-hover:opacity-100 transition-opacity rounded-t-3xl" />
             <div className="flex items-center justify-between">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
                 {icon ? (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-xl group-hover:scale-110 group-hover:bg-emerald-50 transition-all">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-xl group-hover:scale-110 group-hover:bg-sky-50 group-hover:text-blue-600 transition-all">
                         {icon}
                     </div>
                 ) : null}
@@ -37,14 +37,14 @@ export function MetricCard({ label, value, subtext, icon, trend }) {
             <div className="mt-4 flex items-baseline gap-2">
                 <p className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950">{value}</p>
                 {trend ? (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200/60">
+                    <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 ring-1 ring-sky-200/60">
                         {trend}
                     </span>
                 ) : null}
             </div>
             {subtext ? <p className="mt-2 text-xs text-slate-400 font-medium">{subtext}</p> : null}
             {/* Bottom accent line */}
-            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#1d5a38]/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#0066ff]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
     );
 }
@@ -78,7 +78,7 @@ export function EmptyState({ title = "No records found", description = "There ar
 
 export function Badge({ variant = "slate", children }) {
     const styles = {
-        emerald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+        emerald: "bg-sky-50 text-blue-700 ring-sky-300/60",
         amber:   "bg-amber-50 text-amber-700 ring-amber-600/20",
         rose:    "bg-rose-50 text-rose-700 ring-rose-600/20",
         cyan:    "bg-cyan-50 text-cyan-700 ring-cyan-600/20",

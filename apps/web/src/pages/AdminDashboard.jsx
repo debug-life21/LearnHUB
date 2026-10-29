@@ -709,39 +709,39 @@ export function AdminDashboard({ user }) {
       }}/>
       <div className="mx-auto max-w-7xl space-y-8">
       {/* Top Welcome Card */}
-      <div className="admin-welcome relative overflow-hidden p-6 sm:p-8">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-emerald-900/5 blur-3xl" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c234b] via-[#091b3b] to-[#061124] p-6 sm:p-8 text-white border border-sky-500/25 shadow-xl">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-6">
         <div>
-          <span className="admin-eyebrow text-xs font-bold uppercase tracking-[0.16em]">
+          <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-sky-400">
             TedbabeLearnHUB · {t("adminOverview")}
           </span>
           <div className="flex items-center gap-4">
-            {adminProfile.avatarUrl ? <img src={adminProfile.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-stone-200"/> : null}
-            <h1 className="editorial-display mt-3 text-4xl text-stone-950 sm:text-5xl">Good to see you, {adminProfile.fullName?.split(" ")[0]}.</h1>
+            {adminProfile.avatarUrl ? <img src={adminProfile.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-white/30"/> : null}
+            <h1 className="mt-3 text-3xl font-black text-white sm:text-4xl">Good to see you, {adminProfile.fullName?.split(" ")[0]}.</h1>
           </div>
-          <p className="mt-2 text-sm text-stone-500">Your learning community, at a glance.</p>
+          <p className="mt-2 text-sm text-slate-300">Your learning community, at a glance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => activeTab === "reports" ? void loadReports() : void loadAll()}
             disabled={isLoading || isReportsLoading}
             type="button"
-            className="rounded-full border border-stone-300 bg-white/70 px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+            className="rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
           >
             {isLoading || isReportsLoading ? "Refreshing..." : "↻ Refresh"}
           </button>
           <button
             onClick={() => setCreateCategoryModal(true)}
             type="button"
-            className="rounded-full border border-stone-300 bg-white/70 px-4 py-2.5 text-xs font-bold text-stone-700 transition-colors hover:bg-white"
+            className="rounded-full border border-sky-400/40 bg-sky-500/15 px-4 py-2.5 text-xs font-bold text-sky-200 transition-colors hover:bg-sky-500/25"
           >
             + {t("createCategory")}
           </button>
-          <button onClick={() => setCreateCourseModal(true)} className="rounded-full bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-emerald-900">
+          <button onClick={() => setCreateCourseModal(true)} className="rounded-full bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-blue-500/25 transition-all hover:from-[#0052cc] hover:to-[#0088e6] hover:-translate-y-0.5">
             + {t("createCourse")}
           </button>
-          <button onClick={() => setCreateClassModal(true)} className="rounded-full bg-[#8a6c3e] px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#745a34]">
+          <button onClick={() => setCreateClassModal(true)} className="rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-indigo-500/25 transition-all hover:from-[#4f46e5] hover:to-[#7c3aed] hover:-translate-y-0.5">
             + {t("createClass")}
           </button>
           <button
@@ -751,7 +751,7 @@ export function AdminDashboard({ user }) {
             }}
             disabled={schedulableClasses.length === 0}
             title={schedulableClasses.length === 0 ? "Assign an active teacher to a class before scheduling a session." : undefined}
-            className="rounded-full border border-stone-300 bg-white/70 px-4 py-2.5 text-xs font-bold text-stone-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-cyan-400/40 bg-cyan-500/15 px-4 py-2.5 text-xs font-bold text-cyan-200 transition-colors hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             + {t("scheduleSession")}
           </button>
@@ -818,7 +818,7 @@ export function AdminDashboard({ user }) {
                           ))}
                         </div>
                         <div className="flex gap-2 pt-2 border-t border-slate-100">
-                          <button onClick={() => handleTeacherApprove(app._id)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700">
+                          <button onClick={() => handleTeacherApprove(app._id)} className="rounded-lg bg-[#0066ff] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#0052cc] shadow-xs">
                             ✓ {t("approve")}
                           </button>
                           <button onClick={() => setRejectionModal({ open: true, appId: app._id, reason: "" })} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700">
@@ -874,7 +874,7 @@ export function AdminDashboard({ user }) {
               <button type="button" onClick={() => {
                 setUserForm({ fullName: "", email: "", password: "", role: "teacher" });
                 setCreateUserModal(true);
-              }} className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-bold text-white">+ Add teacher</button>
+              }} className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/20 hover:from-[#0052cc] hover:to-[#0088e6]">+ Add teacher</button>
             </div>}
           >
             <div className="divide-y divide-slate-100">
@@ -892,7 +892,7 @@ export function AdminDashboard({ user }) {
                     </Badge>
                     <button onClick={() => handleToggleTeacherStatus(teach._id, teach.accountStatus)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${teach.accountStatus === "active"
                     ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                    : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}>
+                    : "bg-sky-100 text-blue-700 hover:bg-sky-200"}`}>
                       {teach.accountStatus === "active" ? "Suspend" : "Activate"}
                     </button>
                     <button
@@ -922,7 +922,7 @@ export function AdminDashboard({ user }) {
               <button type="button" onClick={() => {
                 setUserForm({ fullName: "", email: "", password: "", role: "student" });
                 setCreateUserModal(true);
-              }} className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-bold text-white">+ Add learner</button>
+              }} className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/20 hover:from-[#0052cc] hover:to-[#0088e6]">+ Add learner</button>
             </div>}
           >
             <div className="divide-y divide-slate-100">
@@ -941,7 +941,7 @@ export function AdminDashboard({ user }) {
                     </p>
                   </div>
                   <div>
-                    <button type="button" onClick={() => void handleToggleUserStatus(stud)} className={`mb-2 rounded-lg px-3 py-1.5 text-xs font-bold ${stud.accountStatus === "active" ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"}`}>
+                    <button type="button" onClick={() => void handleToggleUserStatus(stud)} className={`mb-2 rounded-lg px-3 py-1.5 text-xs font-bold ${stud.accountStatus === "active" ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-sky-100 text-blue-800 hover:bg-sky-200"}`}>
                       {stud.accountStatus === "active" ? "Suspend" : "Activate"}
                     </button>
                     <button
@@ -977,7 +977,7 @@ export function AdminDashboard({ user }) {
           <DashboardCard
             title="Administrator access"
             subtitle="Create and manage trusted administrator accounts"
-            action={<button type="button" onClick={() => setCreateAdministratorModal(true)} className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-900">+ Add administrator</button>}
+            action={<button type="button" onClick={() => setCreateAdministratorModal(true)} className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6]">+ Add administrator</button>}
           >
             <div className="divide-y divide-slate-100">
               {administrators.map((administrator) => {
@@ -1140,7 +1140,7 @@ export function AdminDashboard({ user }) {
                 </div>
                 <a
                   href={`${(import.meta.env.VITE_PUBLIC_URL || "").replace(/\/$/, "")}/workspace/${cls._id}?tab=tracking`}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-800 to-teal-800 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-emerald-950/15 transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99]"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] active:scale-[0.99]"
                 >
                   <span>🎓 Enter Learning Space & Track Cohort</span>
                   <span className="text-sm">→</span>
@@ -1180,7 +1180,7 @@ export function AdminDashboard({ user }) {
                       setEditingSessionId("");
                       setSessionForm({ classId: cls._id, title: "", description: "", startsAt: "", endsAt: "", meetingUrl: "", status: "scheduled" });
                       setCreateSessionModal(true);
-                    }} className="text-xs font-bold text-emerald-800 hover:underline disabled:cursor-not-allowed disabled:opacity-40">+ Schedule</button>
+                    }} className="text-xs font-bold text-[#0066ff] hover:underline disabled:cursor-not-allowed disabled:opacity-40">+ Schedule</button>
                   </div>
                   <div className="space-y-2">
                     {sessions.filter((session) => String(session.classroom?._id ?? session.classroom) === cls._id).map((session) => {
@@ -1194,7 +1194,7 @@ export function AdminDashboard({ user }) {
                             <div className="min-w-0">
                               <p className="truncate text-xs font-bold text-slate-800">{session.title}</p>
                               <p className="text-[11px] text-slate-500">{formatSessionTime(session.startsAt, cls.timeZone)} · {formatSessionTime(session.endsAt, cls.timeZone)}</p>
-                              <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${isLive ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"}`}>{statusLabel}</p>
+                              <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${isLive ? "bg-sky-100 text-blue-800" : "bg-slate-200 text-slate-700"}`}>{statusLabel}</p>
                               <p className="mt-1 text-[11px] text-slate-500">{cls.teacher?.fullName || "No teacher"} · {cls.students?.length || 0} learners · {cls.timeZone}</p>
                             </div>
                             {session.meetingUrl ? (
@@ -1217,7 +1217,7 @@ export function AdminDashboard({ user }) {
                             }} className="rounded-md border border-stone-200 px-2 py-1 text-[11px] font-bold text-slate-700">Edit / control</button>
                             {session.status === "scheduled" && (
                               <>
-                                <button type="button" disabled={updatingSessionId === session._id} onClick={() => handleSessionStatusChange(session, "completed")} className="rounded-md border border-emerald-200 px-2 py-1 text-[11px] font-bold text-emerald-700 disabled:opacity-50">Mark complete</button>
+                                <button type="button" disabled={updatingSessionId === session._id} onClick={() => handleSessionStatusChange(session, "completed")} className="rounded-md border border-sky-300 px-2 py-1 text-[11px] font-bold text-[#0066ff] hover:bg-sky-50 disabled:opacity-50">Mark complete</button>
                                 <button type="button" disabled={updatingSessionId === session._id} onClick={() => handleSessionStatusChange(session, "cancelled")} className="rounded-md border border-amber-200 px-2 py-1 text-[11px] font-bold text-amber-800 disabled:opacity-50">Cancel session</button>
                               </>
                             )}
@@ -1244,7 +1244,7 @@ export function AdminDashboard({ user }) {
             <button type="button" onClick={() => {
               setResourceForm({ title: "", description: "", classroomId: "", sourceType: "youtube", sourceUrl: "", category: "video", visibility: "class_only", originalFilename: "", mimeType: "", base64Data: "" });
               setCreateResourceModal(true);
-            }} className="rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900">+ Add resource</button>
+            }} className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6]">+ Add resource</button>
           </div>
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
             <strong>YouTube:</strong> Copy the video URL and add it here. TedbabeLearnHUB embeds the video using YouTube&apos;s privacy-enhanced player and limits related videos to the same channel when YouTube supports it.
@@ -1324,7 +1324,7 @@ export function AdminDashboard({ user }) {
               setEditingFaqId("");
               setFaqForm({ question: "", answer: "", isPublished: true, sortOrder: faqs.length });
               setCreateFaqModal(true);
-            }} className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-900">+ Add FAQ</button>}
+            }} className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6]">+ Add FAQ</button>}
           >
             <div className="divide-y divide-slate-100">
               {faqs.map((faq) => (<div key={faq._id} className="flex flex-wrap items-start justify-between gap-4 py-4">
@@ -1351,7 +1351,7 @@ export function AdminDashboard({ user }) {
 
       {activeTab === "support" ? (<div className="space-y-6">
           <DashboardCard title="Contact inbox" subtitle={`${inquiries.filter((inquiry) => inquiry.status !== "closed").length} inquiries need follow-up`}>
-            {inquiryFeedback && <p role="status" className="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{inquiryFeedback}</p>}
+            {inquiryFeedback && <p role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-blue-900">{inquiryFeedback}</p>}
             <div className="space-y-4">
               {inquiries.map((inquiry) => (<article key={inquiry._id} className="rounded-2xl border border-slate-200 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1366,7 +1366,7 @@ export function AdminDashboard({ user }) {
                   <span className="text-xs text-slate-400">{new Date(inquiry.createdAt).toLocaleString()}</span>
                   <div className="flex gap-2">
                     {inquiry.status !== "in_progress" && <button type="button" onClick={() => void handleInquiryStatus(inquiry, "in_progress")} className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-50">Mark in progress</button>}
-                    {inquiry.status !== "closed" && <button type="button" onClick={() => void handleInquiryStatus(inquiry, "closed")} className="rounded-lg bg-emerald-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-900">Close inquiry</button>}
+                    {inquiry.status !== "closed" && <button type="button" onClick={() => void handleInquiryStatus(inquiry, "closed")} className="rounded-lg bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-3.5 py-1.5 text-xs font-bold text-white hover:from-[#0052cc] hover:to-[#0088e6]">Close inquiry</button>}
                     {inquiry.status !== "new" && <button type="button" onClick={() => void handleInquiryStatus(inquiry, "new")} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">Reopen</button>}
                     <button type="button" onClick={() => setDeleteRecord({ endpoint: `/api/admin/contact-inquiries/${inquiry._id}`, label: "Contact inquiry" })} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50">Delete</button>
                   </div>
@@ -1439,7 +1439,7 @@ export function AdminDashboard({ user }) {
                 <textarea rows={3} maxLength={500} value={adminProfile.bio} onChange={(event) => setAdminProfile({ ...adminProfile, bio: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"/>
               </label>
               <p className="text-xs text-slate-500">Email: {user.email} (used for sign-in; contact support to change it)</p>
-              <button type="submit" className="w-full rounded-xl bg-emerald-800 py-2.5 text-xs font-bold text-white hover:bg-emerald-900">Save profile</button>
+              <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-2.5 text-xs font-bold text-white hover:from-[#0052cc] hover:to-[#0088e6] shadow-sm">Save profile</button>
             </form>
           </DashboardCard>
         </div>
@@ -1601,7 +1601,7 @@ export function AdminDashboard({ user }) {
             <input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
             <span className="mt-1 block text-[11px] font-normal text-slate-500">At least 12 characters. Share it securely with the account owner.</span>
           </label>
-          <button type="submit" className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900">Create account</button>
+          <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3 text-sm font-bold text-white hover:from-[#0052cc] hover:to-[#0088e6] shadow-sm">Create account</button>
         </form>
       </Modal>
 
@@ -1621,7 +1621,7 @@ export function AdminDashboard({ user }) {
             <input required type="password" minLength={12} maxLength={128} autoComplete="new-password" value={administratorForm.password} onChange={(event) => setAdministratorForm({ ...administratorForm, password: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal"/>
             <span className="mt-1 block text-[11px] font-normal text-slate-500">At least 12 characters. Share it securely and ask the new administrator to change it.</span>
           </label>
-          <button type="submit" className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900">Create administrator</button>
+          <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3 text-sm font-bold text-white hover:from-[#0052cc] hover:to-[#0088e6] shadow-sm">Create administrator</button>
         </form>
       </Modal>
 
@@ -1646,7 +1646,7 @@ export function AdminDashboard({ user }) {
               Publish publicly
             </label>
           </div>
-          <button type="submit" className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900">{editingFaqId ? "Save FAQ" : "Create FAQ"}</button>
+          <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3 text-sm font-bold text-white hover:from-[#0052cc] hover:to-[#0088e6] shadow-sm">{editingFaqId ? "Save FAQ" : "Create FAQ"}</button>
         </form>
       </Modal>
 
@@ -1861,10 +1861,10 @@ export function AdminDashboard({ user }) {
             </>
           )}
           <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-            <input type="checkbox" checked={resourceForm.visibility === "public"} onChange={(event) => setResourceForm({ ...resourceForm, visibility: event.target.checked ? "public" : "class_only" })} className="accent-emerald-700"/>
+            <input type="checkbox" checked={resourceForm.visibility === "public"} onChange={(event) => setResourceForm({ ...resourceForm, visibility: event.target.checked ? "public" : "class_only" })} className="accent-[#0066ff]"/>
             Make this resource public instead of cohort-only
           </label>
-          <button type="submit" disabled={isUploadingResource || (resourceForm.sourceType === "upload" ? !resourceForm.base64Data : !resourceForm.sourceUrl.trim())} className="w-full rounded-xl bg-emerald-800 py-3 text-sm font-bold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-300">
+          <button type="submit" disabled={isUploadingResource || (resourceForm.sourceType === "upload" ? !resourceForm.base64Data : !resourceForm.sourceUrl.trim())} className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3 text-sm font-bold text-white hover:from-[#0052cc] hover:to-[#0088e6] shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300">
             {isUploadingResource ? "Saving…" : resourceForm.sourceType === "upload" ? "Upload resource" : "Add resource"}
           </button>
         </form>

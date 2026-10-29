@@ -324,25 +324,26 @@ export function TeacherDashboard({ user }) {
     return (<div className="min-h-screen space-y-8 px-4 py-6 sm:px-6 lg:pl-72 lg:pr-8">
       <DashboardSidebar title="Teacher workspace" user={{ ...user, fullName: profileForm.fullName, avatarUrl: profileForm.avatarUrl }} tabs={dashboardTabs} activeTab={activeTab} onSelect={setActiveTab}/>
       {/* Top Banner */}
-      <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl flex flex-wrap items-center justify-between gap-6">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-            {t("teacherOverview")}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c234b] via-[#091b3b] to-[#061124] p-6 sm:p-8 text-white border border-sky-500/25 shadow-xl flex flex-wrap items-center justify-between gap-6">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative">
+          <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-sky-400">
+            TedbabeLearnHUB · {t("teacherOverview")}
           </span>
-          <div className="flex items-center gap-4">
-            {profileForm.avatarUrl ? <img src={profileForm.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-white/30"/> : null}
-            <h1 className="mt-2 text-3xl font-black">{profileForm.fullName}</h1>
+          <div className="mt-2 flex items-center gap-4">
+            {profileForm.avatarUrl ? <img src={profileForm.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-white/30"/> : null}
+            <h1 className="text-3xl font-black text-white sm:text-4xl">{profileForm.fullName}</h1>
           </div>
-          <p className="mt-1 text-sm text-slate-400">{user.email}</p>
+          <p className="mt-1 text-sm text-slate-300">{user.email}</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setCreateAssignModal(true)} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold hover:bg-blue-500 transition-colors">
+        <div className="relative flex flex-wrap gap-2">
+          <button onClick={() => setCreateAssignModal(true)} className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2.5 text-xs font-extrabold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6] transition-all hover:-translate-y-0.5">
             + {t("createAssignment")}
           </button>
-          <button onClick={() => setCreateQuizModal(true)} className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold hover:bg-cyan-500 transition-colors">
+          <button onClick={() => setCreateQuizModal(true)} className="rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2.5 text-xs font-extrabold text-white shadow-md shadow-indigo-500/25 hover:from-[#4f46e5] hover:to-[#7c3aed] transition-all hover:-translate-y-0.5">
             + {t("createAssessment")}
           </button>
-          <button onClick={() => setUploadModal(true)} className="rounded-xl bg-slate-800 border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-700 transition-colors">
+          <button onClick={() => setUploadModal(true)} className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-bold text-white hover:bg-white/20 transition-all">
             + {t("uploadResource")}
           </button>
         </div>
@@ -412,7 +413,7 @@ export function TeacherDashboard({ user }) {
                 <div className="pt-2 border-t border-slate-100">
                   <Link
                     to={`/workspace/${cls._id}`}
-                    className="block w-full text-center rounded-2xl bg-emerald-800 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 transition shadow-sm"
+                    className="block w-full text-center rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6]"
                   >
                     Open Cohort Workspace →
                   </Link>
@@ -452,7 +453,7 @@ export function TeacherDashboard({ user }) {
                         <div className="flex gap-1.5">
                           {["present", "absent", "late", "excused"].map((st) => (<button key={st} type="button" onClick={() => setStudentAttendance(stud._id, st)} className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition-colors ${currentStatus === st
                                 ? st === "present"
-                                    ? "bg-emerald-600 text-white"
+                                    ? "bg-[#0066ff] text-white"
                                     : st === "absent"
                                         ? "bg-rose-600 text-white"
                                         : st === "late"

@@ -273,18 +273,19 @@ export function StudentDashboard({ user }) {
         </div>) : null}
 
       {/* Student Welcome Card */}
-      <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
-            {t("studentOverview")}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c234b] via-[#091b3b] to-[#061124] p-6 sm:p-8 text-white border border-sky-500/25 shadow-xl flex flex-wrap items-center justify-between gap-6">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative">
+          <span className="text-xs font-extrabold uppercase tracking-[0.16em] text-sky-400">
+            TedbabeLearnHUB · {t("studentOverview")}
           </span>
-          <div className="mt-1 flex items-center gap-4">
-            {personalForm.avatarUrl ? <img src={personalForm.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-slate-200"/> : null}
-            <h1 className="text-3xl font-black text-slate-900">{personalForm.fullName}</h1>
+          <div className="mt-2 flex items-center gap-4">
+            {personalForm.avatarUrl ? <img src={personalForm.avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-white/30"/> : null}
+            <h1 className="text-3xl font-black text-white sm:text-4xl">{personalForm.fullName}</h1>
           </div>
-          <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+          <p className="mt-1 text-sm text-slate-300">{user.email}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="relative flex items-center gap-3">
           <Badge variant={user.studentProfile?.placementStatus === "assigned" ? "emerald" : "amber"}>
             {user.studentProfile?.placementStatus === "assigned" ? "Cohort assigned" : "Awaiting cohort placement"}
           </Badge>
@@ -360,7 +361,7 @@ export function StudentDashboard({ user }) {
                 <div className="pt-2 border-t border-slate-100">
                   <Link
                     to={`/workspace/${cls._id}`}
-                    className="block w-full text-center rounded-2xl bg-emerald-800 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 transition shadow-sm"
+                    className="block w-full text-center rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6]"
                   >
                     Enter Learning Workspace →
                   </Link>
@@ -445,7 +446,7 @@ export function StudentDashboard({ user }) {
                     {res.classroom?._id || res.classroom || classrooms[0]?._id ? (
                       <Link
                         to={`/workspace/${res.classroom?._id || res.classroom || classrooms[0]?._id}?resourceId=${res._id}`}
-                        className="font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 hover:underline"
+                        className="font-bold text-[#0066ff] hover:text-[#0052cc] flex items-center gap-1 hover:underline"
                       >
                         Open in Workspace →
                       </Link>
@@ -632,7 +633,7 @@ export function StudentDashboard({ user }) {
                     </div>
                     <button
                       onClick={() => handleClaimCertificate(cls._id)}
-                      className="rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-900"
+                      className="rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6]"
                     >
                       Check & Claim Certificate
                     </button>
@@ -644,7 +645,7 @@ export function StudentDashboard({ user }) {
                 {certificates.map((cert) => (
                   <div key={cert._id} className="rounded-3xl border border-amber-300 bg-amber-50/50 p-6 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-emerald-800 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      <span className="rounded-lg bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                         Verified Credential
                       </span>
                       <span className="font-mono text-xs font-bold text-slate-600">
@@ -655,7 +656,7 @@ export function StudentDashboard({ user }) {
                     <div className="text-xs text-slate-600 space-y-1">
                       <p>Issued to: <strong>{cert.studentName}</strong></p>
                       <p>Date: {new Date(cert.issueDate).toLocaleDateString()}</p>
-                      <p>Overall Grade: <strong className="text-emerald-800">{cert.overallScore}%</strong></p>
+                      <p>Overall Grade: <strong className="text-[#0066ff]">{cert.overallScore}%</strong></p>
                     </div>
                     <Link
                       to={`/verify-certificate/${cert.certificateNumber}`}
@@ -749,7 +750,7 @@ export function StudentDashboard({ user }) {
       {/* MODAL: Take Quiz */}
       <Modal title={`Assessment: ${quizModal.assessment?.title || ""}`} isOpen={quizModal.open} onClose={() => setQuizModal({ open: false, assessment: null, answers: {}, result: null })}>
         {quizModal.result ? (<div className="space-y-4 text-center py-4">
-            <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl ${quizModal.result.passed ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"}`}>
+            <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl ${quizModal.result.passed ? "bg-sky-100 text-blue-700" : "bg-rose-100 text-rose-600"}`}>
               {quizModal.result.passed ? "✓" : "!"}
             </div>
             <h3 className="text-xl font-bold text-slate-900">

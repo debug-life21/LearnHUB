@@ -415,16 +415,16 @@ export function LearningWorkspace() {
 
             <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
                 {isAdmin && (
-                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100/60 p-4 shadow-sm">
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-300 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50/60 p-4 shadow-sm">
                         <div className="flex items-center gap-3">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-800 text-xs font-black text-amber-200 shadow-sm">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-xs font-black text-white shadow-sm">
                                 TLH
                             </span>
                             <div>
-                                <p className="text-xs font-black uppercase tracking-wider text-emerald-950">
+                                <p className="text-xs font-black uppercase tracking-wider text-slate-900">
                                     Administrator Oversight Mode
                                 </p>
-                                <p className="text-xs text-emerald-800">
+                                <p className="text-xs text-[#0066ff]">
                                     You have full administrative visibility to track live sessions, lesson media, student attendance, and discussions in this cohort.
                                 </p>
                             </div>
@@ -433,13 +433,13 @@ export function LearningWorkspace() {
                             <button
                                 type="button"
                                 onClick={() => setActiveTab("tracking")}
-                                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${activeTab === "tracking" ? "bg-emerald-800 text-white shadow-sm" : "bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100"}`}
+                                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${activeTab === "tracking" ? "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white shadow-sm" : "bg-white text-blue-900 border border-sky-200 hover:bg-sky-50"}`}
                             >
                                 📊 Track Cohort Space
                             </button>
                             <Link
                                 to="/dashboard"
-                                className="rounded-xl border border-emerald-300 bg-white px-3.5 py-2 text-xs font-bold text-emerald-900 transition hover:bg-emerald-100"
+                                className="rounded-xl border border-sky-300 bg-white px-3.5 py-2 text-xs font-bold text-blue-900 transition hover:bg-sky-50"
                             >
                                 ← Admin Dashboard
                             </Link>
@@ -448,9 +448,9 @@ export function LearningWorkspace() {
                 )}
 
                 {feedback && (
-                    <div className="mt-4 rounded-2xl bg-emerald-50 p-3.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 flex justify-between items-center">
+                    <div className="mt-4 rounded-2xl bg-sky-50 p-3.5 text-xs font-bold text-blue-900 ring-1 ring-sky-200 flex justify-between items-center">
                         <span>{feedback}</span>
-                        <button onClick={() => setFeedback("")} className="text-emerald-600 hover:text-emerald-900">✕</button>
+                        <button onClick={() => setFeedback("")} className="text-blue-600 hover:text-blue-900">✕</button>
                     </div>
                 )}
 
@@ -567,7 +567,7 @@ export function LearningWorkspace() {
                                                     }}
                                                     className={`group flex w-full items-center gap-3 rounded-2xl p-2 text-left transition-all ${
                                                         isSelected
-                                                            ? "bg-emerald-800 text-white shadow-md ring-2 ring-emerald-700/40"
+                                                            ? "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white shadow-md ring-2 ring-blue-500/40"
                                                             : "bg-stone-50 text-stone-800 hover:bg-stone-100"
                                                     }`}
                                                 >
@@ -668,7 +668,7 @@ export function LearningWorkspace() {
                                         {!isStudent ? (
                                             <a
                                                 href={resUrl(`/api/resources/${selectedDoc._id}/download`)}
-                                                className={`rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-900 ${selectedDoc.sourceType !== "upload" ? "hidden" : ""}`}
+                                                className={`rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6] ${selectedDoc.sourceType !== "upload" ? "hidden" : ""}`}
                                                 download
                                                 target="_blank"
                                                 rel="noopener noreferrer"
@@ -825,7 +825,7 @@ export function LearningWorkspace() {
                             <button
                                 type="button"
                                 onClick={() => setNewThreadModal(true)}
-                                className="rounded-2xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900"
+                                className="rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6]"
                             >
                                 + New Discussion Topic
                             </button>
@@ -949,12 +949,12 @@ export function LearningWorkspace() {
                         {trackingStats?.fillRate != null && (
                             <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs font-black uppercase tracking-wider text-stone-600">Cohort Capacity Fill</span>
-                                    <span className="text-xs font-bold text-emerald-800">{trackingStats.fillRate}%</span>
+                                    <span className="text-xs font-black uppercase tracking-wider text-slate-600">Cohort Capacity Fill</span>
+                                    <span className="text-xs font-bold text-[#0066ff]">{trackingStats.fillRate}%</span>
                                 </div>
-                                <div className="h-3 w-full rounded-full bg-stone-100 overflow-hidden">
+                                <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
                                     <div
-                                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
+                                        className="h-full rounded-full bg-gradient-to-r from-[#0066ff] to-[#00d2ff] transition-all"
                                         style={{ width: `${Math.min(trackingStats.fillRate, 100)}%` }}
                                     />
                                 </div>
@@ -976,7 +976,7 @@ export function LearningWorkspace() {
                                             className="h-11 w-11 rounded-xl object-cover ring-1 ring-stone-200"
                                         />
                                     ) : (
-                                        <div className="h-11 w-11 rounded-xl bg-emerald-800 flex items-center justify-center text-xs font-black text-amber-200">
+                                        <div className="h-11 w-11 rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] flex items-center justify-center text-xs font-black text-white shadow-sm">
                                             {(trackingData.cohort.teacher.fullName || "T").slice(0, 2).toUpperCase()}
                                         </div>
                                     )}
@@ -984,7 +984,7 @@ export function LearningWorkspace() {
                                         <p className="text-sm font-bold text-stone-900">{trackingData.cohort.teacher.fullName || trackingData.cohort.teacher.name}</p>
                                         <p className="text-xs text-stone-500">{trackingData.cohort.teacher.email}</p>
                                     </div>
-                                    <span className="ml-auto rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 ring-1 ring-emerald-200">
+                                    <span className="ml-auto rounded-lg bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-blue-800 ring-1 ring-sky-200">
                                         Instructor
                                     </span>
                                 </div>
@@ -1149,7 +1149,7 @@ export function LearningWorkspace() {
                         </button>
                         <button
                             type="submit"
-                            className="rounded-2xl bg-emerald-800 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-900"
+                            className="rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-5 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6]"
                         >
                             Post Topic
                         </button>

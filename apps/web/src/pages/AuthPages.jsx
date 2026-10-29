@@ -6,16 +6,17 @@ import { useAuth } from "../context/AuthContext";
 import { apiRequest, loadPublicCourses } from "../lib/api";
 import { CategoryCoursePicker } from "../components/CategoryCoursePicker";
 import { TIME_ZONES } from "../lib/timezones";
+import { BrandLogo } from "../components/BrandLogo";
 
 function AuthShell({ title, subtitle, children }) {
     return (
         <div className="editorial-page auth-page mx-auto max-w-lg px-4 py-12 sm:px-6 sm:py-16">
             <div className="rounded-3xl bg-white p-7 shadow-xl ring-1 ring-slate-200/90 sm:p-10">
                 <div className="mb-7 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#285b45] text-base font-black text-[#e7d5ad] shadow-md shadow-emerald-950/20 ring-1 ring-white/20">
-                        TLH
-                    </div>
-                    <h1 className="editorial-display mt-4 text-3xl tracking-tight text-stone-900 sm:text-4xl">{title}</h1>
+                    <Link to="/" className="inline-flex justify-center transition hover:opacity-90">
+                        <BrandLogo size="md" />
+                    </Link>
+                    <h1 className="mt-5 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
                     <p className="mt-1.5 text-sm font-medium text-slate-500">{subtitle}</p>
                 </div>
                 {children}
@@ -26,8 +27,8 @@ function AuthShell({ title, subtitle, children }) {
 
 function Feedback({ children }) {
     if (!children) return null;
-    const success = children.startsWith("A new code has been sent");
-    return <div role={success ? "status" : "alert"} className={`mb-5 rounded-2xl p-3.5 text-sm font-semibold ring-1 ${success ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-rose-50 text-rose-700 ring-rose-200"}`}>{children}</div>;
+    const success = children.startsWith("A new code has been sent") || children.toLowerCase().includes("successful");
+    return <div role={success ? "status" : "alert"} className={`mb-5 rounded-2xl p-3.5 text-sm font-semibold ring-1 ${success ? "bg-sky-50 text-sky-800 ring-sky-200" : "bg-rose-50 text-rose-700 ring-rose-200"}`}>{children}</div>;
 }
 
 function GoogleSignIn({ onCredential, disabled }) {
@@ -131,7 +132,7 @@ export function SignInPage() {
                             : "https://tedbabelearnhub-admin.vercel.app"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition"
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0c234b] to-[#061124] py-3 text-xs font-bold text-white shadow-sm hover:from-[#091b3b] hover:to-[#040b17] transition"
                     >
                         Go to Admin Dashboard ↗
                     </a>
@@ -144,23 +145,23 @@ export function SignInPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
                 <label className="block text-xs font-bold text-slate-700">
                     {t("email")}
-                    <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="name@example.com" />
+                    <input required autoComplete="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10" placeholder="name@example.com" />
                 </label>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     <div className="flex items-center justify-between">
                         <span>{t("password")}</span>
-                        <Link to="/forgot-password" className="text-[11px] font-semibold text-blue-600 hover:underline lowercase first-letter:uppercase">
+                        <Link to="/forgot-password" className="text-[11px] font-semibold text-[#0066ff] hover:text-[#0052cc] hover:underline lowercase first-letter:uppercase">
                             Forgot password?
                         </Link>
                     </div>
-                    <input required autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Your password" />
+                    <input required autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10" placeholder="Your password" />
                 </label>
-                <button disabled={loading} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50">
+                <button disabled={loading} type="submit" className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50">
                     {loading ? t("loading") : "Continue"}
                 </button>
             </form>
             <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-600">
-                New to TedbabeLearnHUB? <Link to="/signup" className="font-bold text-blue-600 hover:underline">Create an account</Link>
+                New to TedbabeLearnHUB? <Link to="/signup" className="font-bold text-[#0066ff] hover:text-[#0052cc] hover:underline">Create an account</Link>
             </p>
         </AuthShell>
     );
@@ -396,22 +397,22 @@ export function SignupPage({ initialRole = "student" }) {
         }
     };
 
-    const fieldClass = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10";
+    const fieldClass = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10";
     return (
         <div className="editorial-page auth-page mx-auto w-full px-4 py-8 sm:px-6 sm:py-12">
             <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-                <aside className="relative overflow-hidden rounded-3xl bg-[#20372c] p-7 text-white shadow-xl sm:p-9 lg:sticky lg:top-24">
-                    <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-300/10 blur-3xl" />
+                <aside className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c234b] via-[#091b3b] to-[#061124] p-7 text-white shadow-xl sm:p-9 lg:sticky lg:top-24 border border-sky-500/20">
+                    <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl" />
+                    <div aria-hidden="true" className="pointer-events-none absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-blue-600/10 blur-2xl" />
                     <div className="relative">
-                        <Link to="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-xs font-black text-amber-200">TLH</span>
-                            TedbabeLearnHUB
+                        <Link to="/" className="inline-flex items-center gap-2">
+                            <BrandLogo appearance="dark" size="sm" />
                         </Link>
-                        <p className="mt-10 text-xs font-bold uppercase tracking-[0.2em] text-amber-200">{role === "student" ? "Your learning journey" : "Teach with TedbabeLearnHUB"}</p>
-                        <h1 className="editorial-display mt-3 text-4xl leading-tight sm:text-5xl">
+                        <p className="mt-8 text-xs font-bold uppercase tracking-[0.2em] text-sky-300">{role === "student" ? "Your learning journey" : "Teach with TedbabeLearnHUB"}</p>
+                        <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl text-white">
                             {role === "student" ? "Build skills for what comes next." : "Help learners move forward."}
                         </h1>
-                        <p className="mt-4 max-w-md text-sm leading-6 text-emerald-50/75">
+                        <p className="mt-4 max-w-md text-sm leading-6 text-slate-300">
                             {role === "student"
                                 ? "Tell us what you want to learn and when you are available. Our team will help match you with the right cohort."
                                 : "Share your teaching background, expertise, and availability. Our team reviews every application before approval."}
@@ -421,22 +422,22 @@ export function SignupPage({ initialRole = "student" }) {
                                 ? [["01", "Choose your learning path"], ["02", "Set goals and study times"], ["03", "Get matched with a cohort"]]
                                 : [["01", "Add your teaching profile"], ["02", "Upload your CV and credentials"], ["03", "Verify email; admin reviews your application"]]
                             ).map(([number, text]) => (
-                                <div key={number} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3">
-                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-200/15 text-xs font-black text-amber-100">{number}</span>
+                                <div key={number} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-xs font-black text-white shadow-sm shadow-blue-500/25">{number}</span>
                                     <span className="text-xs font-semibold text-white/90">{text}</span>
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-8 rounded-2xl border border-white/10 bg-black/10 p-4 text-xs leading-5 text-emerald-50/70">
+                        <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs leading-5 text-slate-300">
                             Your information is used to set up your TedbabeLearnHUB account and support your learning or teaching application.
                         </div>
                     </div>
                 </aside>
 
-                <main className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_24px_70px_rgba(29,43,34,0.10)] sm:p-8">
+                <main className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_24px_70px_rgba(0,102,255,0.06)] sm:p-8">
                     <div className="mb-7">
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-800">Create account</p>
-                        <h2 className="editorial-display mt-2 text-3xl tracking-tight text-slate-950 sm:text-4xl">Let’s get started.</h2>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0066ff]">[ Create account ]</p>
+                        <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Let’s get started.</h2>
                         <p className="mt-2 text-sm text-slate-500">First choose how you want to use TedbabeLearnHUB, then complete your account details.</p>
                     </div>
                     <Feedback>{feedback}</Feedback>
@@ -459,7 +460,7 @@ export function SignupPage({ initialRole = "student" }) {
                                     { value: "teacher", title: "Teacher", description: "Apply to teach", icon: "👩‍🏫" },
                                 ].map((option) => (
                                     <button key={option.value} type="button" onClick={() => setRole(option.value)} aria-pressed={role === option.value}
-                                        className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition ${role === option.value ? "border-emerald-700 bg-emerald-50 ring-2 ring-emerald-700/10" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                                        className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition ${role === option.value ? "border-[#0066ff] bg-sky-50/80 ring-2 ring-blue-500/15" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                                             }`}>
                                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm">{option.icon}</span>
                                         <span>
@@ -499,7 +500,7 @@ export function SignupPage({ initialRole = "student" }) {
                                 </label>
                                 <label className="block text-xs font-bold text-slate-700 sm:col-span-2">
                                     Phone number <span className="text-rose-500">*</span>
-                                    <div className="mt-1.5 flex items-stretch rounded-xl border border-slate-200 bg-white transition focus-within:border-emerald-700 focus-within:ring-4 focus-within:ring-emerald-700/10">
+                                    <div className="mt-1.5 flex items-stretch rounded-xl border border-slate-200 bg-white transition focus-within:border-[#0066ff] focus-within:ring-4 focus-within:ring-blue-500/10">
                                         <span className="flex shrink-0 items-center gap-1.5 border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-600 rounded-l-xl">
                                             <span className="text-base">{selectedCountry.flag}</span> {selectedCountry.dial || "—"}
                                         </span>
@@ -526,7 +527,7 @@ export function SignupPage({ initialRole = "student" }) {
                             </div>
                         </section>
                         {role === "student" ? (
-                            <div className="space-y-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-4 sm:p-5">
+                            <div className="space-y-4 rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/80 to-white p-4 sm:p-5">
                                 <div>
                                     <h2 className="text-sm font-black text-slate-900">Your learning plan</h2>
                                     <p className="mt-1 text-xs text-slate-500">Help us understand your goals and plan around your schedule.</p>
@@ -605,8 +606,8 @@ export function SignupPage({ initialRole = "student" }) {
                                 </label>
                                 <label className="block text-xs font-bold text-slate-700">
                                     CV / Resume (required, PDF, Word, or image; max 5MB)
-                                    <input required type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" onChange={handleTeacherDocuments} className="mt-2 block w-full rounded-xl border border-dashed border-slate-300 bg-white p-3 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-800 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" />
-                                    {teacherForm.cv ? <span className="mt-1 block font-normal text-emerald-700">{teacherForm.cv.originalFilename}</span> : null}
+                                    <input required type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" onChange={handleTeacherDocuments} className="mt-2 block w-full rounded-xl border border-dashed border-slate-300 bg-white p-3 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-[#0066ff] file:to-[#0099ff] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white file:shadow-sm" />
+                                    {teacherForm.cv ? <span className="mt-1 block font-normal text-[#0066ff]">{teacherForm.cv.originalFilename}</span> : null}
                                 </label>
                                 <label className="block text-xs font-bold text-slate-700">
                                     Certificates / qualification documents (optional, up to 5 files)
@@ -616,12 +617,12 @@ export function SignupPage({ initialRole = "student" }) {
                                 <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">After you verify your email, an administrator will review your application before teacher access is enabled.</p>
                             </div>
                         )}
-                        <button disabled={loading} type="submit" className="w-full rounded-xl bg-emerald-800 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-50">
+                        <button disabled={loading} type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:-translate-y-0.5 hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50">
                             {loading ? t("loading") : role === "teacher" ? "Submit teacher application" : "Create student account"}
                         </button>
                     </form>
                     <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-600">
-                        Already have an account? <Link to="/sign-in" className="font-bold text-blue-600 hover:underline">Sign in</Link>
+                        Already have an account? <Link to="/sign-in" className="font-bold text-[#0066ff] hover:text-[#0052cc] hover:underline">Sign in</Link>
                     </p>
                     <p className="mt-3 text-center text-xs text-slate-400">By continuing, you agree to TedbabeLearnHUB&apos;s <Link to="/terms" className="font-semibold text-slate-600 hover:underline">Terms</Link> and <Link to="/privacy" className="font-semibold text-slate-600 hover:underline">Privacy Policy</Link>.</p>
                 </main>
@@ -694,24 +695,24 @@ export function VerifyCodePage() {
     return (
         <AuthShell title="Verify your email" subtitle="Enter the 6-digit code sent to your inbox">
             <Feedback>{feedback}</Feedback>
-            <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900 leading-relaxed">
-                Verification code sent to <strong className="font-semibold text-blue-700">{email || "your email"}</strong>. If you don't see it within a minute, check your <span className="font-bold underline">Spam / Junk</span> folder.
+            <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-slate-800 leading-relaxed">
+                Verification code sent to <strong className="font-bold text-[#0066ff]">{email || "your email"}</strong>. If you don't see it within a minute, check your <span className="font-bold underline">Spam / Junk</span> folder.
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     {t("email")}
-                    <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" />
+                    <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10" />
                 </label>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     Verification code
-                    <input required minLength={6} maxLength={6} pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-4 text-center font-mono text-2xl font-black tracking-[0.5em] outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="000000" aria-label="6-digit verification code" />
+                    <input required minLength={6} maxLength={6} pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-4 text-center font-mono text-2xl font-black tracking-[0.5em] outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10 text-slate-900" placeholder="000000" aria-label="6-digit verification code" />
                 </label>
-                <button disabled={loading || code.length !== 6} type="submit" className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50">
+                <button disabled={loading || code.length !== 6} type="submit" className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50">
                     {loading ? t("loading") : "Verify and continue"}
                 </button>
             </form>
             <div className="mt-5 flex flex-col items-center gap-3 text-sm text-slate-600">
-                <button type="button" disabled={loading || secondsLeft > 0 || !email} onClick={handleResend} className="font-bold text-blue-600 hover:underline disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline">
+                <button type="button" disabled={loading || secondsLeft > 0 || !email} onClick={handleResend} className="font-bold text-[#0066ff] hover:text-[#0052cc] hover:underline disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline">
                     {secondsLeft > 0 ? `Resend code in ${secondsLeft}s` : "Resend code"}
                 </button>
                 <Link to="/sign-in" className="font-semibold text-slate-500 hover:text-slate-800">Back to sign in</Link>
@@ -750,7 +751,7 @@ export function ForgotPasswordPage() {
             <Feedback>{feedback}</Feedback>
             {submitted ? (
                 <div className="space-y-5 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-xl text-emerald-700">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-blue-50 text-xl text-[#0066ff] ring-1 ring-sky-200">
                         ✓
                     </div>
                     <p className="text-sm text-slate-600">
@@ -759,7 +760,7 @@ export function ForgotPasswordPage() {
                     <div className="flex flex-col gap-2 pt-2">
                         <Link
                             to={`/reset-password?email=${encodeURIComponent(email)}`}
-                            className="w-full rounded-2xl bg-blue-600 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700"
+                            className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3 text-xs font-black uppercase tracking-wider text-white hover:from-[#0052cc] hover:to-[#0088e6] transition shadow-md shadow-blue-500/25"
                         >
                             Enter Reset Code
                         </Link>
@@ -778,19 +779,19 @@ export function ForgotPasswordPage() {
                             autoComplete="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10"
                             placeholder="name@example.com"
                         />
                     </label>
                     <button
                         disabled={loading || !email}
                         type="submit"
-                        className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50"
+                        className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50"
                     >
                         {loading ? t("loading") : "Send Reset Instructions"}
                     </button>
                     <div className="pt-2 text-center text-xs">
-                        <Link to="/sign-in" className="font-bold text-slate-600 hover:text-blue-600">
+                        <Link to="/sign-in" className="font-bold text-slate-600 hover:text-[#0066ff]">
                             ← Return to sign in
                         </Link>
                     </div>
@@ -846,7 +847,7 @@ export function ResetPasswordPage() {
             <Feedback>{feedback}</Feedback>
             {success ? (
                 <div className="space-y-4 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-2xl text-emerald-700">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-blue-50 text-2xl text-[#0066ff] ring-1 ring-sky-200">
                         ✓
                     </div>
                     <h2 className="text-lg font-bold text-slate-900">Password Changed!</h2>
@@ -861,7 +862,7 @@ export function ResetPasswordPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10"
                         />
                     </label>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -871,7 +872,7 @@ export function ResetPasswordPage() {
                             type="text"
                             value={tokenOrCode}
                             onChange={(e) => setTokenOrCode(e.target.value)}
-                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-mono tracking-wider normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-mono tracking-wider normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10"
                             placeholder="6-digit code or link token"
                         />
                     </label>
@@ -884,7 +885,7 @@ export function ResetPasswordPage() {
                             type="password"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
-                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10"
                             placeholder="At least 8 characters"
                         />
                     </label>
@@ -897,19 +898,19 @@ export function ResetPasswordPage() {
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium normal-case outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10"
                             placeholder="Re-enter password"
                         />
                     </label>
                     <button
                         disabled={loading || !newPassword || !confirmPassword || !tokenOrCode}
                         type="submit"
-                        className="w-full rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/20 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-50"
+                        className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50"
                     >
                         {loading ? t("loading") : "Update Password"}
                     </button>
                     <div className="pt-2 text-center text-xs">
-                        <Link to="/sign-in" className="font-bold text-slate-600 hover:text-blue-600">
+                        <Link to="/sign-in" className="font-bold text-slate-600 hover:text-[#0066ff]">
                             ← Return to sign in
                         </Link>
                     </div>

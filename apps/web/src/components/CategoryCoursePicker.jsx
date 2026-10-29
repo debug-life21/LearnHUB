@@ -96,7 +96,7 @@ export function CategoryCoursePicker({ courses, selectedCourseIds, onChange }) {
                         key={categoryName}
                         className={`rounded-2xl border transition-all ${
                             categorySelectedCount > 0
-                                ? "border-emerald-300 bg-emerald-50/30 shadow-sm"
+                                ? "border-sky-300 bg-sky-50/40 shadow-sm"
                                 : "border-slate-200 bg-white hover:border-slate-300"
                         }`}
                     >
@@ -113,7 +113,7 @@ export function CategoryCoursePicker({ courses, selectedCourseIds, onChange }) {
 
                             <div className="flex items-center gap-2 text-xs">
                                 {categorySelectedCount > 0 ? (
-                                    <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 font-bold text-white shadow-sm">
+                                    <span className="rounded-full bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-2.5 py-0.5 font-bold text-white shadow-sm">
                                         ✓ {categorySelectedCount} selected
                                     </span>
                                 ) : (
@@ -137,7 +137,7 @@ export function CategoryCoursePicker({ courses, selectedCourseIds, onChange }) {
                                                 key={course._id}
                                                 className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 text-xs transition-all ${
                                                     isChecked
-                                                        ? "border-emerald-400 bg-emerald-50 text-emerald-950 font-medium shadow-sm"
+                                                        ? "border-[#0066ff] bg-sky-50 text-slate-900 font-medium shadow-sm ring-1 ring-blue-500/20"
                                                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                                                 }`}
                                             >
@@ -145,7 +145,7 @@ export function CategoryCoursePicker({ courses, selectedCourseIds, onChange }) {
                                                     type="checkbox"
                                                     checked={isChecked}
                                                     onChange={() => toggleCourse(course._id)}
-                                                    className="mt-0.5 h-4 w-4 rounded accent-emerald-700"
+                                                    className="mt-0.5 h-4 w-4 rounded accent-[#0066ff]"
                                                 />
                                                 <div className="min-w-0 flex-1">
                                                     <span className="block font-bold text-slate-900 leading-snug">

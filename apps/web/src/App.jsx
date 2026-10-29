@@ -87,7 +87,7 @@ function DashboardDispatcher() {
 export default function App() {
     const location = useLocation();
     const isDashboard = location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/workspace");
-    return (<div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 font-sans selection:bg-emerald-700 selection:text-white">
+    return (<div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
       <Navbar />
       <main className="flex-1">
         <Suspense fallback={<div role="status" className="flex min-h-[45vh] items-center justify-center px-4 text-sm font-semibold text-stone-600">Preparing your TedbabeLearnHUB space…</div>}>

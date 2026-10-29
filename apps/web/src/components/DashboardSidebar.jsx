@@ -43,7 +43,7 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                         onClick={() => setIsOpen(true)}
                         aria-expanded={isOpen}
                         aria-controls="mobile-sidebar-drawer"
-                        className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#1d5a38] px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-900/20 transition hover:bg-[#163d26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 active:scale-95"
+                        className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 active:scale-95"
                     >
                         <svg
                             aria-hidden="true"
@@ -60,7 +60,7 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                             <line x1="3" y1="18" x2="21" y2="18" />
                         </svg>
                         <span>Menu</span>
-                        <span className="rounded-full bg-emerald-700/80 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-100">
+                        <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                             {tabs.length}
                         </span>
                     </button>
@@ -146,8 +146,8 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                                             }}
                                             className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-xs font-semibold transition ${
                                                 isCurrent
-                                                    ? "bg-[#1d5a38] text-white shadow-sm shadow-emerald-900/25"
-                                                    : "text-slate-600 hover:bg-[#f0ede4] hover:text-slate-950"
+                                                    ? "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white shadow-sm shadow-blue-500/25 font-bold"
+                                                    : "text-slate-600 hover:bg-sky-50 hover:text-blue-700"
                                             }`}
                                         >
                                             <span className="text-base" aria-hidden="true">{tab.icon}</span>
@@ -195,7 +195,7 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
             <aside className="hidden lg:fixed lg:bottom-0 lg:left-0 lg:top-[4.5rem] lg:z-40 lg:block lg:w-64 lg:overflow-y-auto lg:border-r lg:border-slate-200 lg:bg-white/95 lg:px-4 lg:py-6 lg:shadow-none lg:backdrop-blur">
                 <div className="mb-7 flex items-center justify-between gap-3 px-2">
                     <div className="min-w-0">
-                        <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">TedbabeLearnHUB (TLH)</p>
+                        <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-[#0066ff]">TedbabeLearnHUB (TLH)</p>
                         <h2 className="mt-1 truncate text-sm font-bold text-slate-900">{title}</h2>
                     </div>
                     {user?.avatarUrl ? (
@@ -213,8 +213,8 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                             onClick={() => onSelect(tab.id)}
                             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition ${
                                 activeTab === tab.id
-                                    ? "bg-[#1d5a38] text-white shadow-sm shadow-emerald-900/25"
-                                    : "text-slate-600 hover:bg-[#f0ede4] hover:text-slate-950"
+                                    ? "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white shadow-sm shadow-blue-500/25 font-bold"
+                                    : "text-slate-600 hover:bg-sky-50 hover:text-blue-700"
                             }`}
                         >
                             <span className="text-base" aria-hidden="true">{tab.icon}</span>
