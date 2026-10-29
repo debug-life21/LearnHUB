@@ -103,8 +103,8 @@ export async function sendVerificationCode({ email, name, code }) {
               <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:0;">Verify your account</h1>
               <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
               <p style="font-size:14px;color:#334155;line-height:1.6;">Welcome to TedbabeLearnHUB. Enter the 6-digit verification code below to verify your email address. This code expires in <strong>10 minutes</strong>.</p>
-              <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
-                <div style="font-size:36px;font-weight:900;letter-spacing:12px;color:#1d4ed8;font-family:monospace;">${code}</div>
+              <div style="background:#0f172a;border-radius:16px;padding:28px 20px;text-align:center;margin:28px 0;box-shadow:0 4px 24px rgba(15,23,42,0.18);">
+                <div style="font-size:42px;font-weight:900;letter-spacing:16px;color:#818cf8;font-family:'Courier New',Courier,monospace;text-indent:16px;">${code}</div>
               </div>
               <p style="font-size:13px;color:#64748b;line-height:1.5;">If you did not initiate this request, you can safely ignore this email.</p>
             `),
