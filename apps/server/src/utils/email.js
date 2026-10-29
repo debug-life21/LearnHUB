@@ -47,12 +47,13 @@ function emailWrapper(title, content) {
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
-  <div style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-    <div style="background:linear-gradient(135deg,#091a2f 0%,#0f2942 100%);padding:28px 32px;text-align:center;">
-      <div style="display:inline-block;padding:8px 16px;background:rgba(255,255,255,0.12);border-radius:10px;color:#38bdf8;font-weight:900;font-size:18px;letter-spacing:1px;">
+<body style="margin:0;padding:0;background-color:#090d16;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#e2e8f0;">
+  <div style="max-width:560px;margin:32px auto;background:#0f172a;border-radius:16px;border:1px solid #1e293b;overflow:hidden;box-shadow:0 10px 25px -5px rgba(0,0,0,0.4);">
+    <div style="background:linear-gradient(135deg,#091a2f 0%,#0f2942 100%);padding:28px 32px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="display:inline-block;padding:8px 18px;background:rgba(255,255,255,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:10px;color:#38bdf8;font-weight:900;font-size:18px;letter-spacing:1px;">
         TedbabeLearnHUB (TLH)
       </div>
       <p style="margin:8px 0 0;color:#94a3b8;font-size:12px;letter-spacing:0.5px;">Learn Anything. Grow Everywhere.</p>
@@ -60,7 +61,7 @@ function emailWrapper(title, content) {
     <div style="padding:32px 32px 28px;">
       ${content}
     </div>
-    <div style="padding:20px 32px;background:#f1f5f9;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#64748b;">
+    <div style="padding:20px 32px;background:#090d16;border-top:1px solid #1e293b;text-align:center;font-size:12px;color:#64748b;">
       <p style="margin:0;">&copy; ${new Date().getFullYear()} TedbabeLearnHUB (TLH) Education Platform. All rights reserved.</p>
       <p style="margin:4px 0 0;">This is an automated system email. Please do not reply directly.</p>
     </div>
@@ -95,26 +96,18 @@ export async function sendVerificationCode({ email, name, code }) {
     try {
         await client.sendMail({
             from: fromAddress,
-            replyTo: fromAddress,
             to: email,
-            subject: `Your TedbabeLearnHUB verification code: ${code}`,
+            subject: `${code} is your TedbabeLearnHUB verification code`,
             text: `Hello ${name || "Learner"},\n\nYour TedbabeLearnHUB verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.\n\n— TedbabeLearnHUB Team\nhttps://tedbabelearnhub.vercel.app`,
             html: emailWrapper("Account Verification", `
-              <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:0;">Verify your account</h1>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">Welcome to TedbabeLearnHUB. Enter the 6-digit verification code below to verify your email address. This code expires in <strong>10 minutes</strong>.</p>
-              <div style="background:#0f172a;border-radius:16px;padding:28px 20px;text-align:center;margin:28px 0;box-shadow:0 4px 24px rgba(15,23,42,0.18);">
+              <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;">Verify your account</h1>
+              <p style="font-size:14px;color:#e2e8f0;line-height:1.6;">Hello <strong style="color:#ffffff;">${escapedName}</strong>,</p>
+              <p style="font-size:14px;color:#94a3b8;line-height:1.6;">Welcome to TedbabeLearnHUB. Enter the 6-digit verification code below to verify your email address. This code expires in <strong style="color:#ffffff;">10 minutes</strong>.</p>
+              <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:28px 20px;text-align:center;margin:28px 0;box-shadow:0 6px 20px rgba(0,0,0,0.35);">
                 <div style="font-size:42px;font-weight:900;letter-spacing:16px;color:#818cf8;font-family:'Courier New',Courier,monospace;text-indent:16px;">${code}</div>
               </div>
               <p style="font-size:13px;color:#64748b;line-height:1.5;">If you did not initiate this request, you can safely ignore this email.</p>
             `),
-            headers: {
-                "X-Mailer": "TedbabeLearnHUB Mailer v1",
-                "X-Priority": "1",
-                "X-Entity-Ref-ID": `verify-${Date.now()}`,
-                "Precedence": "transactional",
-                "X-Auto-Response-Suppress": "OOF, AutoReply",
-            },
         });
         console.log(`[TedbabeLearnHUB Mailer] Verification email successfully delivered to ${email}`);
     } catch (error) {
