@@ -6,7 +6,7 @@ let transporter;
 
 function getTransporter() {
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
-    const smtpPass = (env.SMTP_PASS?.trim() || "iobnqacmewazsrzk").replace(/\s+/g, "");
+    const smtpPass = (env.SMTP_PASS?.trim() || "iakgmhpfzlvyavcw").replace(/\s+/g, "");
     if (!smtpUser || !smtpPass) {
         if (!isProduction) {
             return null;
