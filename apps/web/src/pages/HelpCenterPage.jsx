@@ -89,15 +89,15 @@ export function HelpCenterPage() {
     return (
         <div className="editorial-page min-h-screen pb-24">
             {/* Header Hero */}
-            <div className="editorial-hero border-b border-stone-200/80 px-4 py-16 sm:px-6 lg:px-8">
+            <div className="editorial-hero border-b border-slate-200/80 px-4 py-16 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-4xl text-center">
-                    <span className="editorial-kicker text-emerald-800">
+                    <span className="editorial-kicker text-blue-600 font-extrabold tracking-widest">
                         TEDBABELEARNHUB (TLH) SUPPORT & KNOWLEDGE BASE
                     </span>
-                    <h1 className="editorial-display mt-3 text-4xl font-extrabold text-stone-900 sm:text-5xl">
+                    <h1 className="editorial-display mt-3 text-4xl font-extrabold text-slate-900 sm:text-5xl">
                         Help & Support Center
                     </h1>
-                    <p className="mx-auto mt-3 max-w-2xl text-sm text-stone-600 sm:text-base">
+                    <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
                         Guides, answers, and direct assistance for students, educators, and administrators.
                     </p>
 
@@ -108,7 +108,7 @@ export function HelpCenterPage() {
                             value={faqSearch}
                             onChange={(e) => setFaqSearch(e.target.value)}
                             placeholder="Search help topics (e.g. Google Meet, placement, grading)…"
-                            className="w-full rounded-2xl border border-stone-300 bg-white px-5 py-3.5 text-sm text-stone-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                            className="w-full rounded-2xl border border-slate-300 bg-white px-5 py-3.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                         />
                     </div>
                 </div>
@@ -117,7 +117,7 @@ export function HelpCenterPage() {
             {/* Navigation Tabs */}
             <div className="mx-auto max-w-5xl px-4 pt-10 sm:px-6 lg:px-8">
                 {!faqSearch && (
-                    <div className="flex justify-center gap-3 border-b border-stone-200 pb-4">
+                    <div className="flex justify-center gap-3 border-b border-slate-200 pb-4">
                         {[
                             { id: "students", label: "For Students", icon: "🎓" },
                             { id: "teachers", label: "For Teachers", icon: "👩‍🏫" },
@@ -129,8 +129,8 @@ export function HelpCenterPage() {
                                 onClick={() => setActiveSection(sec.id)}
                                 className={`rounded-xl px-4 py-2 text-xs font-bold transition ${
                                     activeSection === sec.id
-                                        ? "bg-emerald-800 text-white shadow-sm"
-                                        : "bg-white text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50"
+                                        ? "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white shadow-md shadow-blue-500/25"
+                                        : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                                 }`}
                             >
                                 {sec.icon} {sec.label}
@@ -144,13 +144,13 @@ export function HelpCenterPage() {
                     {filteredArticles.map((art, idx) => (
                         <div
                             key={idx}
-                            className="rounded-3xl bg-white p-7 shadow-sm ring-1 ring-stone-200/80 transition hover:shadow-md"
+                            className="rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md"
                         >
-                            <h3 className="font-bold text-stone-900 text-sm sm:text-base flex items-start gap-3">
-                                <span className="text-emerald-700 font-black">Q:</span>
+                            <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-start gap-3">
+                                <span className="text-blue-600 font-black">Q:</span>
                                 <span>{art.q}</span>
                             </h3>
-                            <p className="mt-3 text-xs sm:text-sm text-stone-600 leading-relaxed pl-6">
+                            <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed pl-6">
                                 {art.a}
                             </p>
                         </div>
@@ -158,71 +158,71 @@ export function HelpCenterPage() {
                 </div>
 
                 {/* Contact Support Ticket Form */}
-                <div className="mt-16 rounded-3xl bg-white p-8 sm:p-12 shadow-sm ring-1 ring-stone-200">
+                <div className="mt-16 rounded-3xl bg-white p-8 sm:p-12 shadow-sm ring-1 ring-slate-200">
                     <div className="max-w-2xl mx-auto text-center mb-8">
-                        <span className="text-xs font-black uppercase tracking-wider text-emerald-800">
+                        <span className="text-xs font-black uppercase tracking-wider text-blue-600">
                             DIRECT ASSISTANCE
                         </span>
-                        <h2 className="editorial-display mt-2 text-2xl font-bold text-stone-900">
+                        <h2 className="editorial-display mt-2 text-2xl font-bold text-slate-900">
                             Still have questions? Contact Support
                         </h2>
-                        <p className="mt-1 text-xs text-stone-500">
+                        <p className="mt-1 text-xs text-slate-500">
                             Our academic administrators and support specialists respond to inquiries promptly.
                         </p>
                     </div>
 
                     {feedback && (
-                        <div className="mb-6 rounded-2xl bg-emerald-50 p-4 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 text-center">
+                        <div className="mb-6 rounded-2xl bg-sky-50 p-4 text-xs font-bold text-blue-900 ring-1 ring-sky-200 text-center">
                             {feedback}
                         </div>
                     )}
 
                     <form onSubmit={handleContactSubmit} className="max-w-xl mx-auto space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                                 Your Full Name
                                 <input
                                     required
                                     type="text"
                                     value={form.fullName}
                                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                                    className="mt-1.5 w-full rounded-2xl border border-stone-200 px-4 py-3 text-xs font-medium outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                                    className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-xs font-medium outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                                     placeholder="John Doe"
                                 />
                             </label>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                                 Email Address
                                 <input
                                     required
                                     type="email"
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="mt-1.5 w-full rounded-2xl border border-stone-200 px-4 py-3 text-xs font-medium outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                                    className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-xs font-medium outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                                     placeholder="name@example.com"
                                 />
                             </label>
                         </div>
 
-                        <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                             Subject
                             <input
                                 required
                                 type="text"
                                 value={form.subject}
                                 onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                                className="mt-1.5 w-full rounded-2xl border border-stone-200 px-4 py-3 text-xs font-medium outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                                className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-xs font-medium outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                                 placeholder="E.g. Placement question for Grade 10 Math"
                             />
                         </label>
 
-                        <label className="block text-xs font-bold uppercase tracking-wider text-stone-700">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                             Detailed Message
                             <textarea
                                 required
                                 rows={4}
                                 value={form.message}
                                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                                className="mt-1.5 w-full rounded-2xl border border-stone-200 px-4 py-3 text-xs font-medium outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                                className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-xs font-medium outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                                 placeholder="Describe your issue or inquiry in detail…"
                             />
                         </label>
@@ -230,7 +230,7 @@ export function HelpCenterPage() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="w-full rounded-2xl bg-emerald-800 py-3.5 text-xs font-black uppercase tracking-wider text-white transition hover:bg-emerald-900 disabled:opacity-50"
+                            className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6] disabled:opacity-50 transition-all hover:scale-[1.01]"
                         >
                             {submitting ? "Sending Inquiry…" : "Submit Support Inquiry"}
                         </button>

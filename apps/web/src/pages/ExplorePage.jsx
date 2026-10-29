@@ -46,12 +46,12 @@ export function ExplorePage() {
       {/* Category Pills Filter */}
       <div className="flex flex-wrap gap-2">
         <button onClick={() => setSearchParams({})} type="button" className={`rounded-2xl px-4 py-2 text-xs font-bold transition-all ${!selectedCat
-            ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+            ? "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white shadow-md shadow-blue-500/25"
             : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"}`}>
           {t("allCategories")}
         </button>
         {categories.map((cat) => (<button key={cat._id} onClick={() => setSearchParams({ selected: cat._id })} type="button" className={`rounded-2xl px-4 py-2 text-xs font-bold transition-all ${selectedCat === cat._id
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                ? "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white shadow-md shadow-blue-500/25"
                 : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"}`}>
             {cat.name}
           </button>))}
@@ -72,7 +72,7 @@ export function ExplorePage() {
             {filteredCourses.map((course) => (<div key={course._id} className="group flex flex-col justify-between rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-200/90 hover:shadow-xl hover:ring-blue-500/40 transition-all duration-300">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 border border-blue-200/60">
+                    <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-blue-700 border border-sky-200/60">
                       {course.category?.name ?? "General"}
                     </span>
                     <span className="text-xs text-slate-500 font-semibold">
@@ -91,14 +91,14 @@ export function ExplorePage() {
                       {t("objectives")}:
                     </p>
                     {course.learningObjectives?.slice(0, 3).map((obj, i) => (<div key={i} className="flex items-start gap-2 text-xs text-slate-600 font-medium">
-                        <span className="text-emerald-500 font-bold">✓</span>
+                        <span className="text-blue-600 font-bold">✓</span>
                         <span>{obj}</span>
                       </div>))}
                   </div>
                 </div>
 
                 <div className="mt-6 border-t border-slate-100 pt-5">
-                  <Link to="/register/student" className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20">
+                  <Link to="/register/student" className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6] transition-all hover:-translate-y-0.5">
                     {t("registerAndRequest")}
                   </Link>
                 </div>

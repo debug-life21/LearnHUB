@@ -40,7 +40,7 @@ export function AboutPage() {
         </div>
 
         <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200/90 hover:shadow-lg transition-all">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl text-emerald-600 shadow-xs">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-2xl text-indigo-600 shadow-xs">
             💎
           </div>
           <h3 className="mt-6 text-xl font-bold text-slate-900">{t("valuesTitle")}</h3>
@@ -51,11 +51,11 @@ export function AboutPage() {
       </div>
 
       {/* Unique Central Placement Model Explanation */}
-      <div className="relative overflow-hidden rounded-3xl bg-[#25362d] p-8 sm:p-12 text-white shadow-2xl ring-1 ring-white/10">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-emerald-600/20 blur-3xl pointer-events-none"></div>
+      <div className="relative overflow-hidden rounded-3xl border border-sky-500/25 bg-gradient-to-br from-[#0c234b] via-[#091b3b] to-[#061124] p-8 sm:p-12 text-white shadow-2xl ring-1 ring-white/10">
+        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl pointer-events-none"></div>
 
         <div className="relative z-10 max-w-3xl">
-          <span className="rounded-full bg-[#e7d5ad]/15 px-3.5 py-1 text-xs font-bold text-[#e7d5ad] border border-[#e7d5ad]/30">
+          <span className="rounded-full border border-sky-400/30 bg-sky-500/15 px-3.5 py-1 text-xs font-bold text-sky-300">
             SYSTEM ARCHITECTURE & INTEGRITY
           </span>
           <h2 className="mt-4 text-2xl sm:text-3xl font-black tracking-tight">
@@ -65,13 +65,13 @@ export function AboutPage() {
             {t("architectureDesc")}
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
-            <Link to="/register/student" className="rounded-2xl bg-[#e7d5ad] px-6 py-3 text-xs font-black text-stone-950 hover:bg-white transition-colors">
+            <Link to="/register/student" className="rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-6 py-3 text-xs font-black text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6] transition-all hover:-translate-y-0.5">
               {t("becomeStudent")}
             </Link>
-            <Link to="/apply/teacher" className="rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-xs font-bold text-slate-200 hover:bg-white/10 hover:text-white transition-colors">
+            <Link to="/apply/teacher" className="rounded-2xl border border-white/20 bg-white/10 px-6 py-3 text-xs font-bold text-white hover:bg-white/20 transition-colors">
               {t("applyToTeach")}
             </Link>
-            <Link to="/contact" className="rounded-2xl px-6 py-3 text-xs font-bold text-slate-300 hover:text-white transition-colors">
+            <Link to="/contact" className="rounded-2xl px-6 py-3 text-xs font-bold text-sky-300 hover:text-white transition-colors">
               Have a question? Talk to us →
             </Link>
           </div>

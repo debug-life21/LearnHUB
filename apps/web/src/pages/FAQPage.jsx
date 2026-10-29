@@ -81,13 +81,16 @@ export function FAQPage() {
       )}
 
       {/* Support Box */}
-      <div className="rounded-3xl border border-[#ded9ce] bg-gradient-to-r from-[#eeece3] to-[#e7eddf] p-8 text-center text-stone-950 shadow-xs">
-        <h4 className="text-lg font-black">{t("faqNeedHelp")}</h4>
-        <p className="mt-2 text-xs sm:text-sm text-stone-600 max-w-md mx-auto leading-relaxed">
+      <div className="rounded-3xl border border-sky-500/25 bg-gradient-to-br from-[#0c234b] via-[#091b3b] to-[#061124] p-8 text-center text-white shadow-xl ring-1 ring-white/10">
+        <span className="rounded-full border border-sky-400/30 bg-sky-500/15 px-3 py-1 text-xs font-bold text-sky-300">
+          NEED A HAND?
+        </span>
+        <h4 className="mt-3 text-xl font-black text-white">{t("faqNeedHelp")}</h4>
+        <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
           From choosing a learning path to finding your way around your account, our team is ready to help.
         </p>
-        <Link to="/contact" className="mt-5 inline-block rounded-2xl bg-emerald-800 px-6 py-3 text-xs font-bold text-white hover:bg-emerald-900 transition-colors shadow-md">
-          {t("faqContactTeam")}
+        <Link to="/contact" className="mt-5 inline-block rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 hover:from-[#0052cc] hover:to-[#0088e6] transition-all hover:-translate-y-0.5">
+          {t("faqContactTeam")} →
         </Link>
       </div>
     </div>);

@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 function LegalShell({ title, lastUpdated, children, }) {
     return (<div className="editorial-page mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 space-y-8">
       {/* Notice Alert */}
-      <div className="rounded-2xl border border-[#ded9ce] bg-[#eeece3] p-4 text-xs text-stone-700 leading-relaxed">
-        <strong>Notice:</strong> This document represents the operational compliance and service agreement framework of the TedbabeLearnHUB (TLH) platform. All policies are actively enforced across all student, educator, and administrative interactions.
+      <div className="rounded-2xl border border-sky-200/80 bg-sky-50/80 p-4 text-xs text-slate-700 leading-relaxed">
+        <strong className="text-blue-900 font-bold">Notice:</strong> This document represents the operational compliance and service agreement framework of the TedbabeLearnHUB (TLH) platform. All policies are actively enforced across all student, educator, and administrative interactions.
       </div>
 
       <div className="border-b border-slate-200 pb-4">

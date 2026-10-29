@@ -18,7 +18,7 @@ export function PricingPage() {
             ],
             buttonText: "Browse Courses Free",
             buttonLink: "/courses",
-            buttonStyle: "bg-stone-900 text-white hover:bg-stone-800",
+            buttonStyle: "bg-slate-900 text-white hover:bg-slate-800 shadow-sm",
         },
         {
             name: "Guided Cohort",
@@ -38,7 +38,7 @@ export function PricingPage() {
             ],
             buttonText: "Apply for Placement",
             buttonLink: "/register/student",
-            buttonStyle: "bg-emerald-800 text-white hover:bg-emerald-900 shadow-lg shadow-emerald-950/20",
+            buttonStyle: "bg-gradient-to-r from-[#0066ff] to-[#0099ff] text-white hover:from-[#0052cc] hover:to-[#0088e6] shadow-md shadow-blue-500/25",
         },
         {
             name: "Academic Foundation",
@@ -56,22 +56,22 @@ export function PricingPage() {
             ],
             buttonText: "Register as Student",
             buttonLink: "/register/student",
-            buttonStyle: "bg-stone-900 text-white hover:bg-stone-800",
+            buttonStyle: "bg-slate-900 text-white hover:bg-slate-800 shadow-sm",
         },
     ];
 
     return (
         <div className="editorial-page min-h-screen pb-24">
             {/* Header Hero */}
-            <div className="editorial-hero border-b border-stone-200/80 px-4 py-16 sm:px-6 lg:px-8">
+            <div className="editorial-hero border-b border-slate-200/80 px-4 py-16 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-5xl text-center">
-                    <span className="editorial-kicker text-emerald-800">
+                    <span className="editorial-kicker text-blue-600 font-extrabold tracking-widest">
                         TRANSPARENT ACCESS
                     </span>
-                    <h1 className="editorial-display mt-3 text-4xl font-extrabold text-stone-900 sm:text-5xl">
+                    <h1 className="editorial-display mt-3 text-4xl font-extrabold text-slate-900 sm:text-5xl">
                         Accessible Education for Every Learner
                     </h1>
-                    <p className="mx-auto mt-4 max-w-3xl text-base text-stone-600 sm:text-lg leading-relaxed">
+                    <p className="mx-auto mt-4 max-w-3xl text-base text-slate-600 sm:text-lg leading-relaxed">
                         Choose the right level of support. From open self-guided catalog exploration to intensive teacher-led live cohorts with verified certificates.
                     </p>
                 </div>
@@ -85,35 +85,35 @@ export function PricingPage() {
                             key={idx}
                             className={`flex flex-col justify-between rounded-3xl p-8 transition-all ${
                                 plan.highlight
-                                    ? "bg-white ring-2 ring-emerald-700 shadow-xl lg:-translate-y-2 relative"
-                                    : "bg-white/80 ring-1 ring-stone-200/80 shadow-sm"
+                                    ? "bg-white ring-2 ring-blue-600 shadow-xl shadow-blue-500/10 lg:-translate-y-2 relative"
+                                    : "bg-white/90 ring-1 ring-slate-200/80 shadow-sm"
                             }`}
                         >
                             {plan.badge && (
-                                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-emerald-800 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
+                                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25">
                                     {plan.badge}
                                 </span>
                             )}
 
                             <div>
-                                <h3 className="editorial-display text-xl font-bold text-stone-900">{plan.name}</h3>
-                                <p className="mt-2 text-xs text-stone-500 leading-relaxed min-h-[36px]">
+                                <h3 className="editorial-display text-xl font-bold text-slate-900">{plan.name}</h3>
+                                <p className="mt-2 text-xs text-slate-500 leading-relaxed min-h-[36px]">
                                     {plan.description}
                                 </p>
 
-                                <div className="mt-6 border-y border-stone-100 py-4">
-                                    <div className="text-3xl font-black text-stone-900 font-mono">
+                                <div className="mt-6 border-y border-slate-100 py-4">
+                                    <div className="text-3xl font-black text-slate-900 font-mono">
                                         {plan.price}
                                     </div>
-                                    <div className="text-xs font-semibold text-stone-400 mt-0.5">
+                                    <div className="text-xs font-semibold text-slate-400 mt-0.5">
                                         {plan.period}
                                     </div>
                                 </div>
 
-                                <ul className="mt-6 space-y-3 text-xs text-stone-700">
+                                <ul className="mt-6 space-y-3 text-xs text-slate-700">
                                     {plan.features.map((feat, fIdx) => (
                                         <li key={fIdx} className="flex items-start gap-2.5">
-                                            <span className="text-emerald-700 font-bold shrink-0">✓</span>
+                                            <span className="text-blue-600 font-bold shrink-0">✓</span>
                                             <span>{feat}</span>
                                         </li>
                                     ))}
@@ -133,12 +133,12 @@ export function PricingPage() {
                 </div>
 
                 {/* Placement Policy Note */}
-                <div className="mt-16 rounded-3xl bg-stone-100 p-8 text-center ring-1 ring-stone-200/80">
-                    <h4 className="text-sm font-bold text-stone-900">Need specific cohort scheduling or group placement?</h4>
-                    <p className="mt-2 text-xs text-stone-600 max-w-xl mx-auto">
+                <div className="mt-16 rounded-3xl bg-slate-50 p-8 text-center ring-1 ring-slate-200/80">
+                    <h4 className="text-sm font-bold text-slate-900">Need specific cohort scheduling or group placement?</h4>
+                    <p className="mt-2 text-xs text-slate-600 max-w-xl mx-auto">
                         Our Hub Administrators work directly with schools, parent groups, and individual learners to arrange convenient morning, afternoon, or weekend class schedules.
                     </p>
-                    <Link to="/contact" className="mt-4 inline-block text-xs font-bold text-emerald-800 hover:underline">
+                    <Link to="/contact" className="mt-4 inline-block text-xs font-bold text-blue-600 hover:underline">
                         Contact Support for Placement Inquiries →
                     </Link>
                 </div>
