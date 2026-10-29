@@ -15,18 +15,18 @@ function getTransporter() {
         return null;
     }
     if (!transporter) {
-        const isGmail = (env.SMTP_HOST || "").toLowerCase().includes("gmail") || smtpUser.endsWith("@gmail.com");
+        // Use port 587 (STARTTLS) — port 465 is blocked by Render/cloud providers
         transporter = nodemailer.createTransport({
-            host: isGmail ? "smtp.gmail.com" : (env.SMTP_HOST || "smtp.gmail.com"),
-            port: isGmail ? 465 : (Number(env.SMTP_PORT) || 465),
-            secure: isGmail ? true : (Number(env.SMTP_PORT) === 465),
-            family: 4, // CRITICAL: Forces IPv4 to bypass 30-40s system IPv6 DNS timeout
-            pool: true, // Keeps connection pool alive for instant subsequent sends
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false, // STARTTLS (upgrades after connection)
+            family: 4,     // CRITICAL: Forces IPv4 to bypass IPv6 DNS timeout
+            pool: true,
             maxConnections: 5,
             maxMessages: 100,
-            connectionTimeout: 10000,
-            greetingTimeout: 8000,
-            socketTimeout: 15000,
+            connectionTimeout: 15000,
+            greetingTimeout: 10000,
+            socketTimeout: 20000,
             auth: { user: smtpUser, pass: smtpPass },
             tls: { rejectUnauthorized: false },
         });
