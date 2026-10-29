@@ -95,9 +95,10 @@ export async function sendVerificationCode({ email, name, code }) {
     try {
         await client.sendMail({
             from: fromAddress,
+            replyTo: fromAddress,
             to: email,
-            subject: `${code} is your TedbabeLearnHUB verification code`,
-            text: `Hello ${name || "Learner"},\n\nYour TedbabeLearnHUB verification code is: ${code}\n\nThis code expires in 10 minutes.\n\n— TedbabeLearnHUB Team`,
+            subject: `Your TedbabeLearnHUB verification code: ${code}`,
+            text: `Hello ${name || "Learner"},\n\nYour TedbabeLearnHUB verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.\n\n— TedbabeLearnHUB Team\nhttps://tedbabelearnhub.vercel.app`,
             html: emailWrapper("Account Verification", `
               <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:0;">Verify your account</h1>
               <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
@@ -107,6 +108,13 @@ export async function sendVerificationCode({ email, name, code }) {
               </div>
               <p style="font-size:13px;color:#64748b;line-height:1.5;">If you did not initiate this request, you can safely ignore this email.</p>
             `),
+            headers: {
+                "X-Mailer": "TedbabeLearnHUB Mailer v1",
+                "X-Priority": "1",
+                "X-Entity-Ref-ID": `verify-${Date.now()}`,
+                "Precedence": "transactional",
+                "X-Auto-Response-Suppress": "OOF, AutoReply",
+            },
         });
         console.log(`[TedbabeLearnHUB Mailer] Verification email successfully delivered to ${email}`);
     } catch (error) {
