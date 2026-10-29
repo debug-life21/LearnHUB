@@ -24,7 +24,7 @@ function LanguageToggle({ compact = false }) {
             onClick={toggle}
             title={isAmharic ? "Switch to English" : "ወደ አማርኛ ቀይር"}
             aria-label={isAmharic ? "Switch to English" : "Switch to Amharic"}
-            className={`flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white font-bold text-slate-700 shadow-sm transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${
+            className={`flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white font-bold text-slate-700 shadow-sm transition-all hover:border-emerald-400/60 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${
                 compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-[13px]"
             }`}
         >
@@ -45,8 +45,8 @@ const navigationItems = [
 function navLinkClass({ isActive }) {
     return `rounded-xl px-4 py-2.5 text-sm sm:text-[15px] font-bold transition-all whitespace-nowrap tracking-wide ${
         isActive
-            ? "bg-white text-emerald-950 shadow-md ring-1 ring-emerald-900/10 font-extrabold"
-            : "text-slate-700 hover:bg-white/80 hover:text-slate-950"
+            ? "bg-white text-emerald-900 shadow-md ring-1 ring-emerald-900/12 font-extrabold"
+            : "text-slate-600 hover:bg-white/90 hover:text-slate-950 hover:shadow-sm"
     }`;
 }
 
@@ -120,7 +120,7 @@ export function Navbar() {
             ? "Teacher"
             : "Student";
     return (
-        <header className="editorial-nav sticky top-0 z-40 border-b border-emerald-950/10 bg-[#fffdf8]/95 shadow-[0_8px_30px_rgba(27,43,33,0.07)] backdrop-blur-xl">
+        <header className="editorial-nav sticky top-0 z-40 border-b border-[#e3ddd4] shadow-[0_4px_20px_rgba(27,43,33,0.08)] backdrop-blur-xl">
             <div className="mx-auto flex min-h-[5.25rem] sm:min-h-[5.75rem] max-w-[90rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
                 <Link
                     to="/"
@@ -139,7 +139,7 @@ export function Navbar() {
                         <div className="hidden items-center gap-2.5 lg:flex">
                             <Link
                                 to="/dashboard"
-                                className="inline-flex items-center gap-2.5 rounded-xl bg-[#25362d] px-4 py-2.5 text-sm sm:text-[15px] font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                                className="inline-flex items-center gap-2.5 rounded-xl bg-[#1d5a38] px-4 py-2.5 text-sm sm:text-[15px] font-bold text-white shadow-md shadow-emerald-900/20 transition-all hover:-translate-y-0.5 hover:bg-[#163d26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
                                 <span className="max-w-36 truncate">{user.fullName || t("dashboard")}</span>
                                 <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-blue-100">
@@ -163,13 +163,13 @@ export function Navbar() {
                         <div className="hidden items-center gap-2 lg:flex">
                             <Link
                                 to="/sign-in"
-                                className="rounded-xl px-4 py-2.5 text-sm sm:text-[15px] font-bold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                                className="rounded-xl px-4 py-2.5 text-sm sm:text-[15px] font-bold text-slate-600 transition-colors hover:bg-slate-100/80 hover:text-slate-950"
                             >
                                 {t("signIn")}
                             </Link>
                             <Link
                                 to="/register/student"
-                                className="rounded-xl bg-emerald-800 px-5 py-2.5 text-sm sm:text-[15px] font-extrabold text-white shadow-[0_5px_14px_rgba(6,78,59,0.25)] transition-all hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
+                                className="rounded-xl bg-[#1d5a38] px-5 py-2.5 text-sm sm:text-[15px] font-extrabold text-white shadow-[0_5px_14px_rgba(29,90,56,0.30)] transition-all hover:-translate-y-0.5 hover:bg-[#163d26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
                             >
                                 {t("studentSignUp")}
                             </Link>
@@ -182,7 +182,7 @@ export function Navbar() {
                     <button
                         onClick={() => setMobileMenuState({ pathname: location.pathname, open: !mobileMenuOpen })}
                         type="button"
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 lg:hidden"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-sm transition-all hover:border-emerald-400/50 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 lg:hidden"
                         aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
                         aria-expanded={mobileMenuOpen}
                         aria-controls="mobile-navigation"
@@ -227,7 +227,7 @@ export function Navbar() {
                                 <Link
                                     to="/dashboard"
                                     onClick={closeMobileMenu}
-                                    className="rounded-xl bg-[#25362d] px-4 py-3 text-center text-base font-bold text-white hover:bg-emerald-900 shadow-sm"
+                                    className="rounded-xl bg-[#1d5a38] px-4 py-3 text-center text-base font-bold text-white hover:bg-[#163d26] shadow-md shadow-emerald-900/20"
                                 >
                                     {t("dashboard")}
                                 </Link>
@@ -253,7 +253,7 @@ export function Navbar() {
                             <Link
                                 to="/register/student"
                                 onClick={closeMobileMenu}
-                                className="rounded-xl bg-emerald-800 px-4 py-3 text-center text-base font-bold text-white hover:bg-emerald-900 shadow-md shadow-emerald-900/20"
+                                className="rounded-xl bg-[#1d5a38] px-4 py-3 text-center text-base font-bold text-white hover:bg-[#163d26] shadow-md shadow-emerald-900/20"
                             >
                                 {t("studentSignUp")}
                             </Link>

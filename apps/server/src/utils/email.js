@@ -2,8 +2,6 @@ import nodemailer from "nodemailer";
 import { env, isProduction } from "../config.js";
 import { ApiError } from "../lib/http.js";
 
-let transporter;
-
 function getTransporter() {
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
     const smtpPass = (env.SMTP_PASS?.trim() || "iakgmhpfzlvyavcw").replace(/\s+/g, "");
@@ -14,24 +12,20 @@ function getTransporter() {
         console.warn("[Mailer] SMTP credentials missing in production. Falling back to log-based verification.");
         return null;
     }
-    if (!transporter) {
-        // Use port 587 (STARTTLS) — port 465 is blocked by Render/cloud providers
-        transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 587,
-            secure: false, // STARTTLS (upgrades after connection)
-            family: 4,     // CRITICAL: Forces IPv4 to bypass IPv6 DNS timeout
-            pool: true,
-            maxConnections: 5,
-            maxMessages: 100,
-            connectionTimeout: 15000,
-            greetingTimeout: 10000,
-            socketTimeout: 20000,
-            auth: { user: smtpUser, pass: smtpPass },
-            tls: { rejectUnauthorized: false },
-        });
-    }
-    return transporter;
+    // Fresh transporter per call — avoids stale pooled connections that hang silently
+    // Port 587 + requireTLS is the most reliable config for Render/cloud (port 465 SSL is often blocked)
+    return nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,       // STARTTLS — upgrades after connection
+        requireTLS: true,    // Fail fast if STARTTLS not available (no silent fallback)
+        family: 4,           // CRITICAL: Forces IPv4 to bypass IPv6 DNS timeout
+        connectionTimeout: 10000,
+        greetingTimeout: 8000,
+        socketTimeout: 15000,
+        auth: { user: smtpUser, pass: smtpPass },
+        tls: { rejectUnauthorized: false },
+    });
 }
 
 function escapeHtml(str) {
@@ -111,7 +105,6 @@ export async function sendVerificationCode({ email, name, code }) {
         });
         console.log(`[TedbabeLearnHUB Mailer] Verification email successfully delivered to ${email}`);
     } catch (error) {
-        transporter = null;
         console.error("[TedbabeLearnHUB Mailer] Verification email delivery failed:", error?.message || error);
         console.log(`[TedbabeLearnHUB Mailer] FALLBACK - Verification code for ${email}: [ ${code} ] (Check console log for verification)`);
     }

@@ -43,7 +43,7 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                         onClick={() => setIsOpen(true)}
                         aria-expanded={isOpen}
                         aria-controls="mobile-sidebar-drawer"
-                        className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-emerald-800 px-3.5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 active:scale-95"
+                        className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#1d5a38] px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-900/20 transition hover:bg-[#163d26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800 active:scale-95"
                     >
                         <svg
                             aria-hidden="true"
@@ -98,7 +98,7 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                     />
 
                     {/* Slide-over panel */}
-                    <div className="fixed inset-y-0 left-0 flex w-full max-w-xs flex-col bg-white shadow-2xl transition-transform sm:max-w-sm">
+                    <div className="fixed inset-y-0 left-0 flex w-full max-w-xs flex-col bg-white shadow-2xl shadow-slate-900/20 transition-transform sm:max-w-sm">
                         {/* Header */}
                         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
                             <div className="min-w-0">
@@ -146,8 +146,8 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                                             }}
                                             className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-xs font-semibold transition ${
                                                 isCurrent
-                                                    ? "bg-emerald-800 text-white shadow-xs"
-                                                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                                                    ? "bg-[#1d5a38] text-white shadow-sm shadow-emerald-900/25"
+                                                    : "text-slate-600 hover:bg-[#f0ede4] hover:text-slate-950"
                                             }`}
                                         >
                                             <span className="text-base" aria-hidden="true">{tab.icon}</span>
@@ -213,8 +213,8 @@ export function DashboardSidebar({ title, user, tabs, activeTab, onSelect, backH
                             onClick={() => onSelect(tab.id)}
                             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition ${
                                 activeTab === tab.id
-                                    ? "bg-emerald-800 text-white shadow-xs"
-                                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                                    ? "bg-[#1d5a38] text-white shadow-sm shadow-emerald-900/25"
+                                    : "text-slate-600 hover:bg-[#f0ede4] hover:text-slate-950"
                             }`}
                         >
                             <span className="text-base" aria-hidden="true">{tab.icon}</span>

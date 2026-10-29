@@ -13,7 +13,7 @@ const envSchema = z.object({
     ADMIN_CLIENT_URL: z.string().default("http://localhost:5174"),
     GOOGLE_CLIENT_ID: z.string().default(""),
     SMTP_HOST: z.string().default("smtp.gmail.com"),
-    SMTP_PORT: z.coerce.number().default(465),
+    SMTP_PORT: z.coerce.number().default(465), // 465=SSL (secure:true), 587=STARTTLS (secure:false)
     SMTP_USER: z.string().default("debuglife1221@gmail.com"),
     SMTP_PASS: z.string().default("iakgmhpfzlvyavcw"),
     SMTP_FROM: z.string().default("TedbabeLearnHUB <debuglife1221@gmail.com>"),
