@@ -297,12 +297,22 @@ export async function login(req, res) {
     if (user.role === "admin" || user.role === "hub_admin") {
         throw new ApiError(403, "Administrator accounts must sign in through the Admin Dashboard only.");
     }
-    const purpose = user.isVerified ? "login" : "signup";
-    await issueCode(user, purpose);
-    res.json({
-        message: "Verification code sent.",
+    // If the account has already completed verification, sign in immediately without OTP
+    if (user.isVerified || user.emailVerified) {
+        const token = setSessionCookie(res, user);
+        return res.json({
+            message: "Signed in successfully.",
+            token,
+            user: userResponse(user),
+        });
+    }
+
+    // If the account is unverified, prompt them to verify with an OTP code
+    await issueCode(user, "signup");
+    return res.json({
+        message: "Verification code sent to your email address.",
         email: user.email,
-        purpose,
+        purpose: "signup",
     });
 }
 
@@ -428,10 +438,10 @@ export async function verifyCode(req, res) {
 export async function resendCode(req, res) {
     const data = z.object({
         email: z.string().trim().email(),
-        purpose: z.enum(["signup", "login"]),
+        purpose: z.string().optional().default("signup"),
     }).parse(req.body);
     const user = await UserModel.findOne({ email: normalizedEmail(data.email) }).select("+codeSentAt");
-    if (!user || (data.purpose === "signup" && user.isVerified) || (data.purpose === "login" && !user.isVerified)) {
+    if (!user || user.isVerified || user.emailVerified) {
         res.json({ message: "If the account is eligible, a new code has been sent." });
         return;
     }
@@ -441,7 +451,7 @@ export async function resendCode(req, res) {
     if (cooldownRemaining > 0) {
         throw new ApiError(429, `Please wait ${Math.ceil(cooldownRemaining / 1000)} seconds before requesting another code.`);
     }
-    await issueCode(user, data.purpose);
+    await issueCode(user, "signup");
     res.json({ message: "A new verification code has been sent." });
 }
 

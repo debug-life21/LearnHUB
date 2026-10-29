@@ -77,10 +77,11 @@ export async function sendVerificationCode({ email, name, code }) {
         console.log(`[TedbabeLearnHUB Mailer] Verification email skipped (SMTP unconfigured). Use code: ${code}`);
         return;
     }
-    const smtpUser = env.SMTP_USER?.trim();
+    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
+    const fromAddress = env.SMTP_FROM || `"TedbabeLearnHUB" <${smtpUser}>`;
     try {
         await client.sendMail({
-            from: `"TedbabeLearnHUB" <${smtpUser}>`,
+            from: fromAddress,
             to: email,
             subject: `${code} is your TedbabeLearnHUB verification code`,
             text: `Hello ${name || "Learner"},\n\nYour TedbabeLearnHUB verification code is: ${code}\n\nThis code expires in 10 minutes.\n\n— TedbabeLearnHUB Team`,
@@ -109,9 +110,11 @@ export async function sendPasswordResetEmail({ email, name, resetUrl, code }) {
         console.log(`[TedbabeLearnHUB Dev Mailer] Password reset link for ${email}: ${resetUrl} (Code: ${code})`);
         return;
     }
+    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
+    const fromAddress = env.SMTP_FROM || `"TedbabeLearnHUB Security" <${smtpUser}>`;
     try {
         await client.sendMail({
-            from: `"TedbabeLearnHUB Security" <${env.SMTP_USER}>`,
+            from: fromAddress,
             to: email,
             subject: "Reset your TedbabeLearnHUB password",
             text: `Hello ${name}, reset your TedbabeLearnHUB password by visiting: ${resetUrl} or using code ${code}. Valid for 15 minutes.`,
@@ -142,9 +145,11 @@ export async function sendSecurityAlertEmail({ email, name, action }) {
         console.log(`[TedbabeLearnHUB Dev Mailer] Security alert for ${email}: ${action}`);
         return;
     }
+    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
+    const fromAddress = env.SMTP_FROM || `"TedbabeLearnHUB Security" <${smtpUser}>`;
     try {
         await client.sendMail({
-            from: `"TedbabeLearnHUB Security" <${env.SMTP_USER}>`,
+            from: fromAddress,
             to: email,
             subject: "Security Alert: TedbabeLearnHUB Account Update",
             text: `Hello ${name}, an important security action was performed: ${action}.`,

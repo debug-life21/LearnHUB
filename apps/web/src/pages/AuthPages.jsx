@@ -65,12 +65,18 @@ function readApplicationFile(file) {
 
 export function SignInPage() {
     const { t } = useTranslation();
-    const { login, refreshUser } = useAuth();
+    const { user, login, refreshUser } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
+
+    useEffect(() => {
+        if (user && (user.isVerified || user.emailVerified)) {
+            navigate("/dashboard", { replace: true });
+        }
+    }, [user, navigate]);
 
     const continueWithGoogle = useCallback(async (credential) => {
         if (!credential) {
@@ -626,7 +632,7 @@ export function SignupPage({ initialRole = "student" }) {
 
 export function VerifyCodePage() {
     const { t } = useTranslation();
-    const { refreshUser } = useAuth();
+    const { user, refreshUser } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const [email, setEmail] = useState(location.state?.email || sessionStorage.getItem("learnhub_pending_email") || "");
@@ -635,6 +641,12 @@ export function VerifyCodePage() {
     const [secondsLeft, setSecondsLeft] = useState(60);
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
+
+    useEffect(() => {
+        if (user && (user.isVerified || user.emailVerified)) {
+            navigate("/dashboard", { replace: true });
+        }
+    }, [user, navigate]);
 
     useEffect(() => {
         if (secondsLeft <= 0) return undefined;

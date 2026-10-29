@@ -32,4 +32,6 @@ services:
       - key: SMTP_USER
         value: debuglife1221@gmail.com
       - key: SMTP_PASS
-        value: iobnqacmewazsrzk
+        value: iakgmhpfzlvyavcw
+      - key: SMTP_FROM
+        value: "TedbabeLearnHUB <debuglife1221@gmail.com>"

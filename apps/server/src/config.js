@@ -13,6 +13,7 @@ const envSchema = z.object({
     SMTP_PORT: z.coerce.number().default(465),
     SMTP_USER: z.string().default("debuglife1221@gmail.com"),
     SMTP_PASS: z.string().default("iobnqacmewazsrzk"),
+    SMTP_FROM: z.string().default("TedbabeLearnHUB <debuglife1221@gmail.com>"),
     STORAGE_PROVIDER: z.enum(["local", "r2"]).default("local"),
     R2_ACCOUNT_ID: z.string().default(""),
     R2_BUCKET: z.string().default(""),
