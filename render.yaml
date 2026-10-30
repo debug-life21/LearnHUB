@@ -25,13 +25,20 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      # Email: Option A — Gmail SMTP with App Password (may be blocked on Render free tier)
       - key: SMTP_HOST
         value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: 587
       - key: SMTP_USER
-        value: debuglife1221@gmail.com
+        sync: false
       - key: SMTP_PASS
-        value: iakgmhpfzlvyavcw
+        sync: false
       - key: SMTP_FROM
-        value: "TedbabeLearnHUB <debuglife1221@gmail.com>"
+        sync: false
+      # Email: Option B — Resend API (RECOMMENDED for reliable production delivery)
+      # Sign up free at https://resend.com, verify your domain, get an API key.
+      # Set RESEND_API_KEY in the Render dashboard — the server will use Resend HTTPS
+      # instead of Gmail SMTP, bypassing all outbound port blocks.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false

@@ -335,14 +335,10 @@ export function SignupPage({ initialRole = "student" }) {
                     } : {}),
                 }),
             });
-            if (response.token && response.user) {
-                await refreshUser();
-                navigate("/dashboard");
-                return;
-            }
+            // Always require OTP verification regardless of role before accessing dashboard
             sessionStorage.setItem("learnhub_pending_email", response.email);
-            sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
-            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose, devCode: response.devCode } });
+            sessionStorage.setItem("learnhub_pending_purpose", response.purpose || "signup");
+            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose || "signup", devCode: response.devCode } });
         } catch (error) {
             setFeedback(error.message);
         } finally {

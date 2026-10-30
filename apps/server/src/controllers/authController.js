@@ -315,19 +315,13 @@ export async function signup(req, res) {
         throw error;
     }
     const code = await issueCode(user, "signup", data.device);
-    let token = null;
-    if (data.role === "student") {
-        token = setSessionCookie(res, user);
-    }
+    // All roles must verify email before getting a session token.
+    // Students become "active" after verifying; teachers still need admin approval.
     res.status(201).json({
-        message: data.role === "student" 
-            ? "Account created successfully. You can now select your courses and study preferences."
-            : "Verification code sent to your email address.",
+        message: "Verification code sent to your email address. Please check your inbox and enter the 6-digit code.",
         email,
         purpose: "signup",
-        token,
-        user: data.role === "student" ? userResponse(user) : undefined,
-        requiresVerification: data.role === "teacher",
+        requiresVerification: true,
         ...(!isProduction ? { devCode: code } : {}),
     });
 }
@@ -355,11 +349,11 @@ export async function login(req, res) {
         throw new ApiError(403, "Administrator accounts must sign in through the Admin Dashboard only.");
     }
 
-    // For non-students (teachers): require email verification first
-    if (!(user.isVerified || user.emailVerified) && user.role !== "student") {
+    // All roles must verify email before getting a session token
+    if (!(user.isVerified || user.emailVerified)) {
         const code = await issueCode(user, "signup", data.device);
         return res.json({
-            message: "Verification code sent to your email address.",
+            message: "Please verify your email address to continue. A 6-digit code has been sent to your inbox.",
             email: user.email,
             purpose: "signup",
             requiresVerification: true,
