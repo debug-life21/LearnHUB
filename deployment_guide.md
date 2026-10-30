@@ -69,9 +69,20 @@ Here's the recommended free stack:
    | `CLIENT_URL` | `https://learnhub.vercel.app` *(your frontend URL)* |
    | `ADMIN_CLIENT_URL` | `https://learnhub-admin.vercel.app` |
    | `GOOGLE_CLIENT_ID` | *(if using Google OAuth)* |
-   | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Gmail SMTP (e.g. `debuglife1221@gmail.com` and 16-char App Password) |
-   | `RESEND_API_KEY` or `BREVO_API_KEY` | *(Recommended for Render)* Free HTTPS email API — 100% immune to cloud port firewalls |
+   | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Gmail SMTP (`debuglife1221@gmail.com` + 16-char App Password) |
+   | `RESEND_API_KEY` *(Recommended)* | Free HTTPS email API from [resend.com](https://resend.com). **100% immune to cloud port firewalls**. |
+   | `BREVO_API_KEY` *(Alternative)* | Free HTTPS email API from [brevo.com](https://brevo.com) (300 emails/day, no credit card needed). |
    | `STORAGE_PROVIDER` | `r2` or `local` |
+
+> [!IMPORTANT]
+> **Why do OTP emails need Resend or Brevo on Render?**
+> Render's free tier blocks outbound SMTP ports (`25`, `465`, and `587`) by default to prevent spam.
+> To inbox real OTP emails directly on Render:
+> 1. Sign up for free at **[resend.com](https://resend.com)** (takes 60 seconds).
+> 2. Create an API key (`re_...`) and add `RESEND_API_KEY` in your Render Environment Variables.
+> 3. That's it! Emails are sent via secure HTTPS (port 443) and arrive in the user's inbox instantly.
+> 
+> *If unconfigured, the system automatically detects the network firewall block and securely displays the OTP code on the verification screen so users are never stuck or locked out.*
 
 6. Click **Deploy**
 

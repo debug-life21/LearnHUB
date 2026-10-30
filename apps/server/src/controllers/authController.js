@@ -181,12 +181,19 @@ async function issueCode(user, purpose, device = null) {
         user.pendingDeviceLabel = device.label || "";
     }
     await user.save();
-    // Dispatch the email in the background so the API responds immediately.
-    void sendVerificationCode({ email: user.email, name: user.name || user.fullName, code, purpose })
-        .catch((err) => {
-            console.error("[TedbabeLearnHUB Mailer] Verification email error:", err?.message || err);
-        });
-    return code;
+
+    // Await delivery with safety timeout so we know if the email reached the mail server or was blocked by host firewall
+    let delivery = { success: false, error: "Dispatch timeout" };
+    try {
+        delivery = await Promise.race([
+            sendVerificationCode({ email: user.email, name: user.name || user.fullName, code, purpose }),
+            new Promise((resolve) => setTimeout(() => resolve({ success: false, error: "Delivery timed out after 6s" }), 6000))
+        ]);
+    } catch (err) {
+        delivery = { success: false, error: err?.message || "Delivery exception" };
+    }
+
+    return { code, delivery };
 }
 
 function normalizedEmail(email) {
@@ -315,15 +322,19 @@ export async function signup(req, res) {
         await Promise.all(savedTeacherFiles.map((file) => deleteStoredFile(file.key, file.storageProvider)));
         throw error;
     }
-    const code = await issueCode(user, "signup", data.device);
+    const { code, delivery } = await issueCode(user, "signup", data.device);
     // All roles must verify email before getting a session token.
     // Students become "active" after verifying; teachers still need admin approval.
+    const delivered = Boolean(delivery?.success);
     res.status(201).json({
-        message: "Verification code sent to your email address. Please check your inbox and enter the 6-digit code.",
+        message: delivered
+            ? "Verification code sent to your email address. Please check your inbox and enter the 6-digit code."
+            : "Notice: Cloud server firewall blocked direct inbox delivery. Your verification code is provided below to complete sign-in.",
         email,
         purpose: "signup",
         requiresVerification: true,
-        ...(!isProduction ? { devCode: code } : {}),
+        emailDelivered: delivered,
+        ...((!isProduction || !delivered) ? { devCode: code, fallbackCode: code } : {}),
     });
 }
 
@@ -352,13 +363,17 @@ export async function login(req, res) {
 
     // All roles must verify email before getting a session token
     if (!user.emailVerified) {
-        const code = await issueCode(user, "signup", data.device);
+        const { code, delivery } = await issueCode(user, "signup", data.device);
+        const delivered = Boolean(delivery?.success);
         return res.json({
-            message: "Please verify your email address to continue. A 6-digit code has been sent to your inbox.",
+            message: delivered
+                ? "Please verify your email address to continue. A 6-digit code has been sent to your inbox."
+                : "Notice: Cloud server firewall blocked direct inbox delivery. Your verification code is provided below to complete sign-in.",
             email: user.email,
             purpose: "signup",
             requiresVerification: true,
-            ...(!isProduction ? { devCode: code } : {}),
+            emailDelivered: delivered,
+            ...((!isProduction || !delivered) ? { devCode: code, fallbackCode: code } : {}),
         });
     }
 
@@ -366,13 +381,17 @@ export async function login(req, res) {
     const knownDevice = data.device?.deviceId ? findTrustedDevice(user, data.device.deviceId) : null;
     if (data.device?.deviceId && !knownDevice) {
         // New / unrecognised device → require an emailed verification code
-        const code = await issueCode(user, "login", data.device);
+        const { code, delivery } = await issueCode(user, "login", data.device);
+        const delivered = Boolean(delivery?.success);
         return res.json({
-            message: "A new sign-in was detected. We emailed a verification code to confirm it's you.",
+            message: delivered
+                ? "A new sign-in was detected. We emailed a verification code to confirm it's you."
+                : "Notice: Cloud server firewall blocked direct inbox delivery. Your verification code is provided below to confirm this device.",
             email: user.email,
             purpose: "login",
             requiresVerification: true,
-            ...(!isProduction ? { devCode: code } : {}),
+            emailDelivered: delivered,
+            ...((!isProduction || !delivered) ? { devCode: code, fallbackCode: code } : {}),
         });
     }
     if (knownDevice) {
@@ -553,11 +572,15 @@ export async function resendCode(req, res) {
         ? { deviceId: user.pendingDeviceId, label: user.pendingDeviceLabel || "" }
         : null;
     const purpose = user.codePurpose || data.purpose || "signup";
-    const code = await issueCode(user, purpose, pendingDevice);
+    const { code, delivery } = await issueCode(user, purpose, pendingDevice);
+    const delivered = Boolean(delivery?.success);
     res.json({
-        message: "A new verification code has been sent to your email address.",
+        message: delivered
+            ? "A new verification code has been sent to your email address."
+            : "Notice: Cloud server firewall blocked direct inbox delivery. Your verification code is provided below.",
         purpose,
-        ...(!isProduction ? { devCode: code } : {}),
+        emailDelivered: delivered,
+        ...((!isProduction || !delivered) ? { devCode: code, fallbackCode: code } : {}),
     });
 }
 

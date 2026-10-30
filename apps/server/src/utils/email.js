@@ -20,9 +20,9 @@ function getTransporters() {
                 port: 465,
                 secure: true,
                 family: 4,
-                connectionTimeout: 10000,
-                greetingTimeout: 8000,
-                socketTimeout: 15000,
+                connectionTimeout: 4000,
+                greetingTimeout: 3000,
+                socketTimeout: 5000,
                 auth: { user: smtpUser, pass: smtpPass },
                 tls: { rejectUnauthorized: false },
             }),
@@ -32,9 +32,9 @@ function getTransporters() {
             transporter: nodemailer.createTransport({
                 service: "gmail",
                 family: 4,
-                connectionTimeout: 10000,
-                greetingTimeout: 8000,
-                socketTimeout: 15000,
+                connectionTimeout: 4000,
+                greetingTimeout: 3000,
+                socketTimeout: 5000,
                 auth: { user: smtpUser, pass: smtpPass },
             }),
         },
@@ -46,14 +46,47 @@ function getTransporters() {
                 secure: false,
                 requireTLS: true,
                 family: 4,
-                connectionTimeout: 10000,
-                greetingTimeout: 8000,
-                socketTimeout: 15000,
+                connectionTimeout: 4000,
+                greetingTimeout: 3000,
+                socketTimeout: 5000,
                 auth: { user: smtpUser, pass: smtpPass },
                 tls: { rejectUnauthorized: false },
             }),
         },
     ];
+}
+
+async function deliverViaSendGrid(mailOptions) {
+    const sendgridKey = (process.env.SENDGRID_API_KEY || "").replace(/^["']|["']$/g, "").trim();
+    if (!sendgridKey) return null;
+    const sendgridFrom = (process.env.SENDGRID_FROM || env.SMTP_USER || "debuglife1221@gmail.com").replace(/^["']|["']$/g, "").trim();
+    try {
+        const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${sendgridKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                personalizations: [{ to: [{ email: mailOptions.to }] }],
+                from: { email: sendgridFrom, name: "TedbabeLearnHUB" },
+                subject: mailOptions.subject,
+                content: [
+                    { type: "text/plain", value: mailOptions.text },
+                    { type: "text/html", value: mailOptions.html }
+                ]
+            }),
+        });
+        if (!res.ok) {
+            const errBody = await res.text();
+            throw new Error(`SendGrid HTTP ${res.status}: ${errBody}`);
+        }
+        console.log(`[TedbabeLearnHUB Mailer] Successfully delivered via SendGrid HTTPS to ${mailOptions.to}`);
+        return { delivered: true, method: "sendgrid_api" };
+    } catch (err) {
+        console.warn(`[TedbabeLearnHUB Mailer] SendGrid API attempt failed: ${err.message || err}`);
+        return null;
+    }
 }
 
 async function deliverViaResend(mailOptions) {
@@ -122,7 +155,7 @@ async function deliverViaBrevo(mailOptions) {
 }
 
 async function deliverEmail(mailOptions) {
-    // 1. Direct HTTPS APIs (Resend & Brevo) - Immune to host firewall/port-25/port-465 blocking on cloud platforms like Render
+    // 1. Direct HTTPS APIs (Resend, Brevo, SendGrid) - Immune to host firewall/port-25/port-465 blocking on cloud platforms like Render
     if (process.env.RESEND_API_KEY) {
         const resendResult = await deliverViaResend(mailOptions);
         if (resendResult) return resendResult;
@@ -130,6 +163,10 @@ async function deliverEmail(mailOptions) {
     if (process.env.BREVO_API_KEY) {
         const brevoResult = await deliverViaBrevo(mailOptions);
         if (brevoResult) return brevoResult;
+    }
+    if (process.env.SENDGRID_API_KEY) {
+        const sendgridResult = await deliverViaSendGrid(mailOptions);
+        if (sendgridResult) return sendgridResult;
     }
 
     const candidates = getTransporters();
@@ -149,11 +186,13 @@ async function deliverEmail(mailOptions) {
         }
     }
 
-    // As last resort, try Resend or Brevo if not tried earlier
+    // As last resort, try HTTPS APIs if not tried earlier
     const resendFallback = await deliverViaResend(mailOptions);
     if (resendFallback) return resendFallback;
     const brevoFallback = await deliverViaBrevo(mailOptions);
     if (brevoFallback) return brevoFallback;
+    const sendgridFallback = await deliverViaSendGrid(mailOptions);
+    if (sendgridFallback) return sendgridFallback;
 
     throw lastError || new Error("All mail transports failed.");
 }

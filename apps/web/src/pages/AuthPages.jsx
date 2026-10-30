@@ -112,7 +112,15 @@ export function SignInPage() {
             }
             sessionStorage.setItem("learnhub_pending_email", response.email || email);
             sessionStorage.setItem("learnhub_pending_purpose", response.purpose || "signup");
-            navigate("/verify-code", { state: { email: response.email || email, purpose: response.purpose || "signup", devCode: response.devCode } });
+            navigate("/verify-code", {
+                state: {
+                    email: response.email || email,
+                    purpose: response.purpose || "signup",
+                    devCode: response.devCode || response.fallbackCode,
+                    fallbackCode: response.fallbackCode || response.devCode,
+                    emailDelivered: response.emailDelivered,
+                }
+            });
         } catch (error) {
             setFeedback(error.message);
         } finally {
@@ -338,7 +346,15 @@ export function SignupPage({ initialRole = "student" }) {
             // Always require OTP verification regardless of role before accessing dashboard
             sessionStorage.setItem("learnhub_pending_email", response.email);
             sessionStorage.setItem("learnhub_pending_purpose", response.purpose || "signup");
-            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose || "signup", devCode: response.devCode } });
+            navigate("/verify-code", {
+                state: {
+                    email: response.email,
+                    purpose: response.purpose || "signup",
+                    devCode: response.devCode || response.fallbackCode,
+                    fallbackCode: response.fallbackCode || response.devCode,
+                    emailDelivered: response.emailDelivered,
+                }
+            });
         } catch (error) {
             setFeedback(error.message);
         } finally {
@@ -547,7 +563,9 @@ export function VerifyCodePage() {
     const navigate = useNavigate();
     const [email, setEmail] = useState((location.state?.email || sessionStorage.getItem("learnhub_pending_email") || "").trim());
     const [purpose] = useState(location.state?.purpose || sessionStorage.getItem("learnhub_pending_purpose") || "signup");
-    const [code, setCode] = useState(location.state?.devCode || "");
+    const [code, setCode] = useState(location.state?.devCode || location.state?.fallbackCode || "");
+    const [fallbackCode, setFallbackCode] = useState(location.state?.fallbackCode || location.state?.devCode || "");
+    const [emailDelivered, setEmailDelivered] = useState(location.state?.emailDelivered !== false);
     const [rememberDevice, setRememberDevice] = useState(true);
     const [secondsLeft, setSecondsLeft] = useState(60);
     const [loading, setLoading] = useState(false);
@@ -600,10 +618,17 @@ export function VerifyCodePage() {
                 body: JSON.stringify({ email: email.trim().toLowerCase(), purpose }),
             });
             setSecondsLeft(60);
-            if (res?.devCode) {
-                setCode(res.devCode);
+            if (res?.devCode || res?.fallbackCode) {
+                setCode(res.devCode || res.fallbackCode);
+                setFallbackCode(res.devCode || res.fallbackCode);
             }
-            setFeedback("A new verification code has been dispatched. Please check your inbox and Spam / Junk folder.");
+            if (res?.emailDelivered === false) {
+                setEmailDelivered(false);
+                setFeedback("Notice: Cloud host firewall blocked SMTP email transmission. Your code is displayed in the alert box above.");
+            } else {
+                setEmailDelivered(true);
+                setFeedback("A new verification code has been dispatched. Please check your inbox and Spam / Junk folder.");
+            }
         } catch (error) {
             setFeedback(error.message);
         } finally {
@@ -619,9 +644,23 @@ export function VerifyCodePage() {
                 : "Enter the 6-digit code sent to your inbox"}
         >
             <Feedback>{feedback}</Feedback>
-            <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-slate-800 leading-relaxed">
-                Verification code sent to <strong className="font-bold text-[#0066ff]">{email || "your email"}</strong>. If you don't see it within a minute, check your <span className="font-bold underline">Spam / Junk</span> folder.
-            </div>
+            {!emailDelivered && fallbackCode ? (
+                <div className="mb-4 rounded-2xl border border-amber-300 bg-amber-500/10 p-4 text-xs leading-relaxed shadow-sm">
+                    <div className="flex items-center gap-2 font-bold text-amber-500 mb-1">
+                        <span className="text-base">⚠️</span> Cloud Network Email Notice
+                    </div>
+                    <p className="text-slate-700">
+                        Outbound SMTP ports (465/587) were blocked by the cloud server network firewall. Your 6-digit verification code is:
+                        <span className="block mt-2 font-mono text-xl font-black text-amber-600 tracking-[0.25em] bg-white py-2 px-3 rounded-xl border border-amber-200 text-center select-all">
+                            {fallbackCode}
+                        </span>
+                    </p>
+                </div>
+            ) : (
+                <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-slate-800 leading-relaxed">
+                    Verification code sent to <strong className="font-bold text-[#0066ff]">{email || "your email"}</strong>. If you don't see it within a minute, check your <span className="font-bold underline">Spam / Junk</span> folder.
+                </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     {t("email")}
