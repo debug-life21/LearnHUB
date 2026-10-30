@@ -18,9 +18,20 @@ export const publicRouter = Router();
 const PUBLIC_SETTING_KEYS = ["promo_video", "platform_name", "platform_tagline"];
 
 publicRouter.get("/home", asyncHandler(async (_req, res) => {
-    const [categories, publishedCourses, activeStudents, activeTeachers, activeClasses, pendingTeacherApplications] = await Promise.all([
-        LearningCategoryModel.find({ isActive: true }).sort({ sortOrder: 1 }).lean(),
-        CourseModel.find({ status: "published" }).limit(6).populate("category").lean(),
+    const categories = await LearningCategoryModel.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
+    const featuredCats = categories.filter((c) => ["Digital Marketing", "Web Development", "Programming"].includes(c.name));
+    const featuredCatIds = featuredCats.map((c) => c._id);
+
+    let featuredCourses = await CourseModel.find({
+        status: "published",
+        ...(featuredCatIds.length > 0 ? { category: { $in: featuredCatIds } } : {}),
+    }).limit(16).populate("category").lean();
+
+    if (featuredCourses.length === 0) {
+        featuredCourses = await CourseModel.find({ status: "published" }).limit(12).populate("category").lean();
+    }
+
+    const [activeStudents, activeTeachers, activeClasses, pendingTeacherApplications] = await Promise.all([
         UserModel.countDocuments({ role: "student", accountStatus: "active" }),
         UserModel.countDocuments({ role: "teacher", accountStatus: "active" }),
         ClassroomModel.countDocuments({ status: { $in: ["planned", "active"] } }),
@@ -32,7 +43,7 @@ publicRouter.get("/home", asyncHandler(async (_req, res) => {
             tagline: "Structured online learning with real teacher guidance and clear student placement.",
         },
         categories,
-        featuredCourses: publishedCourses,
+        featuredCourses,
         stats: {
             activeStudents,
             activeTeachers,

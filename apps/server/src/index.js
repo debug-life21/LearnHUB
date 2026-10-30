@@ -6,6 +6,7 @@ import { UserModel } from "./models/User.js";
 import { CourseModel } from "./models/Course.js";
 import { FAQModel } from "./models/FAQ.js";
 import { seedLearningCatalog } from "./catalog.js";
+import { syncFaqs } from "./faqData.js";
 
 async function autoInitDatabase() {
     try {
@@ -59,38 +60,9 @@ async function autoInitDatabase() {
             }
         }
 
-        // 3. Auto-seed default FAQs if empty
-        const faqCount = await FAQModel.countDocuments();
-        if (faqCount === 0) {
-            const faqs = [
-                {
-                    question: "How do students register and get placed in a cohort?",
-                    answer: "Create an account, share what you want to learn, and tell us when you are available. Our team reviews your goals and helps connect you with a suitable cohort and instructor.",
-                    sortOrder: 1,
-                    isPublished: true,
-                },
-                {
-                    question: "How do educators apply and get approved to teach?",
-                    answer: "Create an instructor account and verify your email. Your application remains under review until an administrator approves it. Once approved, you can access instructor tools and assigned cohorts.",
-                    sortOrder: 2,
-                    isPublished: true,
-                },
-                {
-                    question: "How do live Google Meet lessons work?",
-                    answer: "When a session is scheduled, its meeting link and time appear in your dashboard. Open the session and select Join live session to meet with your instructor and cohort.",
-                    sortOrder: 3,
-                    isPublished: true,
-                },
-                {
-                    question: "How is student progress and grade calculated?",
-                    answer: "Your dashboard brings together attendance, completed assignments, and assessment results so you can follow your progress and see what to focus on next.",
-                    sortOrder: 4,
-                    isPublished: true,
-                },
-            ];
-            await FAQModel.insertMany(faqs);
-            console.log("[Auto-Init] Default FAQs seeded.");
-        }
+        // 3. Auto-seed and sync all FAQs so they are permanently available online and locally
+        const syncedCount = await syncFaqs(FAQModel);
+        console.log(`[Auto-Init] ${syncedCount} FAQs synced to database.`);
     } catch (err) {
         console.error("[Auto-Init] Error during database initialization:", err);
     }

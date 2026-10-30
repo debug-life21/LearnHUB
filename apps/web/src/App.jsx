@@ -46,7 +46,7 @@ function ProtectedRoute({ children, roles }) {
     if (!user) {
         return <Navigate to="/sign-in" replace/>;
     }
-    if (user.isVerified === false && user.emailVerified === false) {
+    if (!user.emailVerified) {
         return <Navigate to="/verify-code" replace state={{ email: user.email, purpose: "signup" }} />;
     }
     if (roles && !roles.includes(user.role) && !(roles.includes("admin") && user.role === "hub_admin")) {

@@ -11,6 +11,7 @@ import { AssessmentModel } from "./models/Assessment.js";
 import { LearningResourceModel } from "./models/LearningResource.js";
 import { AnnouncementModel } from "./models/Announcement.js";
 import { seedLearningCatalog } from "./catalog.js";
+import { syncFaqs } from "./faqData.js";
 import { env } from "./config.js";
 async function seed() {
     console.log("Connecting to database for seeding...");
@@ -18,35 +19,7 @@ async function seed() {
     console.log("Seeding learning categories and courses...");
     const categoryDocs = await seedLearningCatalog();
     console.log("Seeding default FAQs...");
-    const faqs = [
-        {
-            question: "How do students register and get placed in a cohort?",
-            answer: "Create an account, share what you want to learn, and tell us when you are available. Our team reviews your goals and helps connect you with a suitable cohort and instructor.",
-            sortOrder: 1,
-            isPublished: true,
-        },
-        {
-            question: "How do educators apply and get approved to teach?",
-            answer: "Create an instructor account and verify your email. Your application remains under review until an administrator approves it. Once approved, you can access instructor tools and assigned cohorts.",
-            sortOrder: 2,
-            isPublished: true,
-        },
-        {
-            question: "How do live Google Meet lessons work?",
-            answer: "When a session is scheduled, its meeting link and time appear in your dashboard. Open the session and select Join live session to meet with your instructor and cohort.",
-            sortOrder: 3,
-            isPublished: true,
-        },
-        {
-            question: "How is student progress and grade calculated?",
-            answer: "Your dashboard brings together attendance, completed assignments, and assessment results so you can follow your progress and see what to focus on next.",
-            sortOrder: 4,
-            isPublished: true,
-        },
-    ];
-    for (const faq of faqs) {
-        await FAQModel.findOneAndUpdate({ question: faq.question }, faq, { upsert: true });
-    }
+    await syncFaqs(FAQModel);
     if (env.SEED_DEMO_DATA !== "true") {
         console.log("Skipping demo accounts and sample classroom data.");
         await mongoose.disconnect();

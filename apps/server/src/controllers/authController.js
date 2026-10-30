@@ -155,7 +155,8 @@ function userResponse(user) {
         fullName: user.fullName || user.name,
         email: user.email,
         role: user.role,
-        isVerified: user.isVerified,
+        isVerified: Boolean(user.isVerified && user.emailVerified),
+        emailVerified: Boolean(user.emailVerified),
         teacherStatus: user.teacherStatus,
         accountStatus: user.accountStatus,
         languagePreference: user.languagePreference,
@@ -350,7 +351,7 @@ export async function login(req, res) {
     }
 
     // All roles must verify email before getting a session token
-    if (!(user.isVerified || user.emailVerified)) {
+    if (!user.emailVerified) {
         const code = await issueCode(user, "signup", data.device);
         return res.json({
             message: "Please verify your email address to continue. A 6-digit code has been sent to your inbox.",

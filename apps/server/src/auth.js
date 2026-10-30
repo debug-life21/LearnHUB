@@ -68,8 +68,8 @@ export function requireRole(...allowedRoles) {
             return next(new ApiError(403, "You do not have permission for this action."));
         }
         const user = await UserModel.findById(req.user.id).lean();
-        if (!user || user.isDeleted || user.accountStatus !== "active") {
-            return next(new ApiError(403, "Your account is not active."));
+        if (!user || user.isDeleted || user.accountStatus !== "active" || (!isAdminRole(user.role) && !user.emailVerified)) {
+            return next(new ApiError(403, "Your account is not active or email is not verified. Please verify your email first."));
         }
         return next();
     };

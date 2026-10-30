@@ -73,7 +73,7 @@ export function SignInPage() {
     const [feedback, setFeedback] = useState("");
 
     useEffect(() => {
-        if (user && (user.isVerified || user.emailVerified)) {
+        if (user && user.emailVerified) {
             navigate("/dashboard", { replace: true });
         }
     }, [user, navigate]);
@@ -105,14 +105,14 @@ export function SignInPage() {
         setFeedback("");
         try {
             const response = await login({ email, password, device: getDevicePayload() });
-            if (response.user) {
+            if (response.user && response.user.emailVerified) {
                 await refreshUser();
                 navigate("/dashboard");
                 return;
             }
-            sessionStorage.setItem("learnhub_pending_email", response.email);
-            sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
-            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose, devCode: response.devCode } });
+            sessionStorage.setItem("learnhub_pending_email", response.email || email);
+            sessionStorage.setItem("learnhub_pending_purpose", response.purpose || "signup");
+            navigate("/verify-code", { state: { email: response.email || email, purpose: response.purpose || "signup", devCode: response.devCode } });
         } catch (error) {
             setFeedback(error.message);
         } finally {
@@ -555,7 +555,7 @@ export function VerifyCodePage() {
     const isNewDeviceLogin = purpose === "login";
 
     useEffect(() => {
-        if (user && (user.isVerified || user.emailVerified)) {
+        if (user && user.emailVerified) {
             navigate("/dashboard", { replace: true });
         }
     }, [user, navigate]);

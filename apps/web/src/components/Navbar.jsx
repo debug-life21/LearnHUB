@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { BrandLogo } from "./BrandLogo";
+import { NotificationCenter } from "./NotificationCenter";
 
 function LanguageToggle({ compact = false }) {
     const { i18n } = useTranslation();
@@ -137,6 +138,7 @@ export function Navbar() {
                 <div className="flex shrink-0 items-center gap-2.5">
                     {user ? (
                         <div className="hidden items-center gap-2.5 lg:flex">
+                            <NotificationCenter />
                             <Link
                                 to="/dashboard"
                                 className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] px-4 py-2.5 text-sm sm:text-[15px] font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:-translate-y-0.5 hover:from-[#0052cc] hover:to-[#0088e6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"

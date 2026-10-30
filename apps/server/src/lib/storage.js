@@ -198,7 +198,78 @@ export async function getStoredFileStream(key, provider = "local_disk", rangeHea
         }
     }
 
+    // 3. Fallback for sample-syllabus.pdf or seeded demo documents
+    if (key === "sample-syllabus.pdf" || /syllabus/i.test(key)) {
+        try {
+            const buffer = generateOfficialSyllabusPdf();
+            await fs.mkdir(UPLOAD_DIR, { recursive: true }).catch(() => {});
+            await fs.writeFile(filePath, buffer).catch(() => {});
+            const bucketFallback = getGridFSBucket();
+            if (bucketFallback) {
+                try {
+                    const uploadStream = bucketFallback.openUploadStream(key, {
+                        contentType: "application/pdf",
+                        metadata: { originalFilename: "tedbabelearnhub-syllabus.pdf" },
+                    });
+                    Readable.from(buffer).pipe(uploadStream);
+                } catch {
+                    // ignore
+                }
+            }
+            return {
+                body: Readable.from(buffer),
+                contentLength: buffer.length,
+                partial: false,
+            };
+        } catch (err) {
+            console.warn("[Storage] Error generating fallback PDF:", err.message);
+        }
+    }
+
     return null;
+}
+
+export function generateOfficialSyllabusPdf() {
+    const pdfData = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj
+4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+5 0 obj << /Length 520 >>
+stream
+BT
+/F1 18 Tf
+50 720 Td
+(TedbabeLearnHUB - Course Syllabus & Guidelines) Tj
+/F1 12 Tf
+0 -36 Td
+(Official guide to cohort schedules, Google Meet sessions, and materials.) Tj
+0 -28 Td
+(1. Live Classes: Access opens at the scheduled start time.) Tj
+0 -24 Td
+(2. Assessments: Complete all cohort assignments to earn your verified certificate.) Tj
+0 -24 Td
+(3. Materials: In-browser PDF and video viewing is provided for all enrolled students.) Tj
+0 -24 Td
+(4. Discussion & Support: Connect with your instructor in the cohort discussion forum.) Tj
+0 -36 Td
+(TedbabeLearnHUB Academic Team - Learn Anything. Grow Everywhere.) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000224 00000 n 
+0000000295 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+750
+%%EOF`;
+    return Buffer.from(pdfData, "utf-8");
 }
 
 export async function deleteStoredFile(key, provider = "local_disk") {

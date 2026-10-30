@@ -101,6 +101,7 @@ export function HomePage() {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [promoVideo, setPromoVideo] = useState(null);
+    const [featuredFilter, setFeaturedFilter] = useState("all");
 
     // Selected category state for interactive drill-down
     const programsRef = useRef(null);
@@ -401,66 +402,125 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 3b. Admin-Managed Public Video — shown before "Find your next skill" */}
+      {/* 3b. Admin-Managed Public Video — Cinematic Premium Media Showcase */}
       {(() => {
         if (!promoVideo) return null;
         const videoId = extractYouTubeId(promoVideo.url);
-        if (!videoId) return null;
-        const embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1`;
-        return (
-          <section className="w-full bg-slate-950 py-0 overflow-hidden">
-            {/* Top decorative gradient fade */}
-            <div className="h-10 bg-gradient-to-b from-white to-slate-950 pointer-events-none" />
+        const isGoogleDrive = promoVideo.url.includes("drive.google.com");
+        let embedSrc = "";
+        if (videoId) {
+          embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1&color=white`;
+        } else if (isGoogleDrive) {
+          embedSrc = promoVideo.url.replace(/\/view(\?.*)?$/, "/preview");
+        } else {
+          embedSrc = promoVideo.url;
+        }
 
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-              {/* Section header */}
-              <div className="text-center mb-8">
-                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-slate-900/90 px-4 py-1.5 text-xs font-semibold text-cyan-300">
+        return (
+          <section className="relative w-full bg-[#050b18] py-20 overflow-hidden text-white selection:bg-cyan-500 selection:text-black">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-tr from-blue-600/20 via-cyan-500/20 to-purple-600/20 blur-[130px] rounded-full pointer-events-none" />
+            <div className="absolute -bottom-20 left-1/4 w-[500px] h-[250px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
+
+            <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              {/* Section Header */}
+              <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
+                <div className="inline-flex items-center gap-2.5 rounded-full border border-cyan-400/30 bg-cyan-950/40 px-4 py-1.5 text-xs font-black tracking-wider uppercase text-cyan-300 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.15)]">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
                   </span>
-                  {promoVideo.label}
-                </span>
-                <h2 className="mt-4 text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-                  {promoVideo.title}
+                  <span>{promoVideo.label || "Platform Showcase"}</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+                  {promoVideo.title || "Experience How TedbabeLearnHUB Works"}
                 </h2>
-                <p className="mt-3 text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                  Watch a quick walkthrough of the platform — from enrollment to live sessions, resources, and progress tracking.
+                <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+                  Take an exclusive tour through structured cohorts, live scheduled lessons, interactive materials, and certified skill mastery.
                 </p>
               </div>
 
-              {/* Cinematic video player frame */}
-              <div className="relative mx-auto w-full rounded-3xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] ring-1 ring-white/10"
-                style={{ aspectRatio: "16/9" }}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                {/* Glowing border accent */}
-                <div className="absolute inset-0 rounded-3xl ring-2 ring-inset ring-cyan-400/20 pointer-events-none z-10" />
-                {/* Corner accent dots */}
-                <div className="absolute top-3 left-3 h-3 w-3 rounded-full bg-cyan-400/60 z-20 blur-sm" />
-                <div className="absolute top-3 right-3 h-3 w-3 rounded-full bg-blue-400/60 z-20 blur-sm" />
+              {/* Cinematic Video Player Container with Custom Cinema Bezel */}
+              <div className="relative mx-auto max-w-5xl rounded-3xl p-1 bg-gradient-to-b from-cyan-400/30 via-slate-700/20 to-transparent shadow-[0_20px_90px_rgba(0,102,255,0.25)] ring-1 ring-white/10">
+                <div className="relative rounded-[22px] overflow-hidden bg-slate-950/95 backdrop-blur-xl">
+                  {/* Top Media Bar / Window Frame */}
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/80">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-rose-500/80 shadow-sm" />
+                      <span className="h-3 w-3 rounded-full bg-amber-500/80 shadow-sm" />
+                      <span className="h-3 w-3 rounded-full bg-emerald-500/80 shadow-sm" />
+                      <span className="ml-3 text-[11px] font-semibold text-slate-400 truncate max-w-xs sm:max-w-md">
+                        {promoVideo.title || "TedbabeLearnHUB Video Player"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300 border border-cyan-500/20">
+                        1080p HD
+                      </span>
+                      <span className="hidden sm:inline-block rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+                        Official Channel
+                      </span>
+                    </div>
+                  </div>
 
-                <iframe
-                  title={promoVideo.title}
-                  src={embedSrc}
-                  className="absolute inset-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  sandbox="allow-scripts allow-same-origin allow-presentation"
-                />
+                  {/* 16:9 Video Canvas */}
+                  <div
+                    className="relative w-full bg-black overflow-hidden"
+                    style={{ aspectRatio: "16/9" }}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
+                    <iframe
+                      title={promoVideo.title || "Platform Overview"}
+                      src={embedSrc}
+                      className="absolute inset-0 w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Three Value Badges Below Video */}
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-900/40 p-3.5 backdrop-blur-sm">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 text-lg">
+                    🎯
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Cohort Placements</h4>
+                    <p className="text-[11px] text-slate-400">Learn with peers at your skill level</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-900/40 p-3.5 backdrop-blur-sm">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 text-lg">
+                    📹
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Live Scheduled Classes</h4>
+                    <p className="text-[11px] text-slate-400">Punctual Google Meet start times</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-900/40 p-3.5 backdrop-blur-sm">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 text-lg">
+                    🎓
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Verified Credentials</h4>
+                    <p className="text-[11px] text-slate-400">Authentic completion certificates</p>
+                  </div>
+                </div>
               </div>
 
               {/* Sub-label below video */}
-              <p className="mt-5 text-center text-xs text-slate-500 font-medium">
-                Official platform overview · Permanently maintained by administrator
+              <p className="mt-6 text-center text-xs text-slate-500 font-medium">
+                Official TedbabeLearnHUB overview · Maintained by platform administrators
               </p>
             </div>
-
-            {/* Bottom decorative gradient fade */}
-            <div className="h-10 bg-gradient-to-t from-white to-slate-950 pointer-events-none" />
           </section>
         );
       })()}
@@ -727,38 +787,105 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 6. Featured Courses */}
+      {/* 6. Featured Courses: Digital Marketing & Web Development */}
       {(data?.featuredCourses?.length ?? 0) > 0 ? (<section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionHeading badge="ACTIVE COHORTS" title={t("featuredCourses")} subtitle={t("featuredCoursesSubtitle")}/>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {data.featuredCourses.map((course) => (<div key={course._id} className="flex flex-col justify-between rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-200/90 hover:shadow-lg transition-all">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-800 border border-cyan-200/60">
-                      {course.category?.name ?? "Course"}
-                    </span>
-                    <span className="text-xs font-semibold text-slate-500">
-                      {course.skillLevel}
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-xl font-bold text-slate-900 leading-snug">{course.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600 line-clamp-3 leading-relaxed">{course.description}</p>
-                  
-                  <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("objectives")}:</p>
-                    {course.learningObjectives?.slice(0, 3).map((obj, i) => (<div key={i} className="flex items-start gap-2 text-xs text-slate-600 font-medium">
-                        <span className="text-blue-600 font-bold">✓</span>
-                        <span>{obj}</span>
-                      </div>))}
-                  </div>
-                </div>
+          <SectionHeading badge="FEATURED SPECIALIZATIONS" title={t("featuredCourses")} subtitle="Explore high-impact industry tracks in Digital Marketing and Modern Web Development led by certified instructors."/>
+          
+          {/* Integrated Filter Tabs */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setFeaturedFilter("all")}
+              className={`rounded-full px-5 py-2.5 text-xs font-black transition-all ${
+                featuredFilter === "all"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/25"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              All Tracks ({data.featuredCourses.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeaturedFilter("marketing")}
+              className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black transition-all ${
+                featuredFilter === "marketing"
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-500/25"
+                  : "bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200/50"
+              }`}
+            >
+              <span>🚀</span> Digital Marketing
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeaturedFilter("dev")}
+              className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black transition-all ${
+                featuredFilter === "dev"
+                  ? "bg-cyan-600 text-white shadow-md shadow-cyan-500/25"
+                  : "bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200/50"
+              }`}
+            >
+              <span>💻</span> Web Development
+            </button>
+          </div>
 
-                <div className="mt-6 border-t border-slate-100 pt-5">
-                  <Link to="/register/student" className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-xs font-bold text-white hover:bg-blue-600 transition-colors shadow-sm">
-                    {t("enrollNow")}
-                  </Link>
-                </div>
-              </div>))}
+          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {data.featuredCourses
+              .filter((course) => {
+                if (featuredFilter === "marketing") {
+                  return course.category?.name?.toLowerCase().includes("marketing");
+                }
+                if (featuredFilter === "dev") {
+                  return (
+                    course.category?.name?.toLowerCase().includes("development") ||
+                    course.category?.name?.toLowerCase().includes("programming")
+                  );
+                }
+                return true;
+              })
+              .map((course) => {
+                const isMarketing = course.category?.name?.toLowerCase().includes("marketing");
+                return (
+                  <div key={course._id} className="group flex flex-col justify-between rounded-3xl bg-white p-7 shadow-sm ring-1 ring-slate-200/90 hover:shadow-xl hover:ring-blue-500/30 transition-all duration-300">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold border ${
+                          isMarketing
+                            ? "bg-purple-50 text-purple-700 border-purple-200/60"
+                            : "bg-cyan-50 text-cyan-800 border-cyan-200/60"
+                        }`}>
+                          {isMarketing ? "🎯 " : "⚡ "}
+                          {course.category?.name ?? "Specialization"}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">
+                          {course.skillLevel}
+                        </span>
+                      </div>
+                      <h3 className="mt-4 text-xl font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">{course.title}</h3>
+                      <p className="mt-2 text-sm text-slate-600 line-clamp-3 leading-relaxed">{course.description}</p>
+                      
+                      <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("objectives")}:</p>
+                        {course.learningObjectives?.slice(0, 3).map((obj, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs text-slate-600 font-medium">
+                            <span className={isMarketing ? "text-purple-600 font-bold" : "text-cyan-600 font-bold"}>✓</span>
+                            <span>{obj}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-6 border-t border-slate-100 pt-5">
+                      <Link to="/register/student" className={`inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-xs font-bold text-white transition-colors shadow-sm ${
+                        isMarketing
+                          ? "bg-slate-950 hover:bg-purple-700"
+                          : "bg-slate-950 hover:bg-blue-600"
+                      }`}>
+                        {t("enrollNow")}
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </section>) : null}
 

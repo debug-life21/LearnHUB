@@ -69,7 +69,8 @@ Here's the recommended free stack:
    | `CLIENT_URL` | `https://learnhub.vercel.app` *(your frontend URL)* |
    | `ADMIN_CLIENT_URL` | `https://learnhub-admin.vercel.app` |
    | `GOOGLE_CLIENT_ID` | *(if using Google OAuth)* |
-   | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | *(for email, optional)* |
+   | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | Gmail SMTP (e.g. `debuglife1221@gmail.com` and 16-char App Password) |
+   | `RESEND_API_KEY` or `BREVO_API_KEY` | *(Recommended for Render)* Free HTTPS email API — 100% immune to cloud port firewalls |
    | `STORAGE_PROVIDER` | `r2` or `local` |
 
 6. Click **Deploy**

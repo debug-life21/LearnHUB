@@ -88,11 +88,48 @@ async function deliverViaResend(mailOptions) {
     }
 }
 
+async function deliverViaBrevo(mailOptions) {
+    const brevoKey = (process.env.BREVO_API_KEY || "").replace(/^["']|["']$/g, "").trim();
+    if (!brevoKey) return null;
+    const senderEmail = (env.SMTP_USER || "debuglife1221@gmail.com").replace(/^["']|["']$/g, "").trim();
+    try {
+        const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+            method: "POST",
+            headers: {
+                "api-key": brevoKey,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({
+                sender: { name: "TedbabeLearnHUB", email: senderEmail },
+                to: [{ email: mailOptions.to }],
+                subject: mailOptions.subject,
+                htmlContent: mailOptions.html,
+                textContent: mailOptions.text,
+            }),
+        });
+        if (!res.ok) {
+            const errBody = await res.text();
+            throw new Error(`Brevo HTTP ${res.status}: ${errBody}`);
+        }
+        const data = await res.json();
+        console.log(`[TedbabeLearnHUB Mailer] Successfully delivered via Brevo HTTPS to ${mailOptions.to} (ID: ${data.messageId || JSON.stringify(data)})`);
+        return { delivered: true, info: data, method: "brevo_api" };
+    } catch (err) {
+        console.warn(`[TedbabeLearnHUB Mailer] Brevo API attempt failed: ${err.message || err}`);
+        return null;
+    }
+}
+
 async function deliverEmail(mailOptions) {
-    // 1. If Resend API Key is set, try HTTPS direct delivery first (never blocked by host port firewalls)
+    // 1. Direct HTTPS APIs (Resend & Brevo) - Immune to host firewall/port-25/port-465 blocking on cloud platforms like Render
     if (process.env.RESEND_API_KEY) {
         const resendResult = await deliverViaResend(mailOptions);
         if (resendResult) return resendResult;
+    }
+    if (process.env.BREVO_API_KEY) {
+        const brevoResult = await deliverViaBrevo(mailOptions);
+        if (brevoResult) return brevoResult;
     }
 
     const candidates = getTransporters();
@@ -112,9 +149,11 @@ async function deliverEmail(mailOptions) {
         }
     }
 
-    // As last resort, try Resend if not tried earlier
+    // As last resort, try Resend or Brevo if not tried earlier
     const resendFallback = await deliverViaResend(mailOptions);
     if (resendFallback) return resendFallback;
+    const brevoFallback = await deliverViaBrevo(mailOptions);
+    if (brevoFallback) return brevoFallback;
 
     throw lastError || new Error("All mail transports failed.");
 }

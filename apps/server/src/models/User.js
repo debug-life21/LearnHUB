@@ -32,7 +32,7 @@ const userSchema = new Schema({
     authProvider: { type: String, enum: ["local", "google"], default: "local" },
     role: { type: String, enum: roles, required: true, index: true },
     emailVerified: { type: Boolean, default: false },
-    isVerified: { type: Boolean, default: true },
+    isVerified: { type: Boolean, default: false },
     teacherStatus: {
         type: String,
         enum: ["pending", "approved", "rejected"],

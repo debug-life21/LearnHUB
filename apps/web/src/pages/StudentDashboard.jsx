@@ -11,6 +11,7 @@ import { DashboardSettings } from "../components/DashboardSettings";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 import { formatSessionTime } from "../lib/sessionTime";
 import { MetricCard, DashboardCard, EmptyState, Badge, Modal } from "../components/UIComponents";
+import { SchedulePreferenceSelector } from "../components/SchedulePreferenceSelector";
 import { useAuth } from "../context/AuthContext";
 export function StudentDashboard({ user }) {
     const { t } = useTranslation();
@@ -502,13 +503,10 @@ export function StudentDashboard({ user }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700">{t("preferredSchedule")}</label>
-                  <input
-                    type="text"
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">{t("preferredSchedule")}</label>
+                  <SchedulePreferenceSelector
                     value={profileForm.preferredSchedule}
-                    onChange={(e) => setProfileForm({ ...profileForm, preferredSchedule: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"
-                    placeholder="e.g. Weekdays after 6 PM, or Weekend mornings"
+                    onChange={(val) => setProfileForm({ ...profileForm, preferredSchedule: val })}
                   />
                 </div>
 
@@ -742,8 +740,11 @@ export function StudentDashboard({ user }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700">{t("preferredSchedule")}</label>
-                <input required type="text" value={profileForm.preferredSchedule} onChange={(e) => setProfileForm({ ...profileForm, preferredSchedule: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="e.g. Weekdays after 6 PM"/>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">{t("preferredSchedule")}</label>
+                <SchedulePreferenceSelector
+                  value={profileForm.preferredSchedule}
+                  onChange={(val) => setProfileForm({ ...profileForm, preferredSchedule: val })}
+                />
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
