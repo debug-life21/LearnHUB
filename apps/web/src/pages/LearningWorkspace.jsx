@@ -28,6 +28,83 @@ export function getYouTubeVideoId(url) {
     }
 }
 
+function useProtectedObjectUrl(resource) {
+    const [url, setUrl] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const storedKey = resource?.storedKey;
+    const fallbackType = resource?.mimeType || "application/octet-stream";
+    useEffect(() => {
+        if (!storedKey) {
+            setUrl("");
+            setError("");
+            return undefined;
+        }
+        let cancelled = false;
+        let objectUrl = "";
+        setLoading(true);
+        setError("");
+        apiRequest(`/api/resources/${storedKey}/file`, { responseType: "blob" })
+            .then((blob) => {
+                if (cancelled) return;
+                const typed = blob instanceof Blob && (!blob.type || blob.type === "application/octet-stream")
+                    ? new Blob([blob], { type: fallbackType })
+                    : blob;
+                objectUrl = URL.createObjectURL(typed);
+                setUrl(objectUrl);
+            })
+            .catch((err) => {
+                if (!cancelled) setError(err.message || "Unable to load this document.");
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [storedKey, fallbackType]);
+    return { url, error, loading };
+}
+
+function ProtectedDocumentPreview({ resource, kind = "document" }) {
+    const { url, error, loading } = useProtectedObjectUrl(resource);
+    return (
+        <div className="relative h-[78vh] min-h-[600px] w-full bg-slate-900" onContextMenu={(e) => e.preventDefault()}>
+            {loading && (
+                <div className="absolute inset-0 flex items-center justify-center text-sm font-medium text-slate-300">
+                    Loading document…
+                </div>
+            )}
+            {error && !loading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                    <p className="text-sm font-semibold text-rose-300">We couldn't display this file.</p>
+                    <p className="max-w-md text-xs text-slate-400">{error}</p>
+                </div>
+            )}
+            {url && !error && (
+                kind === "image" ? (
+                    <div className="flex h-full items-center justify-center p-4">
+                        <img
+                            src={url}
+                            alt={resource?.title}
+                            className="max-h-full max-w-full rounded-xl object-contain shadow-md select-none"
+                            draggable={false}
+                            onContextMenu={(e) => e.preventDefault()}
+                        />
+                    </div>
+                ) : (
+                    <iframe
+                        src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
+                        title={resource?.title}
+                        className="h-full w-full border-0 bg-white"
+                    />
+                )
+            )}
+        </div>
+    );
+}
+
 function VideoThumbnail({ resource, lesson, className = "", aspect = "aspect-video" }) {
     const [imgFailed, setImgFailed] = useState(false);
     const ytUrl = resource?.sourceUrl || resource?.externalUrl || lesson?.videoUrl;
@@ -462,7 +539,7 @@ export function LearningWorkspace() {
                             <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-2xl ring-1 ring-white/10">
                                 {selectedVideoResource?.sourceType === "youtube" ? (
                                     <iframe
-                                        src={selectedVideoResource.externalUrl}
+                                        src={`https://www.youtube-nocookie.com/embed/${getYouTubeVideoId(selectedVideoResource.sourceUrl || selectedVideoResource.externalUrl)}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1`}
                                         title={selectedVideoResource.title}
                                         className="w-full aspect-video border-0 bg-black"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -691,23 +768,9 @@ export function LearningWorkspace() {
                                                 aria-label={selectedDoc.title}
                                             />
                                         ) : (selectedDoc.mimeType?.includes("pdf") || selectedDoc.category === "pdf" || /\.pdf$/i.test(selectedDoc.originalFilename || "")) ? (
-                                            <div className="relative w-full h-[78vh] min-h-[600px] bg-slate-900" onContextMenu={(e) => e.preventDefault()}>
-                                                <iframe
-                                                    src={`${resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}#toolbar=0&navpanes=0&scrollbar=1`}
-                                                    title={selectedDoc.title}
-                                                    className="w-full h-full border-0 bg-white"
-                                                />
-                                            </div>
+                                            <ProtectedDocumentPreview resource={selectedDoc} kind="document" />
                                         ) : selectedDoc.mimeType?.includes("image") ? (
-                                            <div className="flex h-[70vh] items-center justify-center p-4 bg-slate-900/5" onContextMenu={(e) => e.preventDefault()}>
-                                                <img
-                                                    src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
-                                                    alt={selectedDoc.title}
-                                                    className="max-h-full max-w-full object-contain rounded-xl shadow-md select-none"
-                                                    onContextMenu={(e) => e.preventDefault()}
-                                                    draggable={false}
-                                                />
-                                            </div>
+                                            <ProtectedDocumentPreview resource={selectedDoc} kind="image" />
                                         ) : (
                                             <OfficeDocumentPreview resource={selectedDoc} />
                                         )}

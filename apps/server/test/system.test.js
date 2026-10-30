@@ -95,13 +95,16 @@ test("Auth Registration: rejects invalid email", async () => {
     assert.equal(res.status, 400);
 });
 
-test("Auth Registration: requires onboarding details for students and teacher applicants", async () => {
+test("Auth Registration: student signup is lean; teacher applicants still need details", async () => {
+    // Students can now create an account without onboarding details —
+    // learning preferences are completed later from the dashboard.
     const studentRes = await request("/api/auth/signup", {
         method: "POST",
         body: { name: "Student Without Preferences", email: `student.profile.${Date.now()}@example.com`, password: "Password123!", role: "student", phone: "+251912345678", country: "ET" },
     });
-    assert.equal(studentRes.status, 400);
+    assert.equal(studentRes.status, 201, `Expected 201 but got ${studentRes.status}: ${JSON.stringify(studentRes.data)}`);
 
+    // Teacher applications must still include the required CV and details.
     const teacherRes = await request("/api/auth/signup", {
         method: "POST",
         body: { name: "Teacher Without Application", email: `teacher.application.${Date.now()}@example.com`, password: "Password123!", role: "teacher", phone: "+251912345678", country: "ET" },

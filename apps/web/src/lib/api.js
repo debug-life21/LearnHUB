@@ -79,6 +79,7 @@ export async function apiRequest(path, options = {}) {
         method: options.method ?? "GET",
         data,
         headers: options.headers,
+        responseType: options.responseType,
     });
     return response.data;
 }

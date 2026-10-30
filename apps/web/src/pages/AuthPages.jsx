@@ -3,9 +3,8 @@ import { GoogleLogin } from "@react-oauth/google";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest, loadPublicCourses } from "../lib/api";
-import { CategoryCoursePicker } from "../components/CategoryCoursePicker";
-import { TIME_ZONES } from "../lib/timezones";
+import { apiRequest } from "../lib/api";
+import { getDevicePayload } from "../lib/device";
 import { BrandLogo } from "../components/BrandLogo";
 
 function AuthShell({ title, subtitle, children }) {
@@ -89,7 +88,7 @@ export function SignInPage() {
         try {
             await apiRequest("/api/auth/google", {
                 method: "POST",
-                body: JSON.stringify({ credential }),
+                body: JSON.stringify({ credential, device: getDevicePayload() }),
             });
             await refreshUser();
             navigate("/dashboard");
@@ -105,7 +104,7 @@ export function SignInPage() {
         setLoading(true);
         setFeedback("");
         try {
-            const response = await login({ email, password });
+            const response = await login({ email, password, device: getDevicePayload() });
             if (response.user) {
                 await refreshUser();
                 navigate("/dashboard");
@@ -221,22 +220,12 @@ export function SignupPage({ initialRole = "student" }) {
     const [role, setRole] = useState(initialRole);
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
-    const [courses, setCourses] = useState([]);
     const [contactPhone, setContactPhone] = useState("");
     const [country, setCountry] = useState("ET");
     const [phoneError, setPhoneError] = useState("");
 
     const selectedCountry = COUNTRIES.find((c) => c.code === country) || COUNTRIES[0];
 
-    const [studentForm, setStudentForm] = useState({
-        learningGoals: "",
-        learningInterests: "",
-        currentSkillLevel: "Beginner",
-        preferredSchedule: "",
-        preferredCourseIds: [],
-        weeklyStudyHours: 5,
-        timeZone: "Africa/Addis_Ababa",
-    });
     const [teacherForm, setTeacherForm] = useState({
         qualifications: "",
         experience: "",
@@ -248,27 +237,9 @@ export function SignupPage({ initialRole = "student" }) {
         certificates: [],
     });
 
-    useEffect(() => {
-        let active = true;
-        async function loadCourses() {
-            try {
-                const catalog = await loadPublicCourses();
-                if (active) setCourses(catalog);
-            } catch (error) {
-                if (active) setFeedback(`Could not load the course catalog: ${error.message}`);
-            }
-        }
-        void loadCourses();
-        return () => { active = false; };
-    }, []);
-
     const continueWithGoogle = useCallback(async (credential) => {
         if (!credential) {
             setFeedback("Google sign-up could not be completed. Please try again.");
-            return;
-        }
-        if (!studentForm.preferredCourseIds.length || studentForm.preferredSchedule.trim().length < 2) {
-            setFeedback("Choose at least one course and add your preferred study times before creating your student account.");
             return;
         }
         const phoneErr = validatePhone(contactPhone, country);
@@ -286,16 +257,7 @@ export function SignupPage({ initialRole = "student" }) {
                     role,
                     phone: contactPhone,
                     country,
-                    studentProfile: {
-                        learningGoals: studentForm.learningGoals,
-                        learningInterests: studentForm.learningInterests
-                            .split(",").map((interest) => interest.trim()).filter(Boolean),
-                        currentSkillLevel: studentForm.currentSkillLevel,
-                        preferredSchedule: studentForm.preferredSchedule,
-                        preferredCourseIds: studentForm.preferredCourseIds,
-                        weeklyStudyHours: Number(studentForm.weeklyStudyHours),
-                        timeZone: studentForm.timeZone,
-                    },
+                    device: getDevicePayload(),
                 }),
             });
             await refreshUser();
@@ -305,7 +267,7 @@ export function SignupPage({ initialRole = "student" }) {
         } finally {
             setLoading(false);
         }
-    }, [contactPhone, country, navigate, refreshUser, role, studentForm]);
+    }, [contactPhone, country, navigate, refreshUser, role]);
 
     const handleTeacherDocuments = async (event) => {
         const files = Array.from(event.target.files || []);
@@ -334,10 +296,6 @@ export function SignupPage({ initialRole = "student" }) {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (role === "student" && studentForm.preferredCourseIds.length === 0) {
-            setFeedback("Choose at least one course you want to study.");
-            return;
-        }
         if (role === "teacher" && !teacherForm.cv) {
             setFeedback("Upload your CV to submit a teacher application.");
             return;
@@ -361,18 +319,8 @@ export function SignupPage({ initialRole = "student" }) {
                     role,
                     phone: contactPhone,
                     country,
-                    ...(role === "student" ? {
-                        studentProfile: {
-                            learningGoals: studentForm.learningGoals,
-                            learningInterests: studentForm.learningInterests
-                                .split(",").map((interest) => interest.trim()).filter(Boolean),
-                            currentSkillLevel: studentForm.currentSkillLevel,
-                            preferredSchedule: studentForm.preferredSchedule,
-                            preferredCourseIds: studentForm.preferredCourseIds,
-                            weeklyStudyHours: Number(studentForm.weeklyStudyHours),
-                            timeZone: studentForm.timeZone,
-                        },
-                    } : {
+                    device: getDevicePayload(),
+                    ...(role === "teacher" ? {
                         teacherApplication: {
                             qualifications: teacherForm.qualifications,
                             experience: teacherForm.experience,
@@ -384,7 +332,7 @@ export function SignupPage({ initialRole = "student" }) {
                             cv: teacherForm.cv,
                             certificates: teacherForm.certificates,
                         },
-                    }),
+                    } : {}),
                 }),
             });
             sessionStorage.setItem("learnhub_pending_email", response.email);
@@ -414,12 +362,12 @@ export function SignupPage({ initialRole = "student" }) {
                         </h1>
                         <p className="mt-4 max-w-md text-sm leading-6 text-slate-300">
                             {role === "student"
-                                ? "Tell us what you want to learn and when you are available. Our team will help match you with the right cohort."
+                                ? "Create your account in a few seconds. After verifying your email, you can complete your learning profile from your dashboard so we can match you with the right cohort."
                                 : "Share your teaching background, expertise, and availability. Our team reviews every application before approval."}
                         </p>
                         <div className="mt-8 space-y-3">
                             {(role === "student"
-                                ? [["01", "Choose your learning path"], ["02", "Set goals and study times"], ["03", "Get matched with a cohort"]]
+                                ? [["01", "Create your account"], ["02", "Verify your email"], ["03", "Complete your learning profile"]]
                                 : [["01", "Add your teaching profile"], ["02", "Upload your CV and credentials"], ["03", "Verify email; admin reviews your application"]]
                             ).map(([number, text]) => (
                                 <div key={number} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm">
@@ -527,52 +475,12 @@ export function SignupPage({ initialRole = "student" }) {
                             </div>
                         </section>
                         {role === "student" ? (
-                            <div className="space-y-4 rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/80 to-white p-4 sm:p-5">
-                                <div>
-                                    <h2 className="text-sm font-black text-slate-900">Your learning plan</h2>
-                                    <p className="mt-1 text-xs text-slate-500">Help us understand your goals and plan around your schedule.</p>
-                                </div>
-                                <fieldset>
-                                    <legend className="text-xs font-bold text-slate-700">Choose courses by category</legend>
-                                    <CategoryCoursePicker
-                                        courses={courses}
-                                        selectedCourseIds={studentForm.preferredCourseIds}
-                                        onChange={(preferredCourseIds) => setStudentForm({ ...studentForm, preferredCourseIds })}
-                                    />
-                                    <p className="mt-1 text-xs font-normal text-slate-500">Digital Marketing is listed first. Choose one or more courses from any categories.</p>
-                                </fieldset>
-                                <label className="block text-xs font-bold text-slate-700">
-                                    Learning interests (comma-separated)
-                                    <input value={studentForm.learningInterests} onChange={(event) => setStudentForm({ ...studentForm, learningInterests: event.target.value })} className={fieldClass} placeholder="Languages, Web Development" />
-                                </label>
-                                <label className="block text-xs font-bold text-slate-700">
-                                    Current level
-                                    <select value={studentForm.currentSkillLevel} onChange={(event) => setStudentForm({ ...studentForm, currentSkillLevel: event.target.value })} className={fieldClass}>
-                                        <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
-                                    </select>
-                                </label>
-                                <label className="block text-xs font-bold text-slate-700">
-                                    Learning goals
-                                    <textarea value={studentForm.learningGoals} onChange={(event) => setStudentForm({ ...studentForm, learningGoals: event.target.value })} rows={3} maxLength={1000} className={fieldClass} placeholder="What would you like to learn or achieve?" />
-                                </label>
-                                <label className="block text-xs font-bold text-slate-700">
-                                    Best days / times to study
-                                    <input required value={studentForm.preferredSchedule} onChange={(event) => setStudentForm({ ...studentForm, preferredSchedule: event.target.value })} className={fieldClass} placeholder="e.g. Weekdays after 6 PM" />
-                                </label>
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    <label className="block text-xs font-bold text-slate-700">
-                                        Hours available per week
-                                        <input required type="number" min="1" max="80" value={studentForm.weeklyStudyHours} onChange={(event) => setStudentForm({ ...studentForm, weeklyStudyHours: event.target.value })} className={fieldClass} />
-                                    </label>
-                                    <label className="block text-xs font-bold text-slate-700">
-                                        Time zone
-                                        <select required value={studentForm.timeZone} onChange={(event) => setStudentForm({ ...studentForm, timeZone: event.target.value })} className={fieldClass}>
-                                            {TIME_ZONES.map((tz) => (
-                                                <option key={tz.value} value={tz.value}>{tz.label}</option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </div>
+                            <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50/80 to-white p-4 sm:p-5">
+                                <h2 className="text-sm font-black text-slate-900">Almost there</h2>
+                                <p className="mt-1 text-xs leading-5 text-slate-600">
+                                    That's all we need to get you started. After you verify your email, you can complete your
+                                    learning profile — preferred courses, goals, and study schedule — from your dashboard.
+                                </p>
                             </div>
                         ) : (
                             <div className="space-y-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/80 to-white p-4 sm:p-5">
@@ -639,9 +547,11 @@ export function VerifyCodePage() {
     const [email, setEmail] = useState((location.state?.email || sessionStorage.getItem("learnhub_pending_email") || "").trim());
     const [purpose] = useState(location.state?.purpose || sessionStorage.getItem("learnhub_pending_purpose") || "signup");
     const [code, setCode] = useState(location.state?.devCode || "");
+    const [rememberDevice, setRememberDevice] = useState(true);
     const [secondsLeft, setSecondsLeft] = useState(60);
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
+    const isNewDeviceLogin = purpose === "login";
 
     useEffect(() => {
         if (user && (user.isVerified || user.emailVerified)) {
@@ -662,7 +572,12 @@ export function VerifyCodePage() {
         try {
             await apiRequest("/api/auth/verify-code", {
                 method: "POST",
-                body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim() }),
+                body: JSON.stringify({
+                    email: email.trim().toLowerCase(),
+                    code: code.trim(),
+                    rememberDevice: isNewDeviceLogin ? rememberDevice : true,
+                    device: getDevicePayload(),
+                }),
             });
             sessionStorage.removeItem("learnhub_pending_email");
             sessionStorage.removeItem("learnhub_pending_purpose");
@@ -696,7 +611,12 @@ export function VerifyCodePage() {
     };
 
     return (
-        <AuthShell title="Verify your email" subtitle="Enter the 6-digit code sent to your inbox">
+        <AuthShell
+            title={isNewDeviceLogin ? "Confirm this device" : "Verify your email"}
+            subtitle={isNewDeviceLogin
+                ? "We noticed a new sign-in. Enter the 6-digit code sent to your inbox to confirm it's you."
+                : "Enter the 6-digit code sent to your inbox"}
+        >
             <Feedback>{feedback}</Feedback>
             <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-slate-800 leading-relaxed">
                 Verification code sent to <strong className="font-bold text-[#0066ff]">{email || "your email"}</strong>. If you don't see it within a minute, check your <span className="font-bold underline">Spam / Junk</span> folder.
@@ -710,8 +630,19 @@ export function VerifyCodePage() {
                     Verification code
                     <input required minLength={6} maxLength={6} pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-4 text-center font-mono text-2xl font-black tracking-[0.5em] outline-none transition focus:border-[#0066ff] focus:ring-4 focus:ring-blue-500/10 text-slate-900" placeholder="000000" aria-label="6-digit verification code" />
                 </label>
+                {isNewDeviceLogin && (
+                    <label className="flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-xs font-medium normal-case text-slate-700">
+                        <input
+                            type="checkbox"
+                            checked={rememberDevice}
+                            onChange={(event) => setRememberDevice(event.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0066ff] focus:ring-blue-500/30"
+                        />
+                        <span>Remember this device for 30 days and skip this code next time.</span>
+                    </label>
+                )}
                 <button disabled={loading || code.length !== 6} type="submit" className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50">
-                    {loading ? t("loading") : "Verify and continue"}
+                    {loading ? t("loading") : isNewDeviceLogin ? "Confirm and sign in" : "Verify and continue"}
                 </button>
             </form>
             <div className="mt-5 flex flex-col items-center gap-3 text-sm text-slate-600">

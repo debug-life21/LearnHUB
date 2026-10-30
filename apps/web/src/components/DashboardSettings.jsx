@@ -56,8 +56,10 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
     );
 
     // ─── 4. Promo Video (hub_admin only) ──────────────────────────────────
+    const [promoVideoTitle, setPromoVideoTitle] = useState("");
+    const [promoVideoLabel, setPromoVideoLabel] = useState("");
     const [promoVideoInput, setPromoVideoInput] = useState("");
-    const [promoVideoSaved, setPromoVideoSaved] = useState("");
+    const [promoVideoSaved, setPromoVideoSaved] = useState(null);
     const [promoVideoFeedback, setPromoVideoFeedback] = useState("");
     const [savingPromoVideo, setSavingPromoVideo] = useState(false);
 
@@ -66,9 +68,16 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
         if (!["admin", "hub_admin"].includes(user?.role)) return;
         apiRequest("/api/public/settings")
             .then((res) => {
-                const url = res?.settings?.promo_video || "";
-                setPromoVideoInput(url);
-                setPromoVideoSaved(url);
+                const raw = res?.settings?.promo_video;
+                const normalized = typeof raw === "string"
+                    ? { title: "", label: "", url: raw }
+                    : raw && typeof raw === "object"
+                        ? { title: raw.title || "", label: raw.label || "", url: raw.url || "" }
+                        : { title: "", label: "", url: "" };
+                setPromoVideoTitle(normalized.title);
+                setPromoVideoLabel(normalized.label);
+                setPromoVideoInput(normalized.url);
+                setPromoVideoSaved(normalized.url ? normalized : null);
             })
             .catch(() => {});
     }, [user?.role]);
@@ -206,21 +215,28 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
     };
 
     const handleSavePromoVideo = async () => {
+        const url = promoVideoInput.trim();
+        if (!url) return;
         setSavingPromoVideo(true);
         setPromoVideoFeedback("");
+        const value = {
+            title: promoVideoTitle.trim(),
+            label: promoVideoLabel.trim(),
+            url,
+        };
         try {
             await apiRequest("/api/admin/settings", {
                 method: "POST",
                 body: JSON.stringify({
                     key: "promo_video",
-                    value: promoVideoInput.trim(),
-                    description: "Homepage promo / platform overview video (YouTube URL)",
+                    value,
+                    description: "Homepage promo / platform overview video (title, label, YouTube URL)",
                 }),
             });
-            setPromoVideoSaved(promoVideoInput.trim());
-            setPromoVideoFeedback("✅ Promo video updated! It will now appear on the public homepage.");
+            setPromoVideoSaved(value);
+            setPromoVideoFeedback("✅ Video updated! It will now appear on the public homepage, before the learning tracks.");
         } catch (err) {
-            setPromoVideoFeedback("❌ " + (err?.message || "Could not save the video URL."));
+            setPromoVideoFeedback("❌ " + (err?.message || "Could not save the video."));
         } finally {
             setSavingPromoVideo(false);
         }
@@ -234,9 +250,11 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
                 method: "POST",
                 body: JSON.stringify({ key: "promo_video", value: "", description: "Homepage promo video" }),
             });
+            setPromoVideoTitle("");
+            setPromoVideoLabel("");
             setPromoVideoInput("");
-            setPromoVideoSaved("");
-            setPromoVideoFeedback("🗑️ Promo video removed. The section will no longer appear on the homepage.");
+            setPromoVideoSaved(null);
+            setPromoVideoFeedback("🗑️ Video removed. The section will no longer appear on the homepage.");
         } catch (err) {
             setPromoVideoFeedback("❌ " + (err?.message || "Could not remove the video."));
         } finally {
@@ -249,10 +267,38 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
             {/* Promo Video Management — admin only */}
             {["admin", "hub_admin"].includes(user?.role) && (
                 <DashboardCard
-                    title="🎬 Homepage Promo Video"
-                    subtitle="Set a YouTube video that appears as a full-width embed on the public homepage, letting visitors see how the platform works."
+                    title="🎬 Homepage Video"
+                    subtitle="Manage the single public video shown on the homepage, in its own section before “Find your next skill”. Add, change, or remove it any time."
                 >
                     <div className="space-y-4">
+                        {/* Title + Label */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Video Title
+                                </label>
+                                <input
+                                    type="text"
+                                    value={promoVideoTitle}
+                                    onChange={(e) => setPromoVideoTitle(e.target.value)}
+                                    placeholder="e.g. How to register on TedbabeLearnHUB"
+                                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Small Label
+                                </label>
+                                <input
+                                    type="text"
+                                    value={promoVideoLabel}
+                                    onChange={(e) => setPromoVideoLabel(e.target.value)}
+                                    placeholder="e.g. HOW TO REGISTER"
+                                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                />
+                            </div>
+                        </div>
+
                         {/* URL input */}
                         <div>
                             <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -299,10 +345,10 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
                                 <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200 shadow-sm" style={{ aspectRatio: "16/9" }}>
                                     <iframe
                                         title="Promo video preview"
-                                        src={`https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&controls=1&fs=0`}
+                                        src={`https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1`}
                                         className="w-full h-full"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen={false}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                        allowFullScreen
                                         loading="lazy"
                                     />
                                 </div>

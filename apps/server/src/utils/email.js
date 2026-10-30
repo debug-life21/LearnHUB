@@ -125,23 +125,31 @@ function formatFromAddress(label, smtpUser) {
     return `"${raw.replace(/[<>"']/g, "")}" <${smtpUser}>`;
 }
 
-export async function sendVerificationCode({ email, name, code }) {
+export async function sendVerificationCode({ email, name, code, purpose = "signup" }) {
     const escapedName = escapeHtml(name || "Learner");
-    console.log(`[TedbabeLearnHUB Mailer] Verification code for ${email} (${escapedName}): [ ${code} ]`);
+    console.log(`[TedbabeLearnHUB Mailer] Verification code (${purpose}) for ${email} (${escapedName}): [ ${code} ]`);
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
     const fromAddress = formatFromAddress("TedbabeLearnHUB", smtpUser);
+    const isLogin = purpose === "login";
+    const headline = isLogin ? "Confirm a new sign-in" : "Verify your account";
+    const intro = isLogin
+        ? "We noticed a sign-in attempt from a new device or browser. Enter the 6-digit code below to confirm it's you. This code expires in <strong style=\"color:#ffffff;\">10 minutes</strong>."
+        : "Welcome to TedbabeLearnHUB. Enter the 6-digit verification code below to verify your email address. This code expires in <strong style=\"color:#ffffff;\">10 minutes</strong>.";
+    const subject = isLogin
+        ? `TedbabeLearnHUB — New Sign-in Code: ${code}`
+        : `TedbabeLearnHUB — Your Verification Code is ${code}`;
 
     try {
         await deliverEmail({
             from: fromAddress,
             replyTo: smtpUser,
             to: email,
-            subject: `TedbabeLearnHUB — Your Verification Code is ${code}`,
+            subject,
             text: `Hello ${name || "Learner"},\n\nYour TedbabeLearnHUB verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.\n\n— TedbabeLearnHUB Team\nhttps://tedbabelearnhub.vercel.app`,
-            html: emailWrapper("Account Verification", `
-              <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;">Verify your account</h1>
+            html: emailWrapper(isLogin ? "New Sign-in Verification" : "Account Verification", `
+              <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;">${headline}</h1>
               <p style="font-size:14px;color:#e2e8f0;line-height:1.6;">Hello <strong style="color:#ffffff;">${escapedName}</strong>,</p>
-              <p style="font-size:14px;color:#94a3b8;line-height:1.6;">Welcome to TedbabeLearnHUB. Enter the 6-digit verification code below to verify your email address. This code expires in <strong style="color:#ffffff;">10 minutes</strong>.</p>
+              <p style="font-size:14px;color:#94a3b8;line-height:1.6;">${intro}</p>
               <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:28px 20px;text-align:center;margin:28px 0;box-shadow:0 6px 20px rgba(0,0,0,0.35);">
                 <div style="font-size:42px;font-weight:900;letter-spacing:16px;color:#818cf8;font-family:'Courier New',Courier,monospace;text-indent:16px;">${code}</div>
               </div>
@@ -206,16 +214,12 @@ export async function sendPasswordResetEmail({ email, name, resetUrl, code }) {
 
 export async function sendSecurityAlertEmail({ email, name, action }) {
     const escapedName = escapeHtml(name);
-    const client = getTransporter();
-    if (!client) {
-        console.log(`[TedbabeLearnHUB Dev Mailer] Security alert for ${email}: ${action}`);
-        return;
-    }
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
     const fromAddress = formatFromAddress("TedbabeLearnHUB Security", smtpUser);
     try {
-        await client.sendMail({
+        await deliverEmail({
             from: fromAddress,
+            replyTo: smtpUser,
             to: email,
             subject: "Security Alert: TedbabeLearnHUB Account Update",
             text: `Hello ${name}, an important security action was performed: ${action}.`,

@@ -46,6 +46,20 @@ const userSchema = new Schema({
     codeSentAt: { type: Date, select: false, default: undefined },
     resetPasswordToken: { type: String, select: false, default: undefined },
     resetPasswordExpires: { type: Date, select: false, default: undefined },
+    // Device trust for new-device email verification
+    trustedDevices: {
+        type: [new Schema({
+            deviceId: { type: String, required: true },
+            label: { type: String, default: "" },
+            userAgent: { type: String, default: "" },
+            lastSeenAt: { type: Date, default: Date.now },
+            createdAt: { type: Date, default: Date.now },
+        }, { _id: false })],
+        default: [],
+        select: false,
+    },
+    pendingDeviceId: { type: String, select: false, default: undefined },
+    pendingDeviceLabel: { type: String, select: false, default: undefined },
     avatarUrl: { type: String, default: "" },
     bio: { type: String, default: "" },
     phone: { type: String, default: "" },

@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { randomInt, randomBytes } from "node:crypto";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
-import { env } from "../config.js";
+import { env, isProduction } from "../config.js";
 import { setAuthCookie, signToken, verifyPassword, hashPassword } from "../auth.js";
 import { ApiError } from "../lib/http.js";
 import { TeacherApplicationModel } from "../models/TeacherApplication.js";
@@ -14,6 +14,42 @@ import { sendVerificationCode, sendPasswordResetEmail, sendSecurityAlertEmail } 
 const googleAuthClient = new OAuth2Client();
 const codeLifetimeMs = 10 * 60 * 1000;
 const resendCooldownMs = 60 * 1000;
+const deviceTrustMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+const maxTrustedDevices = 10;
+
+const deviceSchema = z.object({
+    deviceId: z.string().trim().min(6).max(200),
+    label: z.string().trim().max(200).optional().default(""),
+    userAgent: z.string().trim().max(500).optional().default(""),
+}).optional();
+
+function findTrustedDevice(user, deviceId) {
+    if (!deviceId || !Array.isArray(user?.trustedDevices)) return null;
+    const now = Date.now();
+    return user.trustedDevices.find((entry) => entry.deviceId === deviceId
+        && (!entry.createdAt || now - new Date(entry.createdAt).getTime() < deviceTrustMs)) || null;
+}
+
+function trustDevice(user, device) {
+    if (!device?.deviceId) return;
+    if (!Array.isArray(user.trustedDevices)) user.trustedDevices = [];
+    const existing = user.trustedDevices.find((entry) => entry.deviceId === device.deviceId);
+    if (existing) {
+        existing.lastSeenAt = new Date();
+        if (device.label) existing.label = device.label;
+        return;
+    }
+    user.trustedDevices.push({
+        deviceId: device.deviceId,
+        label: device.label || "",
+        userAgent: device.userAgent || "",
+        lastSeenAt: new Date(),
+        createdAt: new Date(),
+    });
+    if (user.trustedDevices.length > maxTrustedDevices) {
+        user.trustedDevices = user.trustedDevices.slice(-maxTrustedDevices);
+    }
+}
 
 const COUNTRY_PHONE_PATTERNS = {
     ET: { code: "+251", pattern: /^(?:\+?251[97]\d{8}|0?[97]\d{8})$/, example: "912345678", name: "Ethiopia" },
@@ -74,13 +110,13 @@ function validatePhoneForCountry(phone, country) {
 }
 
 const studentProfileSchema = z.object({
-    learningInterests: z.array(z.string().trim().min(1).max(80)).max(10).default([]),
-    learningGoals: z.string().trim().max(1000).default(""),
-    currentSkillLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).default("Beginner"),
-    preferredSchedule: z.string().trim().min(2).max(200),
-    preferredCourseIds: z.array(z.string()).min(1).max(10),
-    weeklyStudyHours: z.number().int().min(1).max(80).default(5),
-    timeZone: z.string().trim().max(80).default("Africa/Addis_Ababa"),
+    learningInterests: z.array(z.string().trim().min(1).max(80)).max(10).optional().default([]),
+    learningGoals: z.string().trim().max(1000).optional().default(""),
+    currentSkillLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).optional().default("Beginner"),
+    preferredSchedule: z.string().trim().max(200).optional().default(""),
+    preferredCourseIds: z.array(z.string()).max(10).optional().default([]),
+    weeklyStudyHours: z.number().int().min(1).max(80).optional().default(5),
+    timeZone: z.string().trim().max(80).optional().default("Africa/Addis_Ababa"),
 });
 
 const signupSchema = z.object({
@@ -90,6 +126,7 @@ const signupSchema = z.object({
     role: z.enum(["student", "teacher"]),
     phone: z.string().trim().min(7, "Phone number must be at least 7 characters.").max(30),
     country: z.string().trim().min(1, "Please select your country."),
+    device: deviceSchema,
     studentProfile: studentProfileSchema.optional(),
     teacherApplication: z.object({
         qualifications: z.string().trim().min(2).max(1000),
@@ -131,19 +168,23 @@ function setSessionCookie(res, user) {
     return token;
 }
 
-async function issueCode(user, purpose) {
+async function issueCode(user, purpose, device = null) {
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     user.verificationCode = await bcrypt.hash(code, 10);
     user.codeExpiresAt = new Date(Date.now() + codeLifetimeMs);
     user.codePurpose = purpose;
     user.codeAttempts = 0;
     user.codeSentAt = new Date();
-    await user.save();
-    try {
-        await sendVerificationCode({ email: user.email, name: user.name || user.fullName, code });
-    } catch (err) {
-        console.error("[TedbabeLearnHUB Mailer] Verification email error:", err?.message || err);
+    if (device?.deviceId) {
+        user.pendingDeviceId = device.deviceId;
+        user.pendingDeviceLabel = device.label || "";
     }
+    await user.save();
+    // Dispatch the email in the background so the API responds immediately.
+    void sendVerificationCode({ email: user.email, name: user.name || user.fullName, code, purpose })
+        .catch((err) => {
+            console.error("[TedbabeLearnHUB Mailer] Verification email error:", err?.message || err);
+        });
     return code;
 }
 
@@ -155,9 +196,6 @@ export async function signup(req, res) {
     const data = signupSchema.parse(req.body);
     if (data.role === "teacher" && !data.teacherApplication) {
         throw new ApiError(400, "Complete the teacher application and upload a CV.");
-    }
-    if (data.role === "student" && !data.studentProfile) {
-        throw new ApiError(400, "Complete your learning preferences before registering.");
     }
     const phoneCheck = validatePhoneForCountry(data.phone, data.country);
     if (!phoneCheck.valid) {
@@ -189,16 +227,18 @@ export async function signup(req, res) {
     }
     let preferredCourseIds = [];
     if (data.role === "student") {
-        preferredCourseIds = data.studentProfile.preferredCourseIds;
-        if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
-            throw new ApiError(400, "Select valid courses from the course catalog.");
-        }
-        const matchingCourses = await CourseModel.countDocuments({
-            _id: { $in: preferredCourseIds },
-            status: "published",
-        });
-        if (matchingCourses !== new Set(preferredCourseIds).size) {
-            throw new ApiError(400, "One or more selected courses are no longer available.");
+        preferredCourseIds = data.studentProfile?.preferredCourseIds || [];
+        if (preferredCourseIds.length > 0) {
+            if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
+                throw new ApiError(400, "Select valid courses from the course catalog.");
+            }
+            const matchingCourses = await CourseModel.countDocuments({
+                _id: { $in: preferredCourseIds },
+                status: "published",
+            });
+            if (matchingCourses !== new Set(preferredCourseIds).size) {
+                throw new ApiError(400, "One or more selected courses are no longer available.");
+            }
         }
     }
     const savedTeacherFiles = [];
@@ -274,11 +314,12 @@ export async function signup(req, res) {
         await Promise.all(savedTeacherFiles.map((file) => deleteStoredFile(file.key, file.storageProvider)));
         throw error;
     }
-    const code = await issueCode(user, "signup");
+    const code = await issueCode(user, "signup", data.device);
     res.status(201).json({
         message: "Verification code sent to your email address.",
         email,
         purpose: "signup",
+        requiresVerification: true,
         ...(!isProduction ? { devCode: code } : {}),
     });
 }
@@ -287,9 +328,10 @@ export async function login(req, res) {
     const data = z.object({
         email: z.string().trim().email(),
         password: z.string().min(1).max(128),
+        device: deviceSchema,
     }).parse(req.body);
     const user = await UserModel.findOne({ email: normalizedEmail(data.email) })
-        .select("+password +passwordHash");
+        .select("+password +passwordHash +trustedDevices +pendingDeviceId");
     const passwordHash = user?.password || user?.passwordHash;
     const validPassword = passwordHash ? await verifyPassword(passwordHash, data.password) : false;
     if (!user || !validPassword) {
@@ -304,23 +346,42 @@ export async function login(req, res) {
     if (user.role === "admin" || user.role === "hub_admin") {
         throw new ApiError(403, "Administrator accounts must sign in through the Admin Dashboard only.");
     }
-    // If the account has already completed verification, sign in immediately without OTP
-    if (user.isVerified || user.emailVerified) {
-        const token = setSessionCookie(res, user);
+
+    // Unverified account → email verification is required first
+    if (!(user.isVerified || user.emailVerified)) {
+        const code = await issueCode(user, "signup", data.device);
         return res.json({
-            message: "Signed in successfully.",
-            token,
-            user: userResponse(user),
+            message: "Verification code sent to your email address.",
+            email: user.email,
+            purpose: "signup",
+            requiresVerification: true,
+            ...(!isProduction ? { devCode: code } : {}),
         });
     }
 
-    // If the account is unverified, prompt them to verify with an OTP code
-    const code = await issueCode(user, "signup");
+    // Verified account on a recognised, unexpired device → sign in directly
+    const knownDevice = data.device?.deviceId ? findTrustedDevice(user, data.device.deviceId) : null;
+    if (data.device?.deviceId && !knownDevice) {
+        // New / unrecognised device → require an emailed verification code
+        const code = await issueCode(user, "login", data.device);
+        return res.json({
+            message: "A new sign-in was detected. We emailed a verification code to confirm it's you.",
+            email: user.email,
+            purpose: "login",
+            requiresVerification: true,
+            ...(!isProduction ? { devCode: code } : {}),
+        });
+    }
+    if (knownDevice) {
+        knownDevice.lastSeenAt = new Date();
+        await user.save();
+    }
+
+    const token = setSessionCookie(res, user);
     return res.json({
-        message: "Verification code sent to your email address.",
-        email: user.email,
-        purpose: "signup",
-        ...(!isProduction ? { devCode: code } : {}),
+        message: "Signed in successfully.",
+        token,
+        user: userResponse(user),
     });
 }
 
@@ -393,9 +454,11 @@ export async function verifyCode(req, res) {
     const data = z.object({
         email: z.string().trim().email(),
         code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code."),
+        rememberDevice: z.boolean().optional().default(false),
+        device: deviceSchema,
     }).parse(req.body);
     const user = await UserModel.findOne({ email: normalizedEmail(data.email) })
-        .select("+verificationCode +codeExpiresAt +codePurpose +codeAttempts +codeSentAt");
+        .select("+verificationCode +codeExpiresAt +codePurpose +codeAttempts +codeSentAt +trustedDevices +pendingDeviceId +pendingDeviceLabel");
     if (!user || !user.verificationCode || !user.codeExpiresAt) {
         throw new ApiError(400, "The code is invalid or expired. Request a new code.");
     }
@@ -433,10 +496,32 @@ export async function verifyCode(req, res) {
     } else if (user.role === "student") {
         user.accountStatus = "active";
     }
+
+    // Remember the device so future sign-ins skip the code (30 days).
+    const pendingDevice = user.pendingDeviceId
+        ? { deviceId: user.pendingDeviceId, label: user.pendingDeviceLabel || "" }
+        : null;
+    const activeDevice = data.device?.deviceId ? data.device : pendingDevice;
+    if (activeDevice) {
+        const shouldTrust = purpose === "signup" || data.rememberDevice === true;
+        if (shouldTrust) trustDevice(user, activeDevice);
+    }
+    user.pendingDeviceId = undefined;
+    user.pendingDeviceLabel = undefined;
+
     await user.save();
     const token = setSessionCookie(res, user);
+
+    if (purpose === "login" && activeDevice) {
+        sendSecurityAlertEmail({
+            email: user.email,
+            name: user.name || user.fullName,
+            action: `A new sign-in was verified on a new device${activeDevice.label ? ` (${activeDevice.label})` : ""}.`,
+        }).catch(() => {});
+    }
+
     res.json({
-        message: "Email verified successfully.",
+        message: purpose === "login" ? "New device confirmed. You're signed in." : "Email verified successfully.",
         token,
         user: userResponse(user),
         purpose,
@@ -448,8 +533,10 @@ export async function resendCode(req, res) {
         email: z.string().trim().email(),
         purpose: z.string().optional().default("signup"),
     }).parse(req.body);
-    const user = await UserModel.findOne({ email: normalizedEmail(data.email) }).select("+codeSentAt");
-    if (!user || user.isVerified || user.emailVerified) {
+    const user = await UserModel.findOne({ email: normalizedEmail(data.email) })
+        .select("+codeSentAt +codePurpose +pendingDeviceId +pendingDeviceLabel");
+    const resendable = user && (user.codePurpose === "login" || !(user.isVerified || user.emailVerified));
+    if (!resendable) {
         res.json({ message: "If the account is eligible, a new code has been sent." });
         return;
     }
@@ -459,9 +546,14 @@ export async function resendCode(req, res) {
     if (cooldownRemaining > 0) {
         throw new ApiError(429, `Please wait ${Math.ceil(cooldownRemaining / 1000)} seconds before requesting another code.`);
     }
-    const code = await issueCode(user, data.purpose || "signup");
+    const pendingDevice = user.pendingDeviceId
+        ? { deviceId: user.pendingDeviceId, label: user.pendingDeviceLabel || "" }
+        : null;
+    const purpose = user.codePurpose || data.purpose || "signup";
+    const code = await issueCode(user, purpose, pendingDevice);
     res.json({
         message: "A new verification code has been sent to your email address.",
+        purpose,
         ...(!isProduction ? { devCode: code } : {}),
     });
 }
@@ -472,6 +564,7 @@ export async function google(req, res) {
         role: z.enum(["student", "teacher"]).optional(),
         phone: z.string().trim().max(30).default(""),
         country: z.string().trim().default(""),
+        device: deviceSchema,
         studentProfile: studentProfileSchema.optional(),
     }).parse(req.body);
     if (!env.GOOGLE_CLIENT_ID) {
@@ -492,7 +585,7 @@ export async function google(req, res) {
         throw new ApiError(401, "Google account email could not be verified.");
     }
     const email = normalizedEmail(payload.email);
-    let user = await UserModel.findOne({ $or: [{ email }, { googleId: payload.sub }] });
+    let user = await UserModel.findOne({ $or: [{ email }, { googleId: payload.sub }] }).select("+trustedDevices");
     if (user?.isDeleted) {
         throw new ApiError(403, "This account is no longer available.");
     }
@@ -503,19 +596,18 @@ export async function google(req, res) {
         if (data.role === "teacher") {
             throw new ApiError(400, "Teacher applications must be submitted with the required CV and qualifications.");
         }
-        if (!data.studentProfile) {
-            throw new ApiError(400, "Complete your learning plan before creating a student account.");
-        }
-        const preferredCourseIds = data.studentProfile.preferredCourseIds;
-        if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
-            throw new ApiError(400, "Select valid courses from the course catalog.");
-        }
-        const matchingCourses = await CourseModel.countDocuments({
-            _id: { $in: preferredCourseIds },
-            status: "published",
-        });
-        if (matchingCourses !== new Set(preferredCourseIds).size) {
-            throw new ApiError(400, "One or more selected courses are no longer available.");
+        const preferredCourseIds = data.studentProfile?.preferredCourseIds || [];
+        if (preferredCourseIds.length > 0) {
+            if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
+                throw new ApiError(400, "Select valid courses from the course catalog.");
+            }
+            const matchingCourses = await CourseModel.countDocuments({
+                _id: { $in: preferredCourseIds },
+                status: "published",
+            });
+            if (matchingCourses !== new Set(preferredCourseIds).size) {
+                throw new ApiError(400, "One or more selected courses are no longer available.");
+            }
         }
         user = await UserModel.create({
             name: payload.name?.trim() || email.split("@")[0],
@@ -531,10 +623,11 @@ export async function google(req, res) {
             emailVerified: true,
             teacherStatus: "approved",
             accountStatus: "active",
-            studentProfile: {
+            studentProfile: data.role === "student" ? {
                 ...data.studentProfile,
+                preferredCourseIds,
                 placementStatus: "pending",
-            },
+            } : undefined,
         });
     } else {
         if (user.role === "admin" || user.role === "hub_admin" || user.role === "support_staff") {
@@ -547,6 +640,10 @@ export async function google(req, res) {
         user.authProvider = "google";
         user.isVerified = true;
         user.emailVerified = true;
+        await user.save();
+    }
+    if (data.device?.deviceId) {
+        trustDevice(user, data.device);
         await user.save();
     }
     const token = setSessionCookie(res, user);
@@ -687,6 +784,15 @@ export async function updateProfile(req, res) {
             experienceYears: z.number().int().min(0).max(60).optional(),
         }).optional(),
         languagePreference: z.enum(["am", "en"]).optional(),
+        studentProfile: z.object({
+            learningInterests: z.array(z.string().trim().min(1).max(80)).max(10).optional(),
+            learningGoals: z.string().trim().max(1000).optional(),
+            currentSkillLevel: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
+            preferredSchedule: z.string().trim().max(200).optional(),
+            preferredCourseIds: z.array(z.string()).max(10).optional(),
+            weeklyStudyHours: z.number().int().min(1).max(80).optional(),
+            timeZone: z.string().trim().max(80).optional(),
+        }).optional(),
         avatarUrl: z.string().trim().max(1_400_000).refine((value) => (
             value === "" ||
             /^https:\/\/[^\s]+$/i.test(value) ||
@@ -716,6 +822,29 @@ export async function updateProfile(req, res) {
     if (data.languagePreference !== undefined) {
         user.languagePreference = data.languagePreference;
         if (user.studentProfile) user.studentProfile.preferredLanguage = data.languagePreference;
+    }
+    if (data.studentProfile && user.role === "student") {
+        const sp = data.studentProfile;
+        if (sp.preferredCourseIds && sp.preferredCourseIds.length > 0) {
+            if (sp.preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
+                throw new ApiError(400, "Select valid courses from the course catalog.");
+            }
+            const matchingCourses = await CourseModel.countDocuments({
+                _id: { $in: sp.preferredCourseIds },
+                status: "published",
+            });
+            if (matchingCourses !== new Set(sp.preferredCourseIds).size) {
+                throw new ApiError(400, "One or more selected courses are no longer available.");
+            }
+        }
+        user.studentProfile ??= {};
+        if (sp.learningInterests !== undefined) user.studentProfile.learningInterests = sp.learningInterests;
+        if (sp.learningGoals !== undefined) user.studentProfile.learningGoals = sp.learningGoals;
+        if (sp.currentSkillLevel !== undefined) user.studentProfile.currentSkillLevel = sp.currentSkillLevel;
+        if (sp.preferredSchedule !== undefined) user.studentProfile.preferredSchedule = sp.preferredSchedule;
+        if (sp.preferredCourseIds !== undefined) user.studentProfile.preferredCourseIds = sp.preferredCourseIds;
+        if (sp.weeklyStudyHours !== undefined) user.studentProfile.weeklyStudyHours = sp.weeklyStudyHours;
+        if (sp.timeZone !== undefined) user.studentProfile.timeZone = sp.timeZone;
     }
 
     await user.save();

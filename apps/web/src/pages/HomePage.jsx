@@ -73,12 +73,34 @@ function extractYouTubeId(url) {
     return null;
 }
 
+const DEFAULT_PROMO_TITLE = "See How TedbabeLearnHUB Works";
+const DEFAULT_PROMO_LABEL = "PLATFORM OVERVIEW";
+
+// Normalise the admin-managed promo video setting into { title, label, url }
+function normalizePromoVideo(raw) {
+    if (!raw) return null;
+    if (typeof raw === "string") {
+        const url = raw.trim();
+        return url ? { title: DEFAULT_PROMO_TITLE, label: DEFAULT_PROMO_LABEL, url } : null;
+    }
+    if (typeof raw === "object") {
+        const url = String(raw.url || "").trim();
+        if (!url) return null;
+        return {
+            title: String(raw.title || "").trim() || DEFAULT_PROMO_TITLE,
+            label: String(raw.label || "").trim() || DEFAULT_PROMO_LABEL,
+            url,
+        };
+    }
+    return null;
+}
+
 export function HomePage() {
     const { t } = useTranslation();
     const [data, setData] = useState(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
-    const [promoVideoUrl, setPromoVideoUrl] = useState("");
+    const [promoVideo, setPromoVideo] = useState(null);
 
     // Selected category state for interactive drill-down
     const programsRef = useRef(null);
@@ -90,9 +112,9 @@ export function HomePage() {
         apiRequest("/api/public/home")
             .then((res) => setData(res))
             .catch((err) => console.error("Error fetching homepage data:", err));
-        // Fetch public settings to get the admin-set promo video
+        // Fetch public settings to get the admin-managed public video
         apiRequest("/api/public/settings")
-            .then((res) => setPromoVideoUrl(res?.settings?.promo_video || ""))
+            .then((res) => setPromoVideo(normalizePromoVideo(res?.settings?.promo_video)))
             .catch(() => {});
     }, []);
 
@@ -373,6 +395,70 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* 3b. Admin-Managed Public Video — shown before "Find your next skill" */}
+      {(() => {
+        if (!promoVideo) return null;
+        const videoId = extractYouTubeId(promoVideo.url);
+        if (!videoId) return null;
+        const embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1`;
+        return (
+          <section className="w-full bg-slate-950 py-0 overflow-hidden">
+            {/* Top decorative gradient fade */}
+            <div className="h-10 bg-gradient-to-b from-white to-slate-950 pointer-events-none" />
+
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
+              {/* Section header */}
+              <div className="text-center mb-8">
+                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-slate-900/90 px-4 py-1.5 text-xs font-semibold text-cyan-300">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                  </span>
+                  {promoVideo.label}
+                </span>
+                <h2 className="mt-4 text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+                  {promoVideo.title}
+                </h2>
+                <p className="mt-3 text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+                  Watch a quick walkthrough of the platform — from enrollment to live sessions, resources, and progress tracking.
+                </p>
+              </div>
+
+              {/* Cinematic video player frame */}
+              <div className="relative mx-auto w-full rounded-3xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] ring-1 ring-white/10"
+                style={{ aspectRatio: "16/9" }}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                {/* Glowing border accent */}
+                <div className="absolute inset-0 rounded-3xl ring-2 ring-inset ring-cyan-400/20 pointer-events-none z-10" />
+                {/* Corner accent dots */}
+                <div className="absolute top-3 left-3 h-3 w-3 rounded-full bg-cyan-400/60 z-20 blur-sm" />
+                <div className="absolute top-3 right-3 h-3 w-3 rounded-full bg-blue-400/60 z-20 blur-sm" />
+
+                <iframe
+                  title={promoVideo.title}
+                  src={embedSrc}
+                  className="absolute inset-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  sandbox="allow-scripts allow-same-origin allow-presentation"
+                />
+              </div>
+
+              {/* Sub-label below video */}
+              <p className="mt-5 text-center text-xs text-slate-500 font-medium">
+                Managed by the platform administrator · Updated regularly
+              </p>
+            </div>
+
+            {/* Bottom decorative gradient fade */}
+            <div className="h-10 bg-gradient-to-t from-white to-slate-950 pointer-events-none" />
+          </section>
+        );
+      })()}
+
       {/* 4. Curated Learning Categories (Click to reveal programs) */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
@@ -586,69 +672,6 @@ export function HomePage() {
           </div>
         )}
       </section>
-
-      {/* 4b. Admin Promo Video – Full-Width Cinematic Embed */}
-      {(() => {
-        const videoId = extractYouTubeId(promoVideoUrl);
-        if (!videoId) return null;
-        const embedSrc = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&showinfo=0&controls=1&fs=0`;
-        return (
-          <section className="w-full bg-slate-950 py-0 overflow-hidden">
-            {/* Top decorative gradient fade */}
-            <div className="h-10 bg-gradient-to-b from-white to-slate-950 pointer-events-none" />
-
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-              {/* Section header */}
-              <div className="text-center mb-8">
-                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-slate-900/90 px-4 py-1.5 text-xs font-semibold text-cyan-300">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                  </span>
-                  PLATFORM OVERVIEW
-                </span>
-                <h2 className="mt-4 text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-                  See How TedbabeLearnHUB Works
-                </h2>
-                <p className="mt-3 text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                  Watch a quick walkthrough of the platform — from enrollment to live sessions, resources, and progress tracking.
-                </p>
-              </div>
-
-              {/* Cinematic video player frame */}
-              <div className="relative mx-auto w-full rounded-3xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] ring-1 ring-white/10"
-                style={{ aspectRatio: "16/9" }}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                {/* Glowing border accent */}
-                <div className="absolute inset-0 rounded-3xl ring-2 ring-inset ring-cyan-400/20 pointer-events-none z-10" />
-                {/* Corner accent dots */}
-                <div className="absolute top-3 left-3 h-3 w-3 rounded-full bg-cyan-400/60 z-20 blur-sm" />
-                <div className="absolute top-3 right-3 h-3 w-3 rounded-full bg-blue-400/60 z-20 blur-sm" />
-
-                <iframe
-                  title="Platform Overview Video"
-                  src={embedSrc}
-                  className="absolute inset-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen={false}
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  sandbox="allow-scripts allow-same-origin allow-presentation"
-                />
-              </div>
-
-              {/* Sub-label below video */}
-              <p className="mt-5 text-center text-xs text-slate-500 font-medium">
-                Managed by the platform administrator · Updated regularly
-              </p>
-            </div>
-
-            {/* Bottom decorative gradient fade */}
-            <div className="h-10 bg-gradient-to-t from-white to-slate-950 pointer-events-none" />
-          </section>
-        );
-      })()}
 
       {/* 5. How LearnHUB Works: 4-Step Journey */}
       <section className="bg-slate-50/70 border-y border-slate-200/80 py-20">
