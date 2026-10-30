@@ -271,8 +271,8 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
             {/* Promo Video Management — admin only */}
             {["admin", "hub_admin"].includes(user?.role) && (
                 <DashboardCard
-                    title="🎬 Homepage Video"
-                    subtitle="Manage the single public video shown on the homepage, in its own section before “Find your next skill”. Add, change, or remove it any time."
+                    title="🎬 Permanent Homepage Video"
+                    subtitle="Manage the permanent public video shown on the homepage before “Find your next skill”. Once added, it remains permanently displayed on the homepage until you change or remove it."
                 >
                     <div className="space-y-4">
                         {/* Title + Label */}

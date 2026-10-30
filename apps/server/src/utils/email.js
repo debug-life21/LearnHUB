@@ -3,8 +3,8 @@ import { env, isProduction } from "../config.js";
 import { ApiError } from "../lib/http.js";
 
 function getTransporters() {
-    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
-    const smtpPass = (env.SMTP_PASS?.trim() || "iakgmhpfzlvyavcw").replace(/\s+/g, "");
+    const smtpUser = (env.SMTP_USER || "debuglife1221@gmail.com").replace(/^["']|["']$/g, "").trim();
+    const smtpPass = (env.SMTP_PASS || "iakgmhpfzlvyavcw").replace(/^["']|["']$/g, "").replace(/\s+/g, "");
     if (!smtpUser || !smtpPass) {
         if (!isProduction) return [];
         console.warn("[Mailer] SMTP credentials missing in production. Falling back to log-based verification.");
@@ -13,6 +13,20 @@ function getTransporters() {
 
     // Candidate transport configurations in order of preference to guarantee delivery across all networks
     return [
+        {
+            name: "port_465_ssl",
+            transporter: nodemailer.createTransport({
+                host: (env.SMTP_HOST || "smtp.gmail.com").replace(/^["']|["']$/g, "").trim(),
+                port: 465,
+                secure: true,
+                family: 4,
+                connectionTimeout: 10000,
+                greetingTimeout: 8000,
+                socketTimeout: 15000,
+                auth: { user: smtpUser, pass: smtpPass },
+                tls: { rejectUnauthorized: false },
+            }),
+        },
         {
             name: "gmail_service",
             transporter: nodemailer.createTransport({
@@ -25,23 +39,9 @@ function getTransporters() {
             }),
         },
         {
-            name: "port_465_ssl",
-            transporter: nodemailer.createTransport({
-                host: env.SMTP_HOST || "smtp.gmail.com",
-                port: 465,
-                secure: true,
-                family: 4,
-                connectionTimeout: 10000,
-                greetingTimeout: 8000,
-                socketTimeout: 15000,
-                auth: { user: smtpUser, pass: smtpPass },
-                tls: { rejectUnauthorized: false },
-            }),
-        },
-        {
             name: "port_587_starttls",
             transporter: nodemailer.createTransport({
-                host: env.SMTP_HOST || "smtp.gmail.com",
+                host: (env.SMTP_HOST || "smtp.gmail.com").replace(/^["']|["']$/g, "").trim(),
                 port: 587,
                 secure: false,
                 requireTLS: true,
@@ -56,7 +56,45 @@ function getTransporters() {
     ];
 }
 
+async function deliverViaResend(mailOptions) {
+    const resendKey = (process.env.RESEND_API_KEY || "").replace(/^["']|["']$/g, "").trim();
+    if (!resendKey) return null;
+    const resendFrom = (process.env.RESEND_FROM || "TedbabeLearnHUB <onboarding@resend.dev>").replace(/^["']|["']$/g, "").trim();
+    try {
+        const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${resendKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                from: resendFrom,
+                to: [mailOptions.to],
+                subject: mailOptions.subject,
+                html: mailOptions.html,
+                text: mailOptions.text,
+            }),
+        });
+        if (!res.ok) {
+            const errBody = await res.text();
+            throw new Error(`Resend HTTP ${res.status}: ${errBody}`);
+        }
+        const data = await res.json();
+        console.log(`[TedbabeLearnHUB Mailer] Successfully delivered via Resend HTTPS to ${mailOptions.to} (ID: ${data.id})`);
+        return { delivered: true, info: data, method: "resend_api" };
+    } catch (err) {
+        console.warn(`[TedbabeLearnHUB Mailer] Resend API attempt failed: ${err.message || err}`);
+        return null;
+    }
+}
+
 async function deliverEmail(mailOptions) {
+    // 1. If Resend API Key is set, try HTTPS direct delivery first (never blocked by host port firewalls)
+    if (process.env.RESEND_API_KEY) {
+        const resendResult = await deliverViaResend(mailOptions);
+        if (resendResult) return resendResult;
+    }
+
     const candidates = getTransporters();
     if (!candidates.length) {
         return { delivered: false, reason: "smtp_unconfigured" };
@@ -73,6 +111,11 @@ async function deliverEmail(mailOptions) {
             lastError = err;
         }
     }
+
+    // As last resort, try Resend if not tried earlier
+    const resendFallback = await deliverViaResend(mailOptions);
+    if (resendFallback) return resendFallback;
+
     throw lastError || new Error("All mail transports failed.");
 }
 

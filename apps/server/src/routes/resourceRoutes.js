@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
@@ -33,7 +34,7 @@ resourceRouter.post("/upload", asyncHandler(async (req, res) => {
     if (data.sourceType !== "upload") {
         if (!data.sourceUrl) throw new ApiError(400, "Enter a link for the selected resource.");
         try {
-            external = normalizeExternalResource(data.sourceType, data.sourceUrl);
+            external = normalizeExternalResource(data.sourceType, data.sourceUrl, data.category);
         } catch (error) {
             throw new ApiError(400, error.message);
         }
@@ -143,7 +144,11 @@ resourceRouter.get("/:id/download", asyncHandler(async (req, res) => {
     await sendResourceFile(req, res, resource, true);
 }));
 resourceRouter.get("/:key/file", asyncHandler(async (req, res) => {
-    const resource = await LearningResourceModel.findOne({ storedKey: req.params.key });
+    const rawKey = req.params.key;
+    const isObjectId = mongoose.isValidObjectId(rawKey);
+    const resource = await LearningResourceModel.findOne(
+        isObjectId ? { $or: [{ storedKey: rawKey }, { _id: rawKey }] } : { storedKey: rawKey }
+    );
     if (!resource) {
         throw new ApiError(404, "Resource not found.");
     }

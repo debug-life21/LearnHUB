@@ -247,6 +247,7 @@ export function StudentDashboard({ user }) {
     const nextSession = upcomingLessons[0];
     const dashboardTabs = [
         { id: "overview", label: "Overview", icon: "📊" },
+        { id: "courses", label: "Choose courses", icon: "🎯" },
         { id: "classes", label: `My cohorts (${classes.length})`, icon: "🏫" },
         { id: "schedule", label: `Live classes (${upcomingLessons.length})`, icon: "📹" },
         { id: "assignments", label: `Assignments (${assignments.length})`, icon: "📚" },
@@ -275,6 +276,22 @@ export function StudentDashboard({ user }) {
           {nextSession.meetingUrl ? <LiveSessionButton session={nextSession} /> : null}
         </div>) : null}
 
+      {/* Verification notice if email not yet verified */}
+      {(!user.isVerified && !user.emailVerified) ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50/90 p-4 text-xs font-medium text-slate-800">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">✉️</span>
+            <div>
+              <p className="font-bold text-slate-900">Email verification pending</p>
+              <p className="text-slate-600">A 6-digit code was sent to <strong className="text-[#0066ff]">{user.email}</strong>. You have full access to select your courses and prepare below.</p>
+            </div>
+          </div>
+          <Link to="/verify-code" state={{ email: user.email, purpose: "signup" }} className="rounded-xl bg-[#0066ff] px-4 py-2 text-xs font-bold text-white hover:bg-[#0052cc] transition shadow-sm">
+            Enter code
+          </Link>
+        </div>
+      ) : null}
+
       {/* Student Welcome Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c234b] via-[#091b3b] to-[#061124] p-6 sm:p-8 text-white border border-sky-500/25 shadow-xl flex flex-wrap items-center justify-between gap-6">
         <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
@@ -298,7 +315,7 @@ export function StudentDashboard({ user }) {
       {(!profileForm.preferredCourseIds.length || !profileForm.preferredSchedule) ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <p>Complete your course choices and preferred study times so the TedbabeLearnHUB team can place you in a suitable cohort.</p>
-          <button onClick={() => setActiveTab("profile")} className="rounded-xl bg-amber-800 px-4 py-2 text-xs font-bold text-white hover:bg-amber-900">Complete learning profile</button>
+          <button onClick={() => setActiveTab("courses")} className="rounded-xl bg-amber-800 px-4 py-2 text-xs font-bold text-white hover:bg-amber-900 shadow-sm">Choose courses now</button>
         </div>
       ) : null}
 
@@ -309,6 +326,29 @@ export function StudentDashboard({ user }) {
 
       {/* 1. OVERVIEW */}
       {activeTab === "overview" ? (<div className="space-y-8">
+          {(!profileForm.preferredCourseIds || profileForm.preferredCourseIds.length === 0) && classes.length === 0 && (
+            <div className="rounded-3xl border-2 border-blue-400/80 bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🎯</span>
+                    <h3 className="text-base font-bold text-blue-950">Next Step: Select your courses</h3>
+                  </div>
+                  <p className="text-xs text-blue-800 leading-relaxed max-w-xl">
+                    You can select the courses you want to study right now. Once submitted, our academic team will match you with the appropriate cohort and schedule.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("courses")}
+                  className="shrink-0 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700 transition"
+                >
+                  Choose courses now →
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard label="My cohorts" value={classes.length} icon="📚"/>
             <MetricCard label="Upcoming sessions" value={upcomingLessons.length} icon="📹"/>
@@ -399,6 +439,101 @@ export function StudentDashboard({ user }) {
               </div>))}
           </div>
         </div>) : null}
+
+      {/* 2b. COURSES SELECTION */}
+      {activeTab === "courses" ? (
+        <div className="max-w-3xl mx-auto space-y-6">
+          <DashboardCard
+            title="Choose your courses"
+            subtitle="Select the courses you want to study. Our academic coordinators will assign you to the right cohort."
+          >
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              <div className="rounded-2xl bg-blue-50/70 p-4 border border-blue-100 flex items-start gap-3">
+                <span className="text-xl">💡</span>
+                <div className="text-xs text-blue-900 leading-relaxed">
+                  <strong>How course placement works:</strong> Pick one or more courses below. After submitting, your request is reviewed by the academic team and you will be added to your cohort learning workspace.
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-800">
+                    Available courses by category
+                  </label>
+                  <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    {profileForm.preferredCourseIds?.length || 0} selected
+                  </span>
+                </div>
+                <CategoryCoursePicker
+                  courses={courses}
+                  selectedCourseIds={profileForm.preferredCourseIds}
+                  onChange={(preferredCourseIds) => setProfileForm({ ...profileForm, preferredCourseIds })}
+                />
+              </div>
+
+              <div className="border-t border-slate-100 pt-5 space-y-4">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Your Learning Preferences</h4>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700">{t("skillLevel")}</label>
+                    <select
+                      value={profileForm.currentSkillLevel}
+                      onChange={(e) => setProfileForm({ ...profileForm, currentSkillLevel: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs outline-none bg-white"
+                    >
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700">Hours per week</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="80"
+                      value={profileForm.weeklyStudyHours}
+                      onChange={(e) => setProfileForm({ ...profileForm, weeklyStudyHours: e.target.value })}
+                      className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700">{t("preferredSchedule")}</label>
+                  <input
+                    type="text"
+                    value={profileForm.preferredSchedule}
+                    onChange={(e) => setProfileForm({ ...profileForm, preferredSchedule: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"
+                    placeholder="e.g. Weekdays after 6 PM, or Weekend mornings"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700">{t("learningGoals")}</label>
+                  <textarea
+                    rows={2}
+                    value={profileForm.learningGoals}
+                    onChange={(e) => setProfileForm({ ...profileForm, learningGoals: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"
+                    placeholder="What do you hope to achieve through this learning journey?"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700 transition"
+              >
+                Submit Selected Courses & Preferences
+              </button>
+            </form>
+          </DashboardCard>
+        </div>
+      ) : null}
 
       {activeTab === "schedule" ? (
         <DashboardCard title="Live class schedule" subtitle="Times are shown in your device's local time. You can also compare with the cohort time zone.">

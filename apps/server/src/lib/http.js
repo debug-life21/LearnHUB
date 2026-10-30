@@ -13,10 +13,16 @@ export function asyncHandler(handler) {
 }
 export function errorHandler(error, _req, res, _next) {
     if (error instanceof ZodError) {
-        const detail = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+        const detail = error.errors.map(e => `${e.path.join('.') || 'field'}: ${e.message}`).join(', ');
         return res.status(400).json({
-            message: `Validation failed: ${detail}`,
+            message: detail || "Validation failed.",
             errors: error.flatten(),
+        });
+    }
+    if (error?.name === "ValidationError") {
+        const detail = Object.values(error.errors || {}).map(e => e.message).join(', ');
+        return res.status(400).json({
+            message: detail || "Validation failed.",
         });
     }
     if (error instanceof ApiError) {

@@ -297,16 +297,16 @@ studentRouter.patch("/profile", asyncHandler(async (req, res) => {
         learningGoals: z.string().optional(),
         currentSkillLevel: z.string().optional(),
         preferredSchedule: z.string().optional(),
-        preferredCourseIds: z.array(z.string()).min(1).max(10).optional(),
-        weeklyStudyHours: z.number().int().min(1).max(80).optional(),
+        preferredCourseIds: z.array(z.string()).max(20).optional(),
+        weeklyStudyHours: z.coerce.number().min(1).max(80).optional(),
         timeZone: z.string().trim().max(80).optional(),
         preferredLanguage: z.enum(["am", "en"]).optional(),
     }).parse(req.body);
     const preferredCourseIds = data.preferredCourseIds ?? [];
-    if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
-        throw new ApiError(400, "Select valid courses from the course catalog.");
-    }
-    if (data.preferredCourseIds !== undefined) {
+    if (preferredCourseIds.length > 0) {
+        if (preferredCourseIds.some((courseId) => !/^[a-f\d]{24}$/i.test(courseId))) {
+            throw new ApiError(400, "Select valid courses from the course catalog.");
+        }
         const availableCourses = await CourseModel.countDocuments({
             _id: { $in: preferredCourseIds },
             status: "published",

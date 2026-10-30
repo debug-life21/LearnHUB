@@ -455,7 +455,7 @@ export function HomePage() {
 
               {/* Sub-label below video */}
               <p className="mt-5 text-center text-xs text-slate-500 font-medium">
-                Managed by the platform administrator · Updated regularly
+                Official platform overview · Permanently maintained by administrator
               </p>
             </div>
 

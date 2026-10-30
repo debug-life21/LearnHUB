@@ -32,8 +32,12 @@ function useProtectedObjectUrl(resource) {
     const [url, setUrl] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    const storedKey = resource?.storedKey;
-    const fallbackType = resource?.mimeType || "application/octet-stream";
+    const [reloadCount, setReloadCount] = useState(0);
+    const storedKey = resource?.storedKey || resource?._id;
+    const fallbackType = resource?.mimeType || "application/pdf";
+
+    const retry = () => setReloadCount((c) => c + 1);
+
     useEffect(() => {
         if (!storedKey) {
             setUrl("");
@@ -44,6 +48,7 @@ function useProtectedObjectUrl(resource) {
         let objectUrl = "";
         setLoading(true);
         setError("");
+
         apiRequest(`/api/resources/${storedKey}/file`, { responseType: "blob" })
             .then((blob) => {
                 if (cancelled) return;
@@ -53,33 +58,58 @@ function useProtectedObjectUrl(resource) {
                 objectUrl = URL.createObjectURL(typed);
                 setUrl(objectUrl);
             })
-            .catch((err) => {
-                if (!cancelled) setError(err.message || "Unable to load this document.");
+            .catch(async (err) => {
+                if (cancelled) return;
+                let msg = err?.message || "Unable to load this document.";
+                if (err?.response?.data instanceof Blob) {
+                    try {
+                        const text = await err.response.data.text();
+                        const parsed = JSON.parse(text);
+                        if (parsed.message) msg = parsed.message;
+                    } catch {
+                        // ignore
+                    }
+                }
+                setError(msg);
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
             });
+
         return () => {
             cancelled = true;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [storedKey, fallbackType]);
-    return { url, error, loading };
+    }, [storedKey, fallbackType, reloadCount]);
+
+    return { url, error, loading, retry };
 }
 
 function ProtectedDocumentPreview({ resource, kind = "document" }) {
-    const { url, error, loading } = useProtectedObjectUrl(resource);
+    const { url, error, loading, retry } = useProtectedObjectUrl(resource);
+
     return (
-        <div className="relative h-[78vh] min-h-[600px] w-full bg-slate-900" onContextMenu={(e) => e.preventDefault()}>
+        <div className="relative h-[78vh] min-h-[600px] w-full bg-slate-900 rounded-2xl overflow-hidden" onContextMenu={(e) => e.preventDefault()}>
             {loading && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm font-medium text-slate-300">
-                    Loading document…
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm font-medium text-slate-300">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+                    <span>Loading document…</span>
                 </div>
             )}
             {error && !loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
-                    <p className="text-sm font-semibold text-rose-300">We couldn't display this file.</p>
-                    <p className="max-w-md text-xs text-slate-400">{error}</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-slate-900">
+                    <span className="text-3xl">📄</span>
+                    <p className="text-sm font-bold text-rose-300">We couldn't display this file.</p>
+                    <p className="max-w-md text-xs text-slate-400 leading-relaxed">{error}</p>
+                    <div className="mt-3 flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={retry}
+                            className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-500 transition shadow-sm"
+                        >
+                            Retry loading
+                        </button>
+                    </div>
                 </div>
             )}
             {url && !error && (
@@ -94,11 +124,26 @@ function ProtectedDocumentPreview({ resource, kind = "document" }) {
                         />
                     </div>
                 ) : (
-                    <iframe
-                        src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
-                        title={resource?.title}
-                        className="h-full w-full border-0 bg-white"
-                    />
+                    <div className="h-full w-full flex flex-col">
+                        <div className="flex items-center justify-between bg-slate-950 px-4 py-2 text-xs text-slate-400 border-b border-white/10">
+                            <span className="font-semibold text-slate-200 truncate">{resource?.originalFilename || resource?.title}</span>
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:bg-white/20 transition"
+                                >
+                                    Open in new window ↗
+                                </a>
+                            </div>
+                        </div>
+                        <iframe
+                            src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
+                            title={resource?.title}
+                            className="h-full w-full border-0 bg-white"
+                        />
+                    </div>
                 )
             )}
         </div>
@@ -544,6 +589,15 @@ export function LearningWorkspace() {
                                         className="w-full aspect-video border-0 bg-black"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                         referrerPolicy="strict-origin-when-cross-origin"
+                                        allowFullScreen
+                                    />
+                                ) : selectedVideoResource?.sourceType === "google_drive" ? (
+                                    <iframe
+                                        src={selectedVideoResource.externalUrl}
+                                        title={selectedVideoResource.title}
+                                        className="w-full aspect-video border-0 bg-black"
+                                        referrerPolicy="no-referrer"
+                                        allow="autoplay"
                                         allowFullScreen
                                     />
                                 ) : selectedVideoResource ? (

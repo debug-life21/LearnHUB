@@ -315,11 +315,19 @@ export async function signup(req, res) {
         throw error;
     }
     const code = await issueCode(user, "signup", data.device);
+    let token = null;
+    if (data.role === "student") {
+        token = setSessionCookie(res, user);
+    }
     res.status(201).json({
-        message: "Verification code sent to your email address.",
+        message: data.role === "student" 
+            ? "Account created successfully. You can now select your courses and study preferences."
+            : "Verification code sent to your email address.",
         email,
         purpose: "signup",
-        requiresVerification: true,
+        token,
+        user: data.role === "student" ? userResponse(user) : undefined,
+        requiresVerification: data.role === "teacher",
         ...(!isProduction ? { devCode: code } : {}),
     });
 }
@@ -347,8 +355,8 @@ export async function login(req, res) {
         throw new ApiError(403, "Administrator accounts must sign in through the Admin Dashboard only.");
     }
 
-    // Unverified account → email verification is required first
-    if (!(user.isVerified || user.emailVerified)) {
+    // For non-students (teachers): require email verification first
+    if (!(user.isVerified || user.emailVerified) && user.role !== "student") {
         const code = await issueCode(user, "signup", data.device);
         return res.json({
             message: "Verification code sent to your email address.",

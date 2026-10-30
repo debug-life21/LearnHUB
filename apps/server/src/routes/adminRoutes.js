@@ -325,6 +325,22 @@ adminRouter.patch("/users/:userId/status", asyncHandler(async (req, res) => {
     await writeAudit(req.user.id, `user_status_${status}`, "User", account._id.toString(), { role: account.role });
     res.json({ message: `${account.role === "student" ? "Student" : "Teacher"} account status changed to ${status}.` });
 }));
+adminRouter.patch("/users/:userId/verify-email", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.userId)) throw new ApiError(400, "Invalid user ID.");
+    const account = await UserModel.findOne({
+        _id: req.params.userId,
+        isDeleted: { $ne: true },
+    });
+    if (!account) throw new ApiError(404, "User account not found.");
+    account.isVerified = true;
+    account.emailVerified = true;
+    account.accountStatus = "active";
+    account.verificationCode = undefined;
+    account.codeExpiresAt = undefined;
+    await account.save();
+    await writeAudit(req.user.id, "user_email_manually_verified", "User", account._id.toString(), { role: account.role, email: account.email });
+    res.json({ message: `${account.fullName || account.email}'s email verified and activated.` });
+}));
 adminRouter.get("/students", asyncHandler(async (_req, res) => {
     const students = await UserModel.find({ role: "student", isDeleted: { $ne: true } })
         .select("-passwordHash")
@@ -1095,14 +1111,6 @@ adminRouter.post("/announcements", asyncHandler(async (req, res) => {
             throw new ApiError(404, "The selected cohort does not exist.");
         }
         validClassroomId = rawId;
-    }
-    if (validClassroomId) {
-        if (!mongoose.isValidObjectId(validClassroomId)) {
-            throw new ApiError(400, "Select a valid cohort.");
-        }
-        if (!(await ClassroomModel.exists({ _id: validClassroomId }))) {
-            throw new ApiError(404, "Cohort not found.");
-        }
     }
 
     const announcement = await AnnouncementModel.create({

@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { Readable } from "node:stream";
+import mongoose from "mongoose";
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { env } from "../config.js";
 
@@ -23,6 +25,15 @@ function requireR2Client() {
         throw new Error("R2 credentials are required to read or write this R2 file.");
     }
     return r2Client;
+}
+
+function getGridFSBucket() {
+    if (!mongoose.connection?.readyState || !mongoose.connection?.db) {
+        return null;
+    }
+    return new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+        bucketName: "learning_files",
+    });
 }
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -79,6 +90,27 @@ export async function saveFile(buffer, originalFilename, mimeType = "application
         await fs.mkdir(UPLOAD_DIR, { recursive: true });
         await fs.writeFile(path.join(UPLOAD_DIR, key), buffer, { flag: "wx" });
     }
+
+    // Always mirror to MongoDB GridFS as a persistent backend
+    // so ephemeral server restarts (Render / Heroku) never cause 404s
+    const bucket = getGridFSBucket();
+    if (bucket) {
+        try {
+            const uploadStream = bucket.openUploadStream(key, {
+                contentType: mimeType,
+                metadata: { originalFilename },
+            });
+            await new Promise((resolve, reject) => {
+                const stream = Readable.from(buffer);
+                stream.pipe(uploadStream)
+                    .on("finish", resolve)
+                    .on("error", reject);
+            });
+        } catch (err) {
+            console.warn("[Storage] GridFS mirror warning:", err.message);
+        }
+    }
+
     return {
         key,
         size: buffer.length,
@@ -111,6 +143,8 @@ export async function getStoredFileStream(key, provider = "local_disk", rangeHea
             throw error;
         }
     }
+
+    // 1. Try reading from local disk
     const filePath = getLocalFilePath(key);
     try {
         const { size } = await fs.stat(filePath);
@@ -130,10 +164,41 @@ export async function getStoredFileStream(key, provider = "local_disk", rangeHea
             contentRange: `bytes ${start}-${end}/${size}`,
             partial: true,
         };
-    } catch (error) {
-        if (error?.code === "ENOENT") return null;
-        throw error;
+    } catch (localError) {
+        if (localError?.code !== "ENOENT") throw localError;
     }
+
+    // 2. Fallback to MongoDB GridFS (preserves files across ephemeral restarts)
+    const bucket = getGridFSBucket();
+    if (bucket) {
+        try {
+            const files = await bucket.find({ filename: key }).limit(1).toArray();
+            if (files && files.length > 0) {
+                const fileDoc = files[0];
+                const size = fileDoc.length;
+                if (!rangeHeader) {
+                    return { body: bucket.openDownloadStreamByName(key), contentLength: size, partial: false };
+                }
+                const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+                if (!match || (!match[1] && !match[2])) return { invalidRange: true, size };
+                const start = match[1] ? Number(match[1]) : Math.max(size - Number(match[2]), 0);
+                const end = match[2] && match[1] ? Math.min(Number(match[2]), size - 1) : size - 1;
+                if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= size) {
+                    return { invalidRange: true, size };
+                }
+                return {
+                    body: bucket.openDownloadStreamByName(key, { start, end: end + 1 }),
+                    contentLength: end - start + 1,
+                    contentRange: `bytes ${start}-${end}/${size}`,
+                    partial: true,
+                };
+            }
+        } catch (gridError) {
+            console.warn("[Storage] GridFS read error:", gridError.message);
+        }
+    }
+
+    return null;
 }
 
 export async function deleteStoredFile(key, provider = "local_disk") {
@@ -145,6 +210,17 @@ export async function deleteStoredFile(key, provider = "local_disk") {
         await fs.unlink(getLocalFilePath(key));
     } catch (error) {
         if (error?.code !== "ENOENT") throw error;
+    }
+    const bucket = getGridFSBucket();
+    if (bucket) {
+        try {
+            const files = await bucket.find({ filename: key }).toArray();
+            for (const f of files) {
+                await bucket.delete(f._id);
+            }
+        } catch {
+            // ignore
+        }
     }
 }
 

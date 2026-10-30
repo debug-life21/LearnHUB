@@ -6,7 +6,7 @@ const GOOGLE_DOC_PATHS = new Map([
     ["presentation", "presentation"],
 ]);
 
-export function normalizeExternalResource(sourceType, value) {
+export function normalizeExternalResource(sourceType, value, category = "document") {
     let url;
     try {
         url = new URL(value);
@@ -53,10 +53,23 @@ export function normalizeExternalResource(sourceType, value) {
         const previewUrl = googleDocType
             ? `https://docs.google.com/${googleDocType === "document" ? "document" : googleDocType === "spreadsheet" ? "spreadsheets" : "presentation"}/d/${fileId}/preview`
             : `https://drive.google.com/file/d/${fileId}/preview`;
+
+        const isVideo = category === "video";
+        const isSpreadsheet = category === "spreadsheet" || googleDocType === "spreadsheet";
+        const isPresentation = category === "slide" || googleDocType === "presentation";
+
+        const mimeType = isVideo
+            ? "video/mp4"
+            : isSpreadsheet
+                ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                : isPresentation
+                    ? "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    : "application/pdf";
+
         return {
             sourceUrl: url.toString(),
             externalUrl: previewUrl,
-            mimeType: "application/pdf",
+            mimeType,
         };
     }
 

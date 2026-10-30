@@ -351,6 +351,17 @@ export function AdminDashboard({ user }) {
             setFeedback(err instanceof Error ? err.message : "Could not update account status.");
         }
     };
+    const handleVerifyUserEmail = async (account) => {
+        try {
+            const response = await apiRequest(`/api/admin/users/${account._id}/verify-email`, {
+                method: "PATCH",
+            });
+            setFeedback(response.message);
+            await loadAll();
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not verify email.");
+        }
+    };
     const handleToggleAdministratorStatus = async (administrator) => {
         const status = administrator.accountStatus === "active" ? "suspended" : "active";
         try {
@@ -947,7 +958,12 @@ export function AdminDashboard({ user }) {
                       Goals: {stud.studentProfile?.learningGoals || "None specified"} | Level: {stud.studentProfile?.currentSkillLevel || "Beginner"}
                     </p>
                   </div>
-                  <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(!stud.isVerified && !stud.emailVerified) && (
+                      <button type="button" onClick={() => void handleVerifyUserEmail(stud)} className="mb-2 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-3 py-1.5 text-xs font-bold shadow-sm">
+                        ✓ Verify email
+                      </button>
+                    )}
                     <button type="button" onClick={() => void handleToggleUserStatus(stud)} className={`mb-2 rounded-lg px-3 py-1.5 text-xs font-bold ${stud.accountStatus === "active" ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-sky-100 text-blue-800 hover:bg-sky-200"}`}>
                       {stud.accountStatus === "active" ? "Suspend" : "Activate"}
                     </button>
@@ -1824,7 +1840,7 @@ export function AdminDashboard({ user }) {
                 setResourceForm({
                     ...resourceForm,
                     sourceType,
-                    category: sourceType === "youtube" ? "video" : sourceType === "google_drive" ? "pdf" : "document",
+                    category: sourceType === "youtube" ? "video" : sourceType === "google_drive" ? "video" : "document",
                     sourceUrl: "",
                     originalFilename: "",
                     mimeType: "",
@@ -1832,8 +1848,8 @@ export function AdminDashboard({ user }) {
                 });
               }} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal">
                 <option value="youtube">YouTube video</option>
-                <option value="google_drive">Google Drive document</option>
-                <option value="upload">Upload a file to server</option>
+                <option value="google_drive">Google Drive (Video or Document)</option>
+                <option value="upload">Upload a file to server (PDF, Document, Media)</option>
               </select>
             </label>
             <label className="block text-xs font-bold text-slate-700">Cohort
@@ -1846,26 +1862,29 @@ export function AdminDashboard({ user }) {
           {resourceForm.sourceType === "upload" ? (
             <label className="block text-xs font-bold text-slate-700">Choose file
               <input required type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.mp4,.webm,.mp3,.wav,.txt" onChange={handleResourceFileChange} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-xs font-normal"/>
-              <span className="mt-1 block font-normal text-slate-500">{resourceForm.originalFilename ? `Selected: ${resourceForm.originalFilename}` : "Files are stored by the app server (up to 18MB)."}</span>
+              <span className="mt-1 block font-normal text-slate-500">{resourceForm.originalFilename ? `Selected: ${resourceForm.originalFilename}` : "Files are stored safely on the platform server."}</span>
             </label>
           ) : (
             <>
             {resourceForm.sourceType === "google_drive" && (
-              <label className="block text-xs font-bold text-slate-700">Document format
+              <label className="block text-xs font-bold text-slate-700">Google Drive format
                 <select value={resourceForm.category} onChange={(event) => setResourceForm({ ...resourceForm, category: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal">
-                  <option value="pdf">PDF</option>
-                  <option value="document">Word document</option>
-                  <option value="spreadsheet">Excel spreadsheet</option>
-                  <option value="slide">PowerPoint presentation</option>
+                  <option value="video">🎬 Video (MP4 / Google Drive Video Player)</option>
+                  <option value="pdf">📕 PDF Document</option>
+                  <option value="document">📄 Word document</option>
+                  <option value="spreadsheet">📊 Excel spreadsheet</option>
+                  <option value="slide">📑 PowerPoint presentation</option>
                 </select>
               </label>
             )}
-            <label className="block text-xs font-bold text-slate-700">{resourceForm.sourceType === "youtube" ? "YouTube video link" : "Google Drive sharing link"}
+            <label className="block text-xs font-bold text-slate-700">{resourceForm.sourceType === "youtube" ? "YouTube video link" : resourceForm.category === "video" ? "Google Drive video sharing link" : "Google Drive sharing link"}
               <input required type="url" value={resourceForm.sourceUrl} onChange={(event) => setResourceForm({ ...resourceForm, sourceUrl: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal" placeholder={resourceForm.sourceType === "youtube" ? "https://www.youtube.com/watch?v=..." : "https://drive.google.com/file/d/.../view"}/>
               <span className="mt-1 block font-normal leading-5 text-slate-500">
                 {resourceForm.sourceType === "youtube"
-                    ? "Use a public or unlisted YouTube video. Related-video suggestions are limited by YouTube, not fully controlled by TedbabeLearnHUB."
-                    : "Supports PDF, Word, Excel, and PowerPoint. In Drive, set General access to Anyone with the link and Viewer. Anyone with that link can open the file."}
+                    ? "Use a public or unlisted YouTube video. It will stream directly in the student workspace."
+                    : resourceForm.category === "video"
+                    ? "Supports Google Drive videos. In Drive, set General access to 'Anyone with the link' and 'Viewer'. Students can watch it directly in the learning workspace."
+                    : "Supports PDF, Word, Excel, and PowerPoint. In Drive, set General access to 'Anyone with the link' and 'Viewer'."}
               </span>
             </label>
             </>

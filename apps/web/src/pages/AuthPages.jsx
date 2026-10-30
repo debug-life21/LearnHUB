@@ -335,6 +335,11 @@ export function SignupPage({ initialRole = "student" }) {
                     } : {}),
                 }),
             });
+            if (response.token && response.user) {
+                await refreshUser();
+                navigate("/dashboard");
+                return;
+            }
             sessionStorage.setItem("learnhub_pending_email", response.email);
             sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
             navigate("/verify-code", { state: { email: response.email, purpose: response.purpose, devCode: response.devCode } });
