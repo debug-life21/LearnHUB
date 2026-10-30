@@ -33,13 +33,13 @@ function useProtectedObjectUrl(resource) {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [reloadCount, setReloadCount] = useState(0);
-    const storedKey = resource?.storedKey || resource?._id;
+    const primaryKey = resource?._id || resource?.storedKey;
     const fallbackType = resource?.mimeType || "application/pdf";
 
     const retry = () => setReloadCount((c) => c + 1);
 
     useEffect(() => {
-        if (!storedKey) {
+        if (!primaryKey) {
             setUrl("");
             setError("");
             return undefined;
@@ -49,16 +49,26 @@ function useProtectedObjectUrl(resource) {
         setLoading(true);
         setError("");
 
-        apiRequest(`/api/resources/${storedKey}/file`, { responseType: "blob" })
-            .then((blob) => {
+        const fetchFile = async () => {
+            try {
+                let blob;
+                try {
+                    blob = await apiRequest(`/api/resources/${primaryKey}/file`, { responseType: "blob" });
+                } catch (firstErr) {
+                    // If primary key failed and storedKey is different, try storedKey
+                    if (resource?.storedKey && resource.storedKey !== primaryKey) {
+                        blob = await apiRequest(`/api/resources/${encodeURIComponent(resource.storedKey)}/file`, { responseType: "blob" });
+                    } else {
+                        throw firstErr;
+                    }
+                }
                 if (cancelled) return;
                 const typed = blob instanceof Blob && (!blob.type || blob.type === "application/octet-stream")
                     ? new Blob([blob], { type: fallbackType })
                     : blob;
                 objectUrl = URL.createObjectURL(typed);
                 setUrl(objectUrl);
-            })
-            .catch(async (err) => {
+            } catch (err) {
                 if (cancelled) return;
                 let msg = err?.message || "Unable to load this document.";
                 if (err?.response?.data instanceof Blob) {
@@ -71,16 +81,18 @@ function useProtectedObjectUrl(resource) {
                     }
                 }
                 setError(msg);
-            })
-            .finally(() => {
+            } finally {
                 if (!cancelled) setLoading(false);
-            });
+            }
+        };
+
+        fetchFile();
 
         return () => {
             cancelled = true;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [storedKey, fallbackType, reloadCount]);
+    }, [primaryKey, resource?.storedKey, fallbackType, reloadCount]);
 
     return { url, error, loading, retry };
 }
@@ -216,12 +228,33 @@ function ProtectedDocumentPreview({ resource, kind = "document" }) {
                                 />
                             </div>
                         ) : (
-                            <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center", width: "100%", height: "100%" }} className="transition-transform duration-200">
-                                <iframe
-                                    src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
+                            <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center", width: "100%", height: "100%" }} className="transition-transform duration-200 flex flex-col h-full w-full">
+                                <object
+                                    data={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
+                                    type="application/pdf"
+                                    className="h-full w-full rounded-2xl border-0 bg-white shadow-2xl ring-1 ring-black/10 flex-1"
                                     title={resource?.title}
-                                    className="h-full w-full rounded-2xl border-0 bg-white shadow-2xl ring-1 ring-black/10"
-                                />
+                                >
+                                    <iframe
+                                        src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
+                                        title={resource?.title}
+                                        className="h-full w-full rounded-2xl border-0 bg-white"
+                                    >
+                                        <div className="flex flex-col items-center justify-center p-8 text-center text-slate-800 bg-white rounded-2xl h-full">
+                                            <span className="text-4xl mb-3">📕</span>
+                                            <p className="font-bold text-base mb-1 text-slate-900">{resource?.title || "PDF Document"}</p>
+                                            <p className="text-xs text-slate-500 mb-4 max-w-sm">Tap below to view this document in your browser's native reader.</p>
+                                            <a
+                                                href={url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-cyan-500 transition"
+                                            >
+                                                Open Full PDF ↗
+                                            </a>
+                                        </div>
+                                    </iframe>
+                                </object>
                             </div>
                         )
                     )}

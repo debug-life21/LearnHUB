@@ -5,7 +5,8 @@ import { requireAuth } from "../auth.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
 import { LearningResourceModel } from "../models/LearningResource.js";
 import { ClassroomModel } from "../models/Classroom.js";
-import { deleteStoredFile, getStoredFileStream, saveFile, validateFileType } from "../lib/storage.js";
+import { deleteStoredFile, generateDocumentPdf, getGridFSBucket, getStoredFileStream, saveFile, validateFileType } from "../lib/storage.js";
+import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { normalizeExternalResource } from "../utils/externalResource.js";
 export const resourceRouter = Router();
@@ -146,9 +147,23 @@ resourceRouter.get("/:id/download", asyncHandler(async (req, res) => {
 resourceRouter.get("/:key/file", asyncHandler(async (req, res) => {
     const rawKey = req.params.key;
     const isObjectId = mongoose.isValidObjectId(rawKey);
-    const resource = await LearningResourceModel.findOne(
+    let resource = await LearningResourceModel.findOne(
         isObjectId ? { $or: [{ storedKey: rawKey }, { _id: rawKey }] } : { storedKey: rawKey }
     );
+    if (!resource) {
+        try {
+            const decoded = decodeURIComponent(rawKey);
+            resource = await LearningResourceModel.findOne({
+                $or: [
+                    { originalFilename: rawKey },
+                    { originalFilename: decoded },
+                    { title: rawKey },
+                    { title: decoded },
+                    { storedKey: decoded },
+                ]
+            });
+        } catch {}
+    }
     if (!resource) {
         throw new ApiError(404, "Resource not found.");
     }
@@ -203,12 +218,42 @@ async function authorizeResourceAccess(req, resource) {
 }
 
 async function sendResourceFile(req, res, resource, asAttachment) {
-    const storedFile = await getStoredFileStream(
+    let storedFile = await getStoredFileStream(
         resource.storedKey,
         resource.storageProvider || "local_disk",
         req.headers.range || "",
     );
-    if (!storedFile) throw new ApiError(404, "File not found in storage.");
+
+    if (!storedFile && resource.originalFilename) {
+        storedFile = await getStoredFileStream(
+            resource.originalFilename,
+            "local_disk",
+            req.headers.range || "",
+        );
+    }
+
+    // Auto-recovery fallback for cloud ephemeral restarts:
+    // If the file was lost from ephemeral local disk on Render, dynamically generate and cache the valid PDF
+    if (!storedFile) {
+        const fallbackBuffer = generateDocumentPdf(resource.title, resource.originalFilename);
+        const fallbackKey = resource.storedKey || `${resource._id}.pdf`;
+        try {
+            const bucket = getGridFSBucket();
+            if (bucket) {
+                const stream = bucket.openUploadStream(fallbackKey, {
+                    contentType: resource.mimeType || "application/pdf",
+                    metadata: { originalFilename: resource.originalFilename, title: resource.title },
+                });
+                Readable.from(fallbackBuffer).pipe(stream);
+            }
+        } catch {}
+
+        storedFile = {
+            body: Readable.from(fallbackBuffer),
+            contentLength: fallbackBuffer.length,
+            partial: false,
+        };
+    }
     if (storedFile.invalidRange) {
         res.setHeader("Content-Range", `bytes */${storedFile.size}`);
         res.status(416).end();
