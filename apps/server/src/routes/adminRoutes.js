@@ -26,6 +26,7 @@ import { DiscussionModel } from "../models/Discussion.js";
 import { LearningResourceModel } from "../models/LearningResource.js";
 import { slugify } from "../utils.js";
 import { deleteStoredFile, getStoredFileStream } from "../lib/storage.js";
+import { sendAnnouncementEmail } from "../utils/email.js";
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("hub_admin"));
 function isValidTimeZone(timeZone) {
@@ -1122,36 +1123,57 @@ adminRouter.post("/announcements", asyncHandler(async (req, res) => {
         priority: data.priority,
     });
 
-    // Notify targeted users
-    let recipientIds = [];
+    // Notify and inbox targeted users by collecting their emails
+    let targetUsers = [];
+    let cohortTitle = null;
+
     if (data.target === "all") {
-        const users = await UserModel.find({ role: { $in: ["student", "teacher"] }, accountStatus: "active" }).select("_id").lean();
-        recipientIds = users.map((u) => u._id);
+        targetUsers = await UserModel.find({ accountStatus: "active" }).select("_id email fullName name").lean();
     } else if (data.target === "all_students") {
-        const users = await UserModel.find({ role: "student", accountStatus: "active" }).select("_id").lean();
-        recipientIds = users.map((u) => u._id);
+        targetUsers = await UserModel.find({ role: "student", accountStatus: "active" }).select("_id email fullName name").lean();
     } else if (data.target === "all_teachers") {
-        const users = await UserModel.find({ role: "teacher", accountStatus: "active" }).select("_id").lean();
-        recipientIds = users.map((u) => u._id);
+        targetUsers = await UserModel.find({ role: "teacher", accountStatus: "active" }).select("_id email fullName name").lean();
     } else if (data.target === "classroom" && validClassroomId) {
-        const classroom = await ClassroomModel.findById(validClassroomId).select("teacher students").lean();
+        const classroom = await ClassroomModel.findById(validClassroomId).select("title teacher students").lean();
         if (classroom) {
-            recipientIds = [
+            cohortTitle = classroom.title;
+            const userIds = [
                 ...(classroom.teacher ? [classroom.teacher] : []),
                 ...(classroom.students || []),
             ];
+            targetUsers = await UserModel.find({ _id: { $in: userIds }, accountStatus: "active" }).select("_id email fullName name").lean();
         }
     }
 
-    if (recipientIds.length > 0) {
-        const uniqueRecipients = [...new Set(recipientIds.map((id) => id.toString()))];
-        await NotificationModel.insertMany(uniqueRecipients.map((recipientId) => ({
-            user: recipientId,
+    if (targetUsers.length > 0) {
+        // 1. In-App Notifications
+        const uniqueRecipients = [...new Map(targetUsers.map((u) => [u._id.toString(), u])).values()];
+        await NotificationModel.insertMany(uniqueRecipients.map((u) => ({
+            user: u._id,
             title: `📢 Announcement: ${announcement.title}`,
             message: announcement.content.length > 200 ? `${announcement.content.slice(0, 200)}…` : announcement.content,
             kind: "announcement",
             link: "/dashboard",
         })));
+
+        // 2. Direct Email Inboxing to everyone registered
+        void (async () => {
+            console.log(`[Announcement Inboxing] Sending "${announcement.title}" directly to ${uniqueRecipients.length} registered user inboxes...`);
+            for (const recipient of uniqueRecipients) {
+                if (recipient.email) {
+                    await sendAnnouncementEmail({
+                        email: recipient.email,
+                        name: recipient.fullName || recipient.name,
+                        title: announcement.title,
+                        content: announcement.content,
+                        priority: announcement.priority,
+                        cohortTitle,
+                    }).catch((err) => {
+                        console.error(`[Announcement Inboxing] Failed for ${recipient.email}:`, err?.message || err);
+                    });
+                }
+            }
+        })();
     }
 
     await writeAudit(req.user.id, "announcement_created", "Announcement", announcement._id.toString());

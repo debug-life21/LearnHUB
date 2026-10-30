@@ -87,65 +87,158 @@ function useProtectedObjectUrl(resource) {
 
 function ProtectedDocumentPreview({ resource, kind = "document" }) {
     const { url, error, loading, retry } = useProtectedObjectUrl(resource);
+    const [zoom, setZoom] = useState(100);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     return (
-        <div className="relative h-[78vh] min-h-[600px] w-full bg-slate-900 rounded-2xl overflow-hidden" onContextMenu={(e) => e.preventDefault()}>
-            {loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm font-medium text-slate-300">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
-                    <span>Loading document…</span>
-                </div>
-            )}
-            {error && !loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-slate-900">
-                    <span className="text-3xl">📄</span>
-                    <p className="text-sm font-bold text-rose-300">We couldn't display this file.</p>
-                    <p className="max-w-md text-xs text-slate-400 leading-relaxed">{error}</p>
-                    <div className="mt-3 flex items-center gap-3">
+        <div className={`relative ${isFullscreen ? "fixed inset-0 z-50 p-4 bg-slate-950/95" : "h-[80vh] min-h-[620px] w-full"} transition-all duration-300`} onContextMenu={(e) => e.preventDefault()}>
+            <div className="relative h-full w-full rounded-3xl p-1 bg-gradient-to-b from-blue-500/30 via-slate-700/20 to-transparent shadow-[0_20px_80px_rgba(0,102,255,0.22)] ring-1 ring-white/10 overflow-hidden flex flex-col bg-slate-950">
+                {/* Top Glassmorphic Reader Bar */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/90 backdrop-blur-md">
+                    <div className="flex items-center gap-2.5">
+                        <span className="h-3 w-3 rounded-full bg-rose-500/80 shadow-xs" />
+                        <span className="h-3 w-3 rounded-full bg-amber-500/80 shadow-xs" />
+                        <span className="h-3 w-3 rounded-full bg-emerald-500/80 shadow-xs" />
+                        <span className="ml-2 flex items-center gap-1.5 text-xs font-bold text-slate-200 truncate max-w-xs sm:max-w-md">
+                            <span>{kind === "image" ? "🖼️" : "📕"}</span>
+                            <span className="truncate">{resource?.originalFilename || resource?.title || "Document Reader"}</span>
+                        </span>
+                    </div>
+
+                    {/* Reader Controls Toolbar */}
+                    <div className="flex items-center gap-2 text-xs">
+                        {/* Zoom controls */}
+                        <div className="hidden sm:flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10 text-slate-300">
+                            <button
+                                type="button"
+                                onClick={() => setZoom((z) => Math.max(50, z - 15))}
+                                className="rounded-lg px-2 py-0.5 hover:bg-white/10 font-bold transition"
+                                title="Zoom Out"
+                            >
+                                −
+                            </button>
+                            <span className="px-1 text-[11px] font-mono font-bold text-cyan-300 min-w-[36px] text-center">
+                                {zoom}%
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setZoom((z) => Math.min(200, z + 15))}
+                                className="rounded-lg px-2 py-0.5 hover:bg-white/10 font-bold transition"
+                                title="Zoom In"
+                            >
+                                +
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setZoom(100)}
+                                className="rounded-lg px-2 py-0.5 text-[10px] hover:bg-white/10 text-slate-400 hover:text-white transition"
+                                title="Reset Zoom"
+                            >
+                                Fit
+                            </button>
+                        </div>
+
+                        {/* Canvas Mode Toggle */}
                         <button
                             type="button"
-                            onClick={retry}
-                            className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-500 transition shadow-sm"
+                            onClick={() => setIsDarkMode((d) => !d)}
+                            className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition ${
+                                isDarkMode
+                                    ? "bg-slate-800 text-cyan-300 border-cyan-500/30"
+                                    : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10"
+                            }`}
+                            title="Toggle Reader Mode"
                         >
-                            Retry loading
+                            {isDarkMode ? "🌙 Dark" : "☀️ Light"}
                         </button>
+
+                        {/* Fullscreen Toggle */}
+                        <button
+                            type="button"
+                            onClick={() => setIsFullscreen((f) => !f)}
+                            className="rounded-xl bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300 border border-white/10 hover:bg-white/15 transition"
+                            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                        >
+                            {isFullscreen ? "↙ Exit" : "⛶ Expand"}
+                        </button>
+
+                        {/* Pop out action */}
+                        {url && (
+                            <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-1 text-[11px] font-bold text-white shadow-sm hover:from-blue-500 hover:to-cyan-500 transition"
+                            >
+                                Pop-out ↗
+                            </a>
+                        )}
                     </div>
                 </div>
-            )}
-            {url && !error && (
-                kind === "image" ? (
-                    <div className="flex h-full items-center justify-center p-4">
-                        <img
-                            src={url}
-                            alt={resource?.title}
-                            className="max-h-full max-w-full rounded-xl object-contain shadow-md select-none"
-                            draggable={false}
-                            onContextMenu={(e) => e.preventDefault()}
-                        />
-                    </div>
-                ) : (
-                    <div className="h-full w-full flex flex-col">
-                        <div className="flex items-center justify-between bg-slate-950 px-4 py-2 text-xs text-slate-400 border-b border-white/10">
-                            <span className="font-semibold text-slate-200 truncate">{resource?.originalFilename || resource?.title}</span>
-                            <div className="flex items-center gap-2">
-                                <a
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:bg-white/20 transition"
+
+                {/* Content Canvas */}
+                <div className={`relative flex-1 overflow-auto p-4 flex items-center justify-center transition-colors ${
+                    isDarkMode ? "bg-slate-950" : "bg-slate-100/90"
+                }`}>
+                    {loading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm font-medium text-slate-300">
+                            <div className="h-10 w-10 animate-spin rounded-full border-3 border-cyan-400 border-t-transparent shadow-lg shadow-cyan-500/20" />
+                            <span className="font-semibold text-xs tracking-wider uppercase text-cyan-300">Loading document…</span>
+                        </div>
+                    )}
+                    {error && !loading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-slate-900">
+                            <span className="text-4xl">📄</span>
+                            <p className="text-sm font-bold text-rose-300">We couldn't display this file.</p>
+                            <p className="max-w-md text-xs text-slate-400 leading-relaxed">{error}</p>
+                            <div className="mt-3 flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={retry}
+                                    className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-2.5 text-xs font-bold text-white hover:from-blue-500 hover:to-cyan-500 transition shadow-md shadow-blue-500/20"
                                 >
-                                    Open in new window ↗
-                                </a>
+                                    Retry loading
+                                </button>
                             </div>
                         </div>
-                        <iframe
-                            src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
-                            title={resource?.title}
-                            className="h-full w-full border-0 bg-white"
-                        />
-                    </div>
-                )
-            )}
+                    )}
+                    {url && !error && (
+                        kind === "image" ? (
+                            <div className="flex h-full w-full items-center justify-center p-4">
+                                <img
+                                    src={url}
+                                    alt={resource?.title}
+                                    style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
+                                    className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl transition-transform duration-200 select-none ring-1 ring-white/10"
+                                    draggable={false}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center", width: "100%", height: "100%" }} className="transition-transform duration-200">
+                                <iframe
+                                    src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
+                                    title={resource?.title}
+                                    className="h-full w-full rounded-2xl border-0 bg-white shadow-2xl ring-1 ring-black/10"
+                                />
+                            </div>
+                        )
+                    )}
+                </div>
+
+                {/* Reader Bottom Info Bar */}
+                <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/10 bg-slate-900/90 text-[11px] text-slate-400">
+                    <span className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span className="font-semibold text-slate-300">TedbabeLearnHUB Secured Reader</span>
+                        <span className="hidden sm:inline text-slate-500">• In-Place Protected Material</span>
+                    </span>
+                    <span className="font-mono text-[10px] text-cyan-300/80 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
+                        {resource?.mimeType || "application/pdf"}
+                    </span>
+                </div>
+            </div>
         </div>
     );
 }
@@ -581,81 +674,111 @@ export function LearningWorkspace() {
                     <div className="mt-6 grid gap-8 lg:grid-cols-3">
                         {/* Video Player Column */}
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-2xl ring-1 ring-white/10">
-                                {selectedVideoResource?.sourceType === "youtube" ? (
-                                    <iframe
-                                        src={`https://www.youtube-nocookie.com/embed/${getYouTubeVideoId(selectedVideoResource.sourceUrl || selectedVideoResource.externalUrl)}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1`}
-                                        title={selectedVideoResource.title}
-                                        className="w-full aspect-video border-0 bg-black"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                        referrerPolicy="strict-origin-when-cross-origin"
-                                        allowFullScreen
-                                    />
-                                ) : selectedVideoResource?.sourceType === "google_drive" ? (
-                                    <iframe
-                                        src={selectedVideoResource.externalUrl}
-                                        title={selectedVideoResource.title}
-                                        className="w-full aspect-video border-0 bg-black"
-                                        referrerPolicy="no-referrer"
-                                        allow="autoplay"
-                                        allowFullScreen
-                                    />
-                                ) : selectedVideoResource ? (
-                                    <video
-                                        ref={videoRef}
-                                        src={resUrl(`/api/resources/${selectedVideoResource.storedKey}/file`)}
-                                        controls
-                                        controlsList="nodownload"
-                                        onContextMenu={(e) => e.preventDefault()}
-                                        onTimeUpdate={handleTimeUpdate}
-                                        className="w-full aspect-video bg-black"
-                                    />
-                                ) : currentLesson?.videoUrl ? (
-                                    <video
-                                        ref={videoRef}
-                                        src={currentLesson.videoUrl}
-                                        controls
-                                        controlsList="nodownload"
-                                        onContextMenu={(e) => e.preventDefault()}
-                                        onTimeUpdate={handleTimeUpdate}
-                                        className="w-full aspect-video bg-black"
-                                    />
-                                ) : (
-                                    <div className="aspect-video flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-950 p-8 text-center">
-                                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-800/30 text-2xl text-emerald-400 mb-3">
-                                            📺
-                                        </div>
-                                        <h3 className="text-base font-bold text-white">{currentLesson?.title}</h3>
-                                        <p className="mt-1 text-xs text-slate-400 max-w-sm">
-                                            Guided lesson notes and teacher live instructions are provided in scheduled Google Meet sessions.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Custom Player Controls Toolbar */}
-                                <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 bg-slate-900/90 px-6 py-3 text-xs">
-                                    {selectedVideoResource?.sourceType !== "youtube" && (
+                            <div className="relative rounded-3xl p-1 bg-gradient-to-b from-cyan-400/35 via-slate-700/25 to-transparent shadow-[0_25px_95px_rgba(0,102,255,0.28)] ring-1 ring-white/15">
+                                <div className="relative rounded-[22px] overflow-hidden bg-slate-950 backdrop-blur-xl">
+                                    {/* Top Media Bar / Window Frame */}
+                                    <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/90 backdrop-blur-md">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-slate-400">Speed:</span>
-                                            {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
-                                                <button
-                                                    key={spd}
-                                                    type="button"
-                                                    onClick={() => handleSpeedChange(spd)}
-                                                    className={`rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
-                                                        playbackRate === spd
-                                                            ? "bg-emerald-500 text-slate-950"
-                                                            : "bg-white/10 text-white hover:bg-white/20"
-                                                    }`}
-                                                >
-                                                    {spd}x
-                                                </button>
-                                            ))}
+                                            <span className="h-3 w-3 rounded-full bg-rose-500/80 shadow-xs" />
+                                            <span className="h-3 w-3 rounded-full bg-amber-500/80 shadow-xs" />
+                                            <span className="h-3 w-3 rounded-full bg-emerald-500/80 shadow-xs" />
+                                            <span className="ml-3 text-xs font-bold text-slate-200 truncate max-w-xs sm:max-w-md">
+                                                {selectedVideoResource?.title || currentLesson?.title || "Classroom Player"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="rounded-md bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-bold text-cyan-300 border border-cyan-500/25">
+                                                1080p Studio HD
+                                            </span>
+                                            <span className="hidden sm:inline-block rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+                                                {selectedVideoResource?.sourceType === "youtube" ? "Interactive Video" : "Live Session Lab"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Video Canvas */}
+                                    {selectedVideoResource?.sourceType === "youtube" ? (
+                                        <iframe
+                                            src={`https://www.youtube-nocookie.com/embed/${getYouTubeVideoId(selectedVideoResource.sourceUrl || selectedVideoResource.externalUrl)}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1`}
+                                            title={selectedVideoResource.title}
+                                            className="w-full aspect-video border-0 bg-black"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            referrerPolicy="strict-origin-when-cross-origin"
+                                            allowFullScreen
+                                        />
+                                    ) : selectedVideoResource?.sourceType === "google_drive" ? (
+                                        <iframe
+                                            src={selectedVideoResource.externalUrl}
+                                            title={selectedVideoResource.title}
+                                            className="w-full aspect-video border-0 bg-black"
+                                            referrerPolicy="no-referrer"
+                                            allow="autoplay"
+                                            allowFullScreen
+                                        />
+                                    ) : selectedVideoResource ? (
+                                        <video
+                                            ref={videoRef}
+                                            src={resUrl(`/api/resources/${selectedVideoResource.storedKey}/file`)}
+                                            controls
+                                            controlsList="nodownload"
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            onTimeUpdate={handleTimeUpdate}
+                                            className="w-full aspect-video bg-black"
+                                        />
+                                    ) : currentLesson?.videoUrl ? (
+                                        <video
+                                            ref={videoRef}
+                                            src={currentLesson.videoUrl}
+                                            controls
+                                            controlsList="nodownload"
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            onTimeUpdate={handleTimeUpdate}
+                                            className="w-full aspect-video bg-black"
+                                        />
+                                    ) : (
+                                        <div className="aspect-video flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-950 p-8 text-center">
+                                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-950/60 border border-cyan-500/30 text-2xl text-cyan-400 mb-3 shadow-lg shadow-cyan-500/10">
+                                                📺
+                                            </div>
+                                            <h3 className="text-base font-bold text-white">{currentLesson?.title || "Cohort Video Lab"}</h3>
+                                            <p className="mt-1 text-xs text-slate-400 max-w-sm">
+                                                Guided lesson notes and teacher live instructions are provided in scheduled Google Meet sessions.
+                                            </p>
                                         </div>
                                     )}
-                                    <span className="text-[11px] text-slate-400 font-mono">
-                                        {selectedVideoResource?.sourceType === "youtube" ? "YouTube video" : "Progress Auto-Saved"}
-                                    </span>
+
+                                    {/* Custom Player Controls Toolbar */}
+                                    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 bg-slate-900/90 px-6 py-3.5 text-xs">
+                                        {selectedVideoResource?.sourceType !== "youtube" ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-400 font-semibold">Speed:</span>
+                                                {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                                                    <button
+                                                        key={spd}
+                                                        type="button"
+                                                        onClick={() => handleSpeedChange(spd)}
+                                                        className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                                                            playbackRate === spd
+                                                                ? "bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/30"
+                                                                : "bg-white/10 text-white hover:bg-white/20"
+                                                        }`}
+                                                    >
+                                                        {spd}x
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs">
+                                                <span>▶ Interactive HD Stream</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                                {selectedVideoResource?.sourceType === "youtube" ? "YouTube Verified Embed" : "Progress Auto-Saved"}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -790,43 +913,43 @@ export function LearningWorkspace() {
                     <div className="mt-6 grid gap-8 lg:grid-cols-3">
                         <div className="lg:col-span-2 space-y-4">
                             {selectedDoc ? (
-                                <div className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 shadow-sm space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h3 className="font-bold text-stone-900 text-base">{selectedDoc.title}</h3>
-                                            <p className="text-xs text-stone-500">{selectedDoc.description || selectedDoc.originalFilename}</p>
-                                        </div>
-                                        <span className="rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
-                                            🔒 Protected Workspace View
-                                        </span>
-                                    </div>
-
-                                    {/* In-Browser Document & Material Preview (Strictly In-Place, No Download) */}
-                                    <div className="w-full rounded-2xl bg-stone-100 overflow-hidden ring-1 ring-stone-200" onContextMenu={(e) => e.preventDefault()}>
+                                <div className="space-y-4">
+                                    {/* Direct In-Browser Document & Material Preview */}
+                                    <div className="w-full" onContextMenu={(e) => e.preventDefault()}>
                                         {selectedDoc.sourceType === "google_drive" ? (
-                                            <iframe
-                                                src={selectedDoc.externalUrl}
-                                                title={selectedDoc.title}
-                                                className="h-[75vh] min-h-[550px] w-full border-0 bg-white"
-                                                referrerPolicy="no-referrer"
-                                                allow="autoplay"
-                                            />
+                                            <div className="rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-slate-950">
+                                                <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/90 text-xs text-slate-300">
+                                                    <span className="font-bold truncate">{selectedDoc.title}</span>
+                                                    <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300">Google Drive Cloud Preview</span>
+                                                </div>
+                                                <iframe
+                                                    src={selectedDoc.externalUrl}
+                                                    title={selectedDoc.title}
+                                                    className="h-[75vh] min-h-[550px] w-full border-0 bg-white"
+                                                    referrerPolicy="no-referrer"
+                                                    allow="autoplay"
+                                                />
+                                            </div>
                                         ) : selectedDoc.mimeType?.startsWith("video/") ? (
-                                            <video
-                                                src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
-                                                controls
-                                                controlsList="nodownload"
-                                                onContextMenu={(e) => e.preventDefault()}
-                                                preload="metadata"
-                                                className="h-[70vh] w-full bg-black"
-                                                aria-label={selectedDoc.title}
-                                            />
+                                            <div className="rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-black">
+                                                <video
+                                                    src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
+                                                    controls
+                                                    controlsList="nodownload"
+                                                    onContextMenu={(e) => e.preventDefault()}
+                                                    preload="metadata"
+                                                    className="h-[70vh] w-full bg-black"
+                                                    aria-label={selectedDoc.title}
+                                                />
+                                            </div>
                                         ) : (selectedDoc.mimeType?.includes("pdf") || selectedDoc.category === "pdf" || /\.pdf$/i.test(selectedDoc.originalFilename || "")) ? (
                                             <ProtectedDocumentPreview resource={selectedDoc} kind="document" />
                                         ) : selectedDoc.mimeType?.includes("image") ? (
                                             <ProtectedDocumentPreview resource={selectedDoc} kind="image" />
                                         ) : (
-                                            <OfficeDocumentPreview resource={selectedDoc} />
+                                            <div className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 shadow-sm">
+                                                <OfficeDocumentPreview resource={selectedDoc} />
+                                            </div>
                                         )}
                                     </div>
                                 </div>

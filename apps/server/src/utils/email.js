@@ -319,3 +319,44 @@ export async function sendSecurityAlertEmail({ email, name, action }) {
         console.error("Security alert email delivery failed.", error);
     }
 }
+
+export async function sendAnnouncementEmail({ email, name, title, content, priority = "normal", cohortTitle = null }) {
+    const escapedName = escapeHtml(name || "Learner");
+    const escapedTitle = escapeHtml(title);
+    const escapedContent = escapeHtml(content).replace(/\n/g, "<br/>");
+    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
+    const fromAddress = formatFromAddress("TedbabeLearnHUB Announcements", smtpUser);
+    const badgeColor = priority === "urgent" ? "#ef4444" : priority === "high" ? "#f59e0b" : "#3b82f6";
+    const badgeText = priority.toUpperCase();
+
+    try {
+        await deliverEmail({
+            from: fromAddress,
+            replyTo: smtpUser,
+            to: email,
+            subject: `📢 [TedbabeLearnHUB] ${title}`,
+            text: `Hello ${name || "Learner"},\n\nAnnouncement: ${title}\n\n${content}\n\n— TedbabeLearnHUB Team\n${env.CLIENT_URL || "https://tedbabelearnhub.vercel.app"}/dashboard`,
+            html: emailWrapper("New Announcement", `
+              <div style="display:inline-block;background:${badgeColor};color:#ffffff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">
+                ${badgeText} ANNOUNCEMENT
+              </div>
+              <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;line-height:1.3;">${escapedTitle}</h1>
+              ${cohortTitle ? `<p style="font-size:13px;color:#38bdf8;margin-top:-6px;font-weight:600;">Cohort: ${escapeHtml(cohortTitle)}</p>` : ""}
+              <p style="font-size:14px;color:#e2e8f0;line-height:1.6;">Hello <strong style="color:#ffffff;">${escapedName}</strong>,</p>
+              <div style="background:#1e293b;border:1px solid #334155;border-left:4px solid ${badgeColor};border-radius:12px;padding:20px;margin:20px 0;color:#f8fafc;font-size:14px;line-height:1.7;">
+                ${escapedContent}
+              </div>
+              <div style="text-align:center;margin:28px 0;">
+                <a href="${env.CLIENT_URL || "https://tedbabelearnhub.vercel.app"}/dashboard" style="background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:10px;display:inline-block;box-shadow:0 4px 12px rgba(37,99,235,0.3);">Open My Dashboard →</a>
+              </div>
+              <p style="font-size:12px;color:#64748b;line-height:1.5;">You received this notification because you are registered on TedbabeLearnHUB.</p>
+            `),
+            priority: priority === "urgent" ? "high" : "normal",
+        });
+        console.log(`[TedbabeLearnHUB Mailer] Announcement email inboxed to ${email}`);
+        return { success: true };
+    } catch (error) {
+        console.error(`[TedbabeLearnHUB Mailer] Failed to inbox announcement to ${email}:`, error?.message || error);
+        return { success: false, error: error?.message || "Delivery failed" };
+    }
+}

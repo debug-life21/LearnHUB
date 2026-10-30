@@ -204,8 +204,8 @@ export function HomePage() {
             <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
           </div>
           <div className="text-left text-xs">
-            <p className="font-bold text-white">Learn with a live cohort</p>
-            <p className="text-emerald-400 font-semibold">{data?.stats?.activeClasses ?? 0} active cohorts</p>
+            <p className="font-extrabold text-white">Live Mentor-Led Cohorts</p>
+            <p className="text-emerald-400 font-semibold">{data?.stats?.activeClasses ?? 0} active batches enrolling now</p>
           </div>
         </div>
 
@@ -214,8 +214,8 @@ export function HomePage() {
             ✓
           </div>
           <div className="text-left text-xs">
-            <p className="font-bold text-white">Practice with purpose</p>
-            <p className="text-cyan-300 font-semibold">Projects, feedback, and steady progress</p>
+            <p className="font-extrabold text-white">Guaranteed Practical Mastery</p>
+            <p className="text-cyan-300 font-semibold">Real client projects & verified certificates</p>
           </div>
         </div>
 
