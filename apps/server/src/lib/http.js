@@ -12,11 +12,12 @@ export function asyncHandler(handler) {
     };
 }
 export function errorHandler(error, _req, res, _next) {
-    if (error instanceof ZodError) {
-        const detail = error.errors.map(e => `${e.path.join('.') || 'field'}: ${e.message}`).join(', ');
+    if (error instanceof ZodError || error?.name === "ZodError") {
+        const issues = error.issues || error.errors || [];
+        const detail = issues.map(e => `${(e.path && e.path.join('.')) || 'field'}: ${e.message}`).join(', ');
         return res.status(400).json({
             message: detail || "Validation failed.",
-            errors: error.flatten(),
+            errors: typeof error.flatten === "function" ? error.flatten() : issues,
         });
     }
     if (error?.name === "ValidationError") {
