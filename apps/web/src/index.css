@@ -69,6 +69,47 @@
     outline: 2.5px solid var(--tlh-blue-primary);
     outline-offset: 3px;
   }
+
+  /* Global Cursor Reset — Eliminates the "I" text-selection writing mark across the platform */
+  *, *::before, *::after {
+    cursor: default;
+  }
+
+  /* Interactive elements explicitly use pointer cursor */
+  a,
+  a *,
+  button,
+  button *,
+  [role="button"],
+  [role="button"] *,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  option,
+  label,
+  summary,
+  [tabindex="0"] {
+    cursor: pointer !important;
+  }
+
+  /* Text-editing writing cursor is ONLY active strictly inside input fields & textareas */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea {
+    cursor: text !important;
+  }
+
+  :disabled, [disabled], [aria-disabled="true"] {
+    cursor: not-allowed !important;
+  }
 }
 
 /* ============================================================

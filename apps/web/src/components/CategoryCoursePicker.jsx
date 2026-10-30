@@ -34,7 +34,7 @@ function getCategoryIcon(name = "") {
     if (lower.includes("design") || lower.includes("media")) return "🎨";
     if (lower.includes("secondary")) return "📐";
     if (lower.includes("middle")) return "🔬";
-    if (lower.includes("primary")) return "✏️";
+    if (lower.includes("primary")) return "🎒";
     if (lower.includes("lang")) return "🗣️";
     return "📚";
 }

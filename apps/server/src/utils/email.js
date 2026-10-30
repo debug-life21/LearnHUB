@@ -2,30 +2,78 @@ import nodemailer from "nodemailer";
 import { env, isProduction } from "../config.js";
 import { ApiError } from "../lib/http.js";
 
-function getTransporter() {
+function getTransporters() {
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
     const smtpPass = (env.SMTP_PASS?.trim() || "iakgmhpfzlvyavcw").replace(/\s+/g, "");
     if (!smtpUser || !smtpPass) {
-        if (!isProduction) {
-            return null;
-        }
+        if (!isProduction) return [];
         console.warn("[Mailer] SMTP credentials missing in production. Falling back to log-based verification.");
-        return null;
+        return [];
     }
-    // Fresh transporter per call — avoids stale pooled connections that hang silently
-    // Port 587 + requireTLS is the most reliable config for Render/cloud (port 465 SSL is often blocked)
-    return nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,       // STARTTLS — upgrades after connection
-        requireTLS: true,    // Fail fast if STARTTLS not available (no silent fallback)
-        family: 4,           // CRITICAL: Forces IPv4 to bypass IPv6 DNS timeout
-        connectionTimeout: 10000,
-        greetingTimeout: 8000,
-        socketTimeout: 15000,
-        auth: { user: smtpUser, pass: smtpPass },
-        tls: { rejectUnauthorized: false },
-    });
+
+    // Candidate transport configurations in order of preference to guarantee delivery across all networks
+    return [
+        {
+            name: "gmail_service",
+            transporter: nodemailer.createTransport({
+                service: "gmail",
+                family: 4,
+                connectionTimeout: 10000,
+                greetingTimeout: 8000,
+                socketTimeout: 15000,
+                auth: { user: smtpUser, pass: smtpPass },
+            }),
+        },
+        {
+            name: "port_465_ssl",
+            transporter: nodemailer.createTransport({
+                host: env.SMTP_HOST || "smtp.gmail.com",
+                port: 465,
+                secure: true,
+                family: 4,
+                connectionTimeout: 10000,
+                greetingTimeout: 8000,
+                socketTimeout: 15000,
+                auth: { user: smtpUser, pass: smtpPass },
+                tls: { rejectUnauthorized: false },
+            }),
+        },
+        {
+            name: "port_587_starttls",
+            transporter: nodemailer.createTransport({
+                host: env.SMTP_HOST || "smtp.gmail.com",
+                port: 587,
+                secure: false,
+                requireTLS: true,
+                family: 4,
+                connectionTimeout: 10000,
+                greetingTimeout: 8000,
+                socketTimeout: 15000,
+                auth: { user: smtpUser, pass: smtpPass },
+                tls: { rejectUnauthorized: false },
+            }),
+        },
+    ];
+}
+
+async function deliverEmail(mailOptions) {
+    const candidates = getTransporters();
+    if (!candidates.length) {
+        return { delivered: false, reason: "smtp_unconfigured" };
+    }
+
+    let lastError = null;
+    for (const { name, transporter } of candidates) {
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`[TedbabeLearnHUB Mailer] Successfully delivered via ${name} to ${mailOptions.to} (MessageId: ${info.messageId})`);
+            return { delivered: true, info, method: name };
+        } catch (err) {
+            console.warn(`[TedbabeLearnHUB Mailer] Transport ${name} attempt failed: ${err.message || err}. Trying next candidate...`);
+            lastError = err;
+        }
+    }
+    throw lastError || new Error("All mail transports failed.");
 }
 
 function escapeHtml(str) {
@@ -65,33 +113,30 @@ function emailWrapper(title, content) {
 }
 
 function formatFromAddress(label, smtpUser) {
-    const raw = (env.SMTP_FROM || "").trim();
+    const raw = (env.SMTP_FROM || "").replace(/^["']|["']$/g, "").trim();
     if (!raw) return `"${label}" <${smtpUser}>`;
     if (/<[^>]+>/.test(raw)) return raw;
     const emailMatch = raw.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
     if (emailMatch) {
         const foundEmail = emailMatch[1];
-        const namePart = raw.replace(foundEmail, "").trim() || label;
+        const namePart = raw.replace(foundEmail, "").replace(/[<>"']/g, "").trim() || label;
         return `"${namePart}" <${foundEmail}>`;
     }
-    return `"${raw}" <${smtpUser}>`;
+    return `"${raw.replace(/[<>"']/g, "")}" <${smtpUser}>`;
 }
 
 export async function sendVerificationCode({ email, name, code }) {
     const escapedName = escapeHtml(name || "Learner");
     console.log(`[TedbabeLearnHUB Mailer] Verification code for ${email} (${escapedName}): [ ${code} ]`);
-    const client = getTransporter();
-    if (!client) {
-        console.log(`[TedbabeLearnHUB Mailer] Verification email skipped (SMTP unconfigured). Use code: ${code}`);
-        return;
-    }
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
     const fromAddress = formatFromAddress("TedbabeLearnHUB", smtpUser);
+
     try {
-        await client.sendMail({
+        await deliverEmail({
             from: fromAddress,
+            replyTo: smtpUser,
             to: email,
-            subject: `${code} is your TedbabeLearnHUB verification code`,
+            subject: `TedbabeLearnHUB — Your Verification Code is ${code}`,
             text: `Hello ${name || "Learner"},\n\nYour TedbabeLearnHUB verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.\n\n— TedbabeLearnHUB Team\nhttps://tedbabelearnhub.vercel.app`,
             html: emailWrapper("Account Verification", `
               <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;">Verify your account</h1>
@@ -100,48 +145,62 @@ export async function sendVerificationCode({ email, name, code }) {
               <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:28px 20px;text-align:center;margin:28px 0;box-shadow:0 6px 20px rgba(0,0,0,0.35);">
                 <div style="font-size:42px;font-weight:900;letter-spacing:16px;color:#818cf8;font-family:'Courier New',Courier,monospace;text-indent:16px;">${code}</div>
               </div>
-              <p style="font-size:13px;color:#64748b;line-height:1.5;">If you did not initiate this request, you can safely ignore this email.</p>
+              <p style="font-size:13px;color:#94a3b8;line-height:1.5;">If you don't see this email in your primary inbox, please check your <strong>Spam / Junk</strong> folder.</p>
+              <p style="font-size:12px;color:#64748b;line-height:1.5;margin-top:16px;">If you did not initiate this request, you can safely ignore this email.</p>
             `),
+            priority: "high",
+            headers: {
+                "X-Priority": "1",
+                "X-MSMail-Priority": "High",
+                "Importance": "high",
+                "X-Entity-Ref-ID": `${Date.now()}-${code}`,
+            },
         });
         console.log(`[TedbabeLearnHUB Mailer] Verification email successfully delivered to ${email}`);
+        return { success: true };
     } catch (error) {
         console.error("[TedbabeLearnHUB Mailer] Verification email delivery failed:", error?.message || error);
         console.log(`[TedbabeLearnHUB Mailer] FALLBACK - Verification code for ${email}: [ ${code} ] (Check console log for verification)`);
+        return { success: false, error: error?.message || "Delivery failed" };
     }
 }
 
 export async function sendPasswordResetEmail({ email, name, resetUrl, code }) {
     const escapedName = escapeHtml(name);
-    const client = getTransporter();
-    if (!client) {
-        console.log(`[TedbabeLearnHUB Dev Mailer] Password reset link for ${email}: ${resetUrl} (Code: ${code})`);
-        return;
-    }
     const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
     const fromAddress = formatFromAddress("TedbabeLearnHUB Security", smtpUser);
     try {
-        await client.sendMail({
+        await deliverEmail({
             from: fromAddress,
+            replyTo: smtpUser,
             to: email,
-            subject: "Reset your TedbabeLearnHUB password",
+            subject: `TedbabeLearnHUB — Password Reset Request (Code: ${code})`,
             text: `Hello ${name}, reset your TedbabeLearnHUB password by visiting: ${resetUrl} or using code ${code}. Valid for 15 minutes.`,
             html: emailWrapper("Password Reset Request", `
-              <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin-top:0;">Reset your password</h1>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">Hello <strong>${escapedName}</strong>,</p>
-              <p style="font-size:14px;color:#334155;line-height:1.6;">We received a request to reset the password for your TedbabeLearnHUB account. Click the button below or enter the reset code on the reset page. This link expires in <strong>15 minutes</strong>.</p>
+              <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;">Reset your password</h1>
+              <p style="font-size:14px;color:#e2e8f0;line-height:1.6;">Hello <strong style="color:#ffffff;">${escapedName}</strong>,</p>
+              <p style="font-size:14px;color:#94a3b8;line-height:1.6;">We received a request to reset the password for your TedbabeLearnHUB account. Click the button below or enter the reset code on the reset page. This link expires in <strong style="color:#ffffff;">15 minutes</strong>.</p>
               <div style="text-align:center;margin:28px 0;">
                 <a href="${resetUrl}" style="background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;display:inline-block;box-shadow:0 4px 6px -1px rgba(37,99,235,0.2);">Reset My Password</a>
               </div>
-              <div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:14px;text-align:center;margin:20px 0;">
-                <span style="font-size:12px;color:#64748b;">Or enter reset code:</span>
-                <span style="display:block;font-size:24px;font-weight:800;letter-spacing:6px;color:#0f172a;margin-top:4px;font-family:monospace;">${code}</span>
+              <div style="background:#1e293b;border:1px dashed #475569;border-radius:10px;padding:16px;text-align:center;margin:20px 0;">
+                <span style="font-size:12px;color:#94a3b8;">Or enter reset code:</span>
+                <span style="display:block;font-size:28px;font-weight:900;letter-spacing:8px;color:#818cf8;margin-top:4px;font-family:monospace;">${code}</span>
               </div>
               <p style="font-size:13px;color:#64748b;line-height:1.5;">If you did not request a password reset, please ensure your account remains secure and ignore this email.</p>
             `),
+            priority: "high",
+            headers: {
+                "X-Priority": "1",
+                "X-MSMail-Priority": "High",
+                "Importance": "high",
+            },
         });
+        return { success: true };
     } catch (error) {
         console.error("[TedbabeLearnHUB Mailer] Password reset email delivery failed:", error?.message || error);
         console.log(`[TedbabeLearnHUB Mailer] FALLBACK - Password reset for ${email}: URL=${resetUrl}, Code=${code}`);
+        return { success: false, error: error?.message || "Delivery failed" };
     }
 }
 

@@ -10,8 +10,12 @@ import { LearningCategoryModel } from "../models/LearningCategory.js";
 import { TeacherApplicationModel } from "../models/TeacherApplication.js";
 import { UserModel } from "../models/User.js";
 import { CertificateModel } from "../models/Certificate.js";
+import { PlatformSettingModel } from "../models/PlatformSetting.js";
 
 export const publicRouter = Router();
+
+// Keys that are allowed to be exposed publicly (never expose secrets)
+const PUBLIC_SETTING_KEYS = ["promo_video", "platform_name", "platform_tagline"];
 
 publicRouter.get("/home", asyncHandler(async (_req, res) => {
     const [categories, publishedCourses, activeStudents, activeTeachers, activeClasses, pendingTeacherApplications] = await Promise.all([
@@ -185,4 +189,14 @@ publicRouter.post("/contact", asyncHandler(async (req, res) => {
         message: "Your inquiry has been submitted successfully.",
         inquiryId: inquiry._id,
     });
+}));
+
+// Expose only whitelisted platform settings to the public frontend
+publicRouter.get("/settings", asyncHandler(async (_req, res) => {
+    const docs = await PlatformSettingModel.find({ key: { $in: PUBLIC_SETTING_KEYS } }).lean();
+    const settings = {};
+    for (const doc of docs) {
+        settings[doc.key] = doc.value;
+    }
+    res.json({ settings });
 }));

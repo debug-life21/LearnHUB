@@ -113,7 +113,7 @@ export function SignInPage() {
             }
             sessionStorage.setItem("learnhub_pending_email", response.email);
             sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
-            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose } });
+            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose, devCode: response.devCode } });
         } catch (error) {
             setFeedback(error.message);
         } finally {
@@ -389,7 +389,7 @@ export function SignupPage({ initialRole = "student" }) {
             });
             sessionStorage.setItem("learnhub_pending_email", response.email);
             sessionStorage.setItem("learnhub_pending_purpose", response.purpose);
-            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose } });
+            navigate("/verify-code", { state: { email: response.email, purpose: response.purpose, devCode: response.devCode } });
         } catch (error) {
             setFeedback(error.message);
         } finally {
@@ -636,9 +636,9 @@ export function VerifyCodePage() {
     const { user, refreshUser } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
-    const [email, setEmail] = useState(location.state?.email || sessionStorage.getItem("learnhub_pending_email") || "");
+    const [email, setEmail] = useState((location.state?.email || sessionStorage.getItem("learnhub_pending_email") || "").trim());
     const [purpose] = useState(location.state?.purpose || sessionStorage.getItem("learnhub_pending_purpose") || "signup");
-    const [code, setCode] = useState("");
+    const [code, setCode] = useState(location.state?.devCode || "");
     const [secondsLeft, setSecondsLeft] = useState(60);
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState("");
@@ -662,7 +662,7 @@ export function VerifyCodePage() {
         try {
             await apiRequest("/api/auth/verify-code", {
                 method: "POST",
-                body: JSON.stringify({ email, code }),
+                body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim() }),
             });
             sessionStorage.removeItem("learnhub_pending_email");
             sessionStorage.removeItem("learnhub_pending_purpose");
@@ -679,12 +679,15 @@ export function VerifyCodePage() {
         setLoading(true);
         setFeedback("");
         try {
-            await apiRequest("/api/auth/resend-code", {
+            const res = await apiRequest("/api/auth/resend-code", {
                 method: "POST",
-                body: JSON.stringify({ email, purpose }),
+                body: JSON.stringify({ email: email.trim().toLowerCase(), purpose }),
             });
             setSecondsLeft(60);
-            setFeedback("A new code has been sent if the account is eligible.");
+            if (res?.devCode) {
+                setCode(res.devCode);
+            }
+            setFeedback("A new verification code has been dispatched. Please check your inbox and Spam / Junk folder.");
         } catch (error) {
             setFeedback(error.message);
         } finally {

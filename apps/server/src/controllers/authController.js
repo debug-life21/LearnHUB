@@ -139,10 +139,12 @@ async function issueCode(user, purpose) {
     user.codeAttempts = 0;
     user.codeSentAt = new Date();
     await user.save();
-    // Non-blocking dispatch: user receives immediate HTTP response without waiting for SMTP network handshake
-    sendVerificationCode({ email: user.email, name: user.name || user.fullName, code }).catch((err) => {
-        console.error("[TedbabeLearnHUB Mailer] Async verification send error:", err?.message || err);
-    });
+    try {
+        await sendVerificationCode({ email: user.email, name: user.name || user.fullName, code });
+    } catch (err) {
+        console.error("[TedbabeLearnHUB Mailer] Verification email error:", err?.message || err);
+    }
+    return code;
 }
 
 function normalizedEmail(email) {
@@ -272,8 +274,13 @@ export async function signup(req, res) {
         await Promise.all(savedTeacherFiles.map((file) => deleteStoredFile(file.key, file.storageProvider)));
         throw error;
     }
-    await issueCode(user, "signup");
-    res.status(201).json({ message: "Verification code sent.", email, purpose: "signup" });
+    const code = await issueCode(user, "signup");
+    res.status(201).json({
+        message: "Verification code sent to your email address.",
+        email,
+        purpose: "signup",
+        ...(!isProduction ? { devCode: code } : {}),
+    });
 }
 
 export async function login(req, res) {
@@ -308,11 +315,12 @@ export async function login(req, res) {
     }
 
     // If the account is unverified, prompt them to verify with an OTP code
-    await issueCode(user, "signup");
+    const code = await issueCode(user, "signup");
     return res.json({
         message: "Verification code sent to your email address.",
         email: user.email,
         purpose: "signup",
+        ...(!isProduction ? { devCode: code } : {}),
     });
 }
 
@@ -451,8 +459,11 @@ export async function resendCode(req, res) {
     if (cooldownRemaining > 0) {
         throw new ApiError(429, `Please wait ${Math.ceil(cooldownRemaining / 1000)} seconds before requesting another code.`);
     }
-    await issueCode(user, "signup");
-    res.json({ message: "A new verification code has been sent." });
+    const code = await issueCode(user, data.purpose || "signup");
+    res.json({
+        message: "A new verification code has been sent to your email address.",
+        ...(!isProduction ? { devCode: code } : {}),
+    });
 }
 
 export async function google(req, res) {

@@ -670,13 +670,13 @@ export function LearningWorkspace() {
                                         </span>
                                     </div>
 
-                                    {/* In-Browser PDF / Document Preview */}
-                                    <div className="aspect-[4/3] sm:aspect-[16/10] w-full rounded-2xl bg-stone-100 overflow-hidden ring-1 ring-stone-200">
+                                    {/* In-Browser Document & Material Preview (Strictly In-Place, No Download) */}
+                                    <div className="w-full rounded-2xl bg-stone-100 overflow-hidden ring-1 ring-stone-200" onContextMenu={(e) => e.preventDefault()}>
                                         {selectedDoc.sourceType === "google_drive" ? (
                                             <iframe
                                                 src={selectedDoc.externalUrl}
                                                 title={selectedDoc.title}
-                                                className="h-full w-full border-0 bg-white"
+                                                className="h-[75vh] min-h-[550px] w-full border-0 bg-white"
                                                 referrerPolicy="no-referrer"
                                                 allow="autoplay"
                                             />
@@ -684,35 +684,32 @@ export function LearningWorkspace() {
                                             <video
                                                 src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
                                                 controls
+                                                controlsList="nodownload"
+                                                onContextMenu={(e) => e.preventDefault()}
                                                 preload="metadata"
-                                                className="h-full w-full bg-black"
+                                                className="h-[70vh] w-full bg-black"
                                                 aria-label={selectedDoc.title}
                                             />
-                                        ) : selectedDoc.mimeType?.includes("pdf") ? (
-                                            <iframe
-                                                src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
-                                                title={selectedDoc.title}
-                                                className="w-full h-full border-0"
-                                            />
-                                        ) : selectedDoc.mimeType?.includes("image") ? (
-                                            <img
-                                                src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
-                                                alt={selectedDoc.title}
-                                                className="w-full h-full object-contain"
-                                            />
-                                        ) : /\.(docx|xlsx|pptx)$/i.test(selectedDoc.originalFilename || "") ? (
-                                            <OfficeDocumentPreview resource={selectedDoc} />
-                                        ) : (
-                                            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                                                <span className="text-4xl mb-2">📁</span>
-                                                <h4 className="font-bold text-stone-800 text-sm">{selectedDoc.originalFilename || selectedDoc.title}</h4>
-                                                <p className="text-xs text-stone-500 mt-1">
-                                                    In-browser preview is optimized for PDF and images.
-                                                </p>
-                                                <span className="mt-4 inline-block rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
-                                                    🔒 In-Workspace View Only
-                                                </span>
+                                        ) : (selectedDoc.mimeType?.includes("pdf") || selectedDoc.category === "pdf" || /\.pdf$/i.test(selectedDoc.originalFilename || "")) ? (
+                                            <div className="relative w-full h-[78vh] min-h-[600px] bg-slate-900" onContextMenu={(e) => e.preventDefault()}>
+                                                <iframe
+                                                    src={`${resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}#toolbar=0&navpanes=0&scrollbar=1`}
+                                                    title={selectedDoc.title}
+                                                    className="w-full h-full border-0 bg-white"
+                                                />
                                             </div>
+                                        ) : selectedDoc.mimeType?.includes("image") ? (
+                                            <div className="flex h-[70vh] items-center justify-center p-4 bg-slate-900/5" onContextMenu={(e) => e.preventDefault()}>
+                                                <img
+                                                    src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
+                                                    alt={selectedDoc.title}
+                                                    className="max-h-full max-w-full object-contain rounded-xl shadow-md select-none"
+                                                    onContextMenu={(e) => e.preventDefault()}
+                                                    draggable={false}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <OfficeDocumentPreview resource={selectedDoc} />
                                         )}
                                     </div>
                                 </div>
@@ -736,10 +733,14 @@ export function LearningWorkspace() {
                                 const isSelected = isVideo
                                     ? selectedVideoResource?._id === res._id
                                     : selectedDoc?._id === res._id;
+                                const isPresentation = res.category === "slide" || /\.(pptx?|odp)$/i.test(res.originalFilename || "");
+                                const isSpreadsheet = res.category === "spreadsheet" || /\.(xlsx?|csv|ods)$/i.test(res.originalFilename || "");
+                                const isPdf = res.mimeType?.includes("pdf") || res.category === "pdf" || /\.pdf$/i.test(res.originalFilename || "");
                                 const fileIcon = res.sourceType === "google_drive" ? "☁️"
-                                    : res.mimeType?.includes("pdf") ? "📕"
+                                    : isPdf ? "📕"
+                                    : isPresentation ? "📊"
+                                    : isSpreadsheet ? "📈"
                                     : res.mimeType?.includes("image") ? "🖼️"
-                                    : res.mimeType?.includes("spreadsheet") || res.category === "spreadsheet" ? "📊"
                                     : "📄";
                                 return (
                                     <button

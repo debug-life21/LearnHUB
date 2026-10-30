@@ -55,6 +55,24 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
         localStorage.getItem("learnhub_admin_autorefresh") === "true",
     );
 
+    // ─── 4. Promo Video (hub_admin only) ──────────────────────────────────
+    const [promoVideoInput, setPromoVideoInput] = useState("");
+    const [promoVideoSaved, setPromoVideoSaved] = useState("");
+    const [promoVideoFeedback, setPromoVideoFeedback] = useState("");
+    const [savingPromoVideo, setSavingPromoVideo] = useState(false);
+
+    // Load existing promo video from backend on mount (admin only)
+    useEffect(() => {
+        if (user?.role !== "hub_admin") return;
+        apiRequest("/api/public/settings")
+            .then((res) => {
+                const url = res?.settings?.promo_video || "";
+                setPromoVideoInput(url);
+                setPromoVideoSaved(url);
+            })
+            .catch(() => {});
+    }, [user?.role]);
+
     // Save notification settings to localStorage whenever changed
     useEffect(() => {
         try {
@@ -169,9 +187,157 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
         }
     };
 
+    // ─── Promo Video CRUD helpers ──────────────────────────────────────────
+    const extractYouTubeIdSettings = (url) => {
+        if (!url) return null;
+        try {
+            const u = new URL(url);
+            if (u.hostname === "youtu.be") return u.pathname.slice(1).split("?")[0];
+            const v = u.searchParams.get("v");
+            if (v) return v;
+            const parts = u.pathname.split("/");
+            const idx = parts.indexOf("embed");
+            if (idx !== -1) return parts[idx + 1];
+        } catch {
+            const match = url.match(/[\w-]{11}/);
+            if (match) return match[0];
+        }
+        return null;
+    };
+
+    const handleSavePromoVideo = async () => {
+        setSavingPromoVideo(true);
+        setPromoVideoFeedback("");
+        try {
+            await apiRequest("/api/admin/settings", {
+                method: "POST",
+                body: JSON.stringify({
+                    key: "promo_video",
+                    value: promoVideoInput.trim(),
+                    description: "Homepage promo / platform overview video (YouTube URL)",
+                }),
+            });
+            setPromoVideoSaved(promoVideoInput.trim());
+            setPromoVideoFeedback("✅ Promo video updated! It will now appear on the public homepage.");
+        } catch (err) {
+            setPromoVideoFeedback("❌ " + (err?.message || "Could not save the video URL."));
+        } finally {
+            setSavingPromoVideo(false);
+        }
+    };
+
+    const handleRemovePromoVideo = async () => {
+        setSavingPromoVideo(true);
+        setPromoVideoFeedback("");
+        try {
+            await apiRequest("/api/admin/settings", {
+                method: "POST",
+                body: JSON.stringify({ key: "promo_video", value: "", description: "Homepage promo video" }),
+            });
+            setPromoVideoInput("");
+            setPromoVideoSaved("");
+            setPromoVideoFeedback("🗑️ Promo video removed. The section will no longer appear on the homepage.");
+        } catch (err) {
+            setPromoVideoFeedback("❌ " + (err?.message || "Could not remove the video."));
+        } finally {
+            setSavingPromoVideo(false);
+        }
+    };
+
     return (
         <div className="grid max-w-4xl gap-6">
-            {/* 1. Language & Regional Settings */}
+            {/* Promo Video Management — hub_admin only */}
+            {user?.role === "hub_admin" && (
+                <DashboardCard
+                    title="🎬 Homepage Promo Video"
+                    subtitle="Set a YouTube video that appears as a full-width embed on the public homepage, letting visitors see how the platform works."
+                >
+                    <div className="space-y-4">
+                        {/* URL input */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                YouTube Video URL
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    id="promo-video-url"
+                                    type="url"
+                                    value={promoVideoInput}
+                                    onChange={(e) => setPromoVideoInput(e.target.value)}
+                                    placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
+                                    className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleSavePromoVideo}
+                                    disabled={savingPromoVideo || !promoVideoInput.trim()}
+                                    className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-md hover:from-blue-500 hover:to-cyan-400 disabled:opacity-50 transition-all"
+                                >
+                                    {savingPromoVideo ? "Saving…" : "Save"}
+                                </button>
+                                {promoVideoSaved && (
+                                    <button
+                                        type="button"
+                                        onClick={handleRemovePromoVideo}
+                                        disabled={savingPromoVideo}
+                                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50 transition-all"
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                            <p className="mt-1.5 text-[11px] text-slate-500">
+                                Accepts: <code className="font-mono">youtube.com/watch?v=…</code> · <code className="font-mono">youtu.be/…</code> · <code className="font-mono">youtube.com/embed/…</code>
+                            </p>
+                        </div>
+
+                        {/* Live preview */}
+                        {(() => {
+                            const vid = extractYouTubeIdSettings(promoVideoInput);
+                            if (!vid) return null;
+                            return (
+                                <div className="rounded-2xl overflow-hidden ring-1 ring-slate-200 shadow-sm" style={{ aspectRatio: "16/9" }}>
+                                    <iframe
+                                        title="Promo video preview"
+                                        src={`https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&controls=1&fs=0`}
+                                        className="w-full h-full"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen={false}
+                                        loading="lazy"
+                                    />
+                                </div>
+                            );
+                        })()}
+
+                        {/* Status feedback */}
+                        {promoVideoFeedback && (
+                            <div className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                                promoVideoFeedback.startsWith("✅") || promoVideoFeedback.startsWith("🗑")
+                                    ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                                    : "bg-red-50 text-red-800 ring-1 ring-red-200"
+                            }`}>
+                                {promoVideoFeedback}
+                            </div>
+                        )}
+
+                        {/* Current live status */}
+                        <div className="flex items-center gap-2 text-xs text-slate-500 pt-1">
+                            {promoVideoSaved ? (
+                                <>
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span>Video is <strong className="text-slate-700">live</strong> on the homepage</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="h-2 w-2 rounded-full bg-slate-300" />
+                                    <span>No promo video set — the section is hidden from visitors</span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </DashboardCard>
+            )}
+
             <DashboardCard
                 title={language === "am" ? "የቋንቋ እና የሰዓት አቀማመጥ" : "Language & Regional Settings"}
                 subtitle={language === "am" ? "የፕላትፎርሙን ቋንቋ እና የሰዓት አቀማመጥ ይምረጡ" : "Customize interface language, timezone, and time format."}
