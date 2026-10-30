@@ -4,6 +4,8 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
     plugins: [tailwindcss(), react()],
+    // Reuse the public brand assets (logo, icons, hero imagery) from the web app
+    publicDir: "../web/public",
     server: {
         port: 5174,
         strictPort: true,

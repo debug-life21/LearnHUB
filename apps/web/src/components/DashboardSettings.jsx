@@ -63,7 +63,7 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
 
     // Load existing promo video from backend on mount (admin only)
     useEffect(() => {
-        if (user?.role !== "hub_admin") return;
+        if (!["admin", "hub_admin"].includes(user?.role)) return;
         apiRequest("/api/public/settings")
             .then((res) => {
                 const url = res?.settings?.promo_video || "";
@@ -246,8 +246,8 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
 
     return (
         <div className="grid max-w-4xl gap-6">
-            {/* Promo Video Management — hub_admin only */}
-            {user?.role === "hub_admin" && (
+            {/* Promo Video Management — admin only */}
+            {["admin", "hub_admin"].includes(user?.role) && (
                 <DashboardCard
                     title="🎬 Homepage Promo Video"
                     subtitle="Set a YouTube video that appears as a full-width embed on the public homepage, letting visitors see how the platform works."
