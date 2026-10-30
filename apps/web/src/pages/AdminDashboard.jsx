@@ -1457,6 +1457,9 @@ export function AdminDashboard({ user }) {
           user={user}
           sessions={sessions.filter((session) => session.status === "scheduled")}
           onNavigateTab={(tab) => setActiveTab(tab)}
+          onSaved={() => {
+            void loadAll();
+          }}
         />
       ) : null}
 

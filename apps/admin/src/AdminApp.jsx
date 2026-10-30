@@ -166,7 +166,7 @@ export function AdminApp() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-2xl bg-gradient -to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50"
+                className="w-full rounded-2xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-blue-500/25 transition hover:from-[#0052cc] hover:to-[#0088e6] disabled:cursor-wait disabled:opacity-50"
               >
                 {submitting ? "Signing in…" : "Sign in securely"}
               </button>

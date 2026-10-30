@@ -1076,19 +1076,25 @@ adminRouter.get("/announcements", asyncHandler(async (_req, res) => {
 }));
 adminRouter.post("/announcements", asyncHandler(async (req, res) => {
     const data = z.object({
-        title: z.string().trim().min(3),
-        content: z.string().trim().min(5),
-        target: z.enum(["all", "all_students", "all_teachers", "classroom"]),
-        classroomId: z.string().nullable().optional(),
+        title: z.string().trim().min(3, "Title must be at least 3 characters."),
+        content: z.string().trim().min(5, "Message must be at least 5 characters."),
+        target: z.enum(["all", "all_students", "all_teachers", "classroom"], {
+            errorMap: () => ({ message: "Select a valid audience." })
+        }),
+        classroomId: z.any().optional(),
         priority: z.enum(["normal", "high", "urgent"]).default("normal"),
     }).parse(req.body);
 
-    const validClassroomId = (data.target === "classroom" && data.classroomId && data.classroomId.trim() !== "")
-        ? data.classroomId.trim()
-        : null;
-
-    if (data.target === "classroom" && !validClassroomId) {
-        throw new ApiError(400, "Select a cohort for a cohort-specific announcement.");
+    let validClassroomId = null;
+    if (data.target === "classroom") {
+        const rawId = typeof data.classroomId === "string" ? data.classroomId.trim() : null;
+        if (!rawId || !mongoose.isValidObjectId(rawId)) {
+            throw new ApiError(400, "Select a valid cohort for a cohort-specific announcement.");
+        }
+        if (!(await ClassroomModel.exists({ _id: rawId }))) {
+            throw new ApiError(404, "The selected cohort does not exist.");
+        }
+        validClassroomId = rawId;
     }
     if (validClassroomId) {
         if (!mongoose.isValidObjectId(validClassroomId)) {
@@ -1149,7 +1155,7 @@ adminRouter.patch("/announcements/:announcementId", asyncHandler(async (req, res
         title: z.string().trim().min(3).optional(),
         content: z.string().trim().min(5).optional(),
         target: z.enum(["all", "all_students", "all_teachers", "classroom"]).optional(),
-        classroomId: z.string().nullable().optional(),
+        classroomId: z.any().optional(),
         priority: z.enum(["normal", "high", "urgent"]).optional(),
     }).refine((value) => Object.keys(value).length > 0, "Provide at least one field to update.").parse(req.body);
 
@@ -1162,12 +1168,17 @@ adminRouter.patch("/announcements/:announcementId", asyncHandler(async (req, res
     if (data.priority !== undefined) announcement.priority = data.priority;
 
     if (announcement.target === "classroom") {
-        const rawClassId = data.classroomId !== undefined ? data.classroomId : announcement.classroom?.toString();
-        const validClassroomId = rawClassId && rawClassId.trim() !== "" ? rawClassId.trim() : null;
-        if (!validClassroomId || !mongoose.isValidObjectId(validClassroomId) || !(await ClassroomModel.exists({ _id: validClassroomId }))) {
+        const rawId = data.classroomId !== undefined 
+            ? (typeof data.classroomId === "string" ? data.classroomId.trim() : null)
+            : announcement.classroom?.toString();
+        
+        if (!rawId || !mongoose.isValidObjectId(rawId)) {
             throw new ApiError(400, "Select a valid cohort for a cohort-specific announcement.");
         }
-        announcement.classroom = validClassroomId;
+        if (!(await ClassroomModel.exists({ _id: rawId }))) {
+            throw new ApiError(404, "The selected cohort does not exist.");
+        }
+        announcement.classroom = rawId;
     } else {
         announcement.classroom = null;
     }

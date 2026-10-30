@@ -114,8 +114,14 @@ export function HomePage() {
             .catch((err) => console.error("Error fetching homepage data:", err));
         // Fetch public settings to get the admin-managed public video
         apiRequest("/api/public/settings")
-            .then((res) => setPromoVideo(normalizePromoVideo(res?.settings?.promo_video)))
-            .catch(() => {});
+            .then((res) => {
+                const promo = normalizePromoVideo(res?.settings?.promo_video);
+                if (promo) {
+                    console.log("[TedbabeLearnHUB] Promo video loaded:", promo.title);
+                    setPromoVideo(promo);
+                }
+            })
+            .catch((err) => console.error("[TedbabeLearnHUB] Error loading settings:", err));
     }, []);
 
     const handleCategorySelect = async (cat) => {

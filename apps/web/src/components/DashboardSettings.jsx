@@ -63,23 +63,28 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
     const [promoVideoFeedback, setPromoVideoFeedback] = useState("");
     const [savingPromoVideo, setSavingPromoVideo] = useState(false);
 
-    // Load existing promo video from backend on mount (admin only)
-    useEffect(() => {
+    // Load existing promo video from backend (admin only)
+    const loadPromoSettings = async () => {
         if (!["admin", "hub_admin"].includes(user?.role)) return;
-        apiRequest("/api/public/settings")
-            .then((res) => {
-                const raw = res?.settings?.promo_video;
-                const normalized = typeof raw === "string"
-                    ? { title: "", label: "", url: raw }
-                    : raw && typeof raw === "object"
-                        ? { title: raw.title || "", label: raw.label || "", url: raw.url || "" }
-                        : { title: "", label: "", url: "" };
-                setPromoVideoTitle(normalized.title);
-                setPromoVideoLabel(normalized.label);
-                setPromoVideoInput(normalized.url);
-                setPromoVideoSaved(normalized.url ? normalized : null);
-            })
-            .catch(() => {});
+        try {
+            const res = await apiRequest("/api/public/settings");
+            const raw = res?.settings?.promo_video;
+            const normalized = typeof raw === "string"
+                ? { title: "", label: "", url: raw }
+                : raw && typeof raw === "object"
+                    ? { title: raw.title || "", label: raw.label || "", url: raw.url || "" }
+                    : { title: "", label: "", url: "" };
+            setPromoVideoTitle(normalized.title);
+            setPromoVideoLabel(normalized.label);
+            setPromoVideoInput(normalized.url);
+            setPromoVideoSaved(normalized.url ? normalized : null);
+        } catch (err) {
+            console.error("Error loading promo settings:", err);
+        }
+    };
+
+    useEffect(() => {
+        void loadPromoSettings();
     }, [user?.role]);
 
     // Save notification settings to localStorage whenever changed
@@ -233,8 +238,9 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
                     description: "Homepage promo / platform overview video (title, label, YouTube URL)",
                 }),
             });
-            setPromoVideoSaved(value);
+            await loadPromoSettings();
             setPromoVideoFeedback("✅ Video updated! It will now appear on the public homepage, before the learning tracks.");
+            onSaved?.();
         } catch (err) {
             setPromoVideoFeedback("❌ " + (err?.message || "Could not save the video."));
         } finally {
@@ -250,11 +256,9 @@ export function DashboardSettings({ user, sessions = [], onSaved, onNavigateTab 
                 method: "POST",
                 body: JSON.stringify({ key: "promo_video", value: "", description: "Homepage promo video" }),
             });
-            setPromoVideoTitle("");
-            setPromoVideoLabel("");
-            setPromoVideoInput("");
-            setPromoVideoSaved(null);
+            await loadPromoSettings();
             setPromoVideoFeedback("🗑️ Video removed. The section will no longer appear on the homepage.");
+            onSaved?.();
         } catch (err) {
             setPromoVideoFeedback("❌ " + (err?.message || "Could not remove the video."));
         } finally {

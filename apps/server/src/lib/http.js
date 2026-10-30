@@ -13,8 +13,9 @@ export function asyncHandler(handler) {
 }
 export function errorHandler(error, _req, res, _next) {
     if (error instanceof ZodError) {
+        const detail = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
         return res.status(400).json({
-            message: "Validation failed.",
+            message: `Validation failed: ${detail}`,
             errors: error.flatten(),
         });
     }
