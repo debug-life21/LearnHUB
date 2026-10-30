@@ -149,14 +149,15 @@ const signupSchema = z.object({
 });
 
 function userResponse(user) {
+    const isAdmin = user.role === "admin" || user.role === "hub_admin";
     return {
         id: user._id.toString(),
         name: user.name || user.fullName,
         fullName: user.fullName || user.name,
         email: user.email,
         role: user.role,
-        isVerified: Boolean(user.isVerified && user.emailVerified),
-        emailVerified: Boolean(user.emailVerified),
+        isVerified: isAdmin ? true : Boolean(user.isVerified && user.emailVerified),
+        emailVerified: isAdmin ? true : Boolean(user.emailVerified),
         teacherStatus: user.teacherStatus,
         accountStatus: user.accountStatus,
         languagePreference: user.languagePreference,
@@ -357,11 +358,22 @@ export async function login(req, res) {
     if (user.teacherStatus === "rejected" || user.accountStatus === "suspended") {
         throw new ApiError(403, "This account is not available.");
     }
-    if (user.role === "admin" || user.role === "hub_admin") {
-        throw new ApiError(403, "Administrator accounts must sign in through the Admin Dashboard only.");
+
+    // Admins have automatic full verification and sign in directly everywhere
+    const isAdmin = user.role === "admin" || user.role === "hub_admin";
+    if (isAdmin) {
+        user.isVerified = true;
+        user.emailVerified = true;
+        await user.save();
+        const token = setSessionCookie(res, user);
+        return res.json({
+            message: "Signed in successfully as administrator.",
+            token,
+            user: userResponse(user),
+        });
     }
 
-    // All roles must verify email before getting a session token
+    // New/unverified accounts must verify email once before getting a session token
     if (!user.emailVerified) {
         const { code, delivery } = await issueCode(user, "signup", data.device);
         const delivered = Boolean(delivery?.success);
@@ -377,28 +389,8 @@ export async function login(req, res) {
         });
     }
 
-    // Verified account on a recognised, unexpired device → sign in directly
-    const knownDevice = data.device?.deviceId ? findTrustedDevice(user, data.device.deviceId) : null;
-    if (data.device?.deviceId && !knownDevice) {
-        // New / unrecognised device → require an emailed verification code
-        const { code, delivery } = await issueCode(user, "login", data.device);
-        const delivered = Boolean(delivery?.success);
-        return res.json({
-            message: delivered
-                ? "A new sign-in was detected. We emailed a verification code to confirm it's you."
-                : "Notice: Cloud server firewall blocked direct inbox delivery. Your verification code is provided below to confirm this device.",
-            email: user.email,
-            purpose: "login",
-            requiresVerification: true,
-            emailDelivered: delivered,
-            ...((!isProduction || !delivered) ? { devCode: code, fallbackCode: code } : {}),
-        });
-    }
-    if (knownDevice) {
-        knownDevice.lastSeenAt = new Date();
-        await user.save();
-    }
-
+    // Once a person signs up and verifies, they should NOT be asked for a verification code again.
+    // Direct sign-in with verified credentials:
     const token = setSessionCookie(res, user);
     return res.json({
         message: "Signed in successfully.",

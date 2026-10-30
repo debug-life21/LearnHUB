@@ -373,7 +373,18 @@ export function LearningWorkspace() {
 
             // Fetch classes list to find this classroom
             const classesRes = await apiRequest(`${apiPrefix}/classes`);
-            const matchedClass = (classesRes.classes || []).find((c) => c._id === classroomId);
+            let matchedClass = (classesRes.classes || []).find((c) => String(c._id) === String(classroomId));
+
+            if (!matchedClass && isAdmin) {
+                try {
+                    const singleRes = await apiRequest(`/api/admin/classes/${classroomId}`);
+                    if (singleRes?.classroom) {
+                        matchedClass = singleRes.classroom;
+                    }
+                } catch {
+                    // Non-blocking
+                }
+            }
 
             if (!matchedClass) {
                 setFeedback("Classroom not found or you are not enrolled.");
