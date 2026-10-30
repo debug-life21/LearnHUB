@@ -399,3 +399,107 @@ export async function sendAnnouncementEmail({ email, name, title, content, prior
         return { success: false, error: error?.message || "Delivery failed" };
     }
 }
+
+export async function sendClassPlacementEmail({ email, name, role = "student", classroomTitle, otherPartyName = null }) {
+    const escapedName = escapeHtml(name || "Learner");
+    const escapedClass = escapeHtml(classroomTitle || "Your Class");
+    const escapedOther = escapeHtml(otherPartyName || "");
+    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
+    const fromAddress = formatFromAddress("TedbabeLearnHUB Academics", smtpUser);
+    const isTeacher = role === "teacher";
+
+    const subject = isTeacher
+        ? `🎓 [TedbabeLearnHUB] New student enrolled: ${otherPartyName || "A student"} joined ${classroomTitle}`
+        : `🎓 [TedbabeLearnHUB] You have been assigned to: ${classroomTitle}`;
+
+    const headline = isTeacher ? "New Student Enrolled" : "Class Placement Confirmed";
+    const bodyMessage = isTeacher
+        ? `<p style="font-size:14px;color:#e2e8f0;line-height:1.6;">Hello Instructor <strong style="color:#ffffff;">${escapedName}</strong>,</p>
+           <p style="font-size:14px;color:#94a3b8;line-height:1.6;">Student <strong style="color:#38bdf8;">${escapedOther || "A new student"}</strong> has been officially enrolled into your cohort <strong style="color:#ffffff;">${escapedClass}</strong>.</p>
+           <p style="font-size:13px;color:#94a3b8;line-height:1.5;">You can view the full roster, share resources, and conduct live sessions in your instructor workspace.</p>`
+        : `<p style="font-size:14px;color:#e2e8f0;line-height:1.6;">Hello <strong style="color:#ffffff;">${escapedName}</strong>,</p>
+           <p style="font-size:14px;color:#94a3b8;line-height:1.6;">Great news! You have been assigned to cohort <strong style="color:#ffffff;">${escapedClass}</strong>${escapedOther ? ` taught by <strong style="color:#38bdf8;">${escapedOther}</strong>` : ""}.</p>
+           <p style="font-size:13px;color:#94a3b8;line-height:1.5;">Your curriculum, assignments, and scheduled live sessions are now available in your learning dashboard.</p>`;
+
+    const actionUrl = `${env.CLIENT_URL || "https://tedbabelearnhub.vercel.app"}/dashboard`;
+
+    try {
+        await deliverEmail({
+            from: fromAddress,
+            replyTo: smtpUser,
+            to: email,
+            subject,
+            text: isTeacher
+                ? `Hello ${name}, student ${otherPartyName || "A student"} has joined your class ${classroomTitle}. Check: ${actionUrl}`
+                : `Hello ${name}, you have been assigned to class ${classroomTitle}. Check: ${actionUrl}`,
+            html: emailWrapper(headline, `
+              <div style="display:inline-block;background:#059669;color:#ffffff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">
+                CLASS PLACEMENT
+              </div>
+              <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;">${headline}</h1>
+              ${bodyMessage}
+              <div style="text-align:center;margin:28px 0;">
+                <a href="${actionUrl}" style="background:#059669;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:10px;display:inline-block;box-shadow:0 4px 12px rgba(5,150,105,0.3);">Go to Workspace →</a>
+              </div>
+            `),
+        });
+        console.log(`[TedbabeLearnHUB Mailer] Class placement email delivered to ${email}`);
+        return { success: true };
+    } catch (error) {
+        console.error(`[TedbabeLearnHUB Mailer] Failed to deliver class placement email to ${email}:`, error?.message || error);
+        return { success: false, error: error?.message || "Delivery failed" };
+    }
+}
+
+export async function sendSessionScheduledEmail({ email, name, role = "student", sessionTitle, classroomTitle, startsAt, endsAt, meetingUrl = "" }) {
+    const escapedName = escapeHtml(name || "Learner");
+    const escapedSession = escapeHtml(sessionTitle || "Live Class");
+    const escapedClass = escapeHtml(classroomTitle || "Your Class");
+    const smtpUser = (env.SMTP_USER?.trim() || "debuglife1221@gmail.com").trim();
+    const fromAddress = formatFromAddress("TedbabeLearnHUB Sessions", smtpUser);
+
+    const formattedStart = new Date(startsAt).toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short"
+    });
+
+    const subject = `📹 [TedbabeLearnHUB] Live Session Scheduled: ${sessionTitle} (${formattedStart})`;
+    const actionUrl = `${env.CLIENT_URL || "https://tedbabelearnhub.vercel.app"}/dashboard`;
+
+    try {
+        await deliverEmail({
+            from: fromAddress,
+            replyTo: smtpUser,
+            to: email,
+            subject,
+            text: `Hello ${name},\nA live session "${sessionTitle}" for class "${classroomTitle}" has been scheduled for ${formattedStart}.\n\nNote: The live session link unlocks exactly 10 minutes before start time.\nVisit: ${actionUrl}`,
+            html: emailWrapper("New Live Class Scheduled", `
+              <div style="display:inline-block;background:#0284c7;color:#ffffff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">
+                SCHEDULED LIVE CLASS
+              </div>
+              <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin-top:0;">${escapedSession}</h1>
+              <p style="font-size:14px;color:#e2e8f0;line-height:1.6;">Hello <strong style="color:#ffffff;">${escapedName}</strong>,</p>
+              <p style="font-size:14px;color:#94a3b8;line-height:1.6;">A new live class session has been scheduled for cohort <strong style="color:#ffffff;">${escapedClass}</strong>.</p>
+              
+              <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;margin:20px 0;">
+                <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;">📅 <strong>Scheduled Time:</strong> <span style="color:#38bdf8;font-weight:bold;">${formattedStart}</span></p>
+                <p style="margin:0;font-size:12px;color:#f59e0b;font-weight:600;">🔒 Note: The meeting link automatically activates <strong>10 minutes before class</strong>.</p>
+              </div>
+
+              <div style="text-align:center;margin:28px 0;">
+                <a href="${actionUrl}" style="background:#0284c7;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:10px;display:inline-block;box-shadow:0 4px 12px rgba(2,132,199,0.3);">View in Dashboard →</a>
+              </div>
+            `),
+        });
+        console.log(`[TedbabeLearnHUB Mailer] Session scheduled email delivered to ${email}`);
+        return { success: true };
+    } catch (error) {
+        console.error(`[TedbabeLearnHUB Mailer] Failed to deliver session scheduled email to ${email}:`, error?.message || error);
+        return { success: false, error: error?.message || "Delivery failed" };
+    }
+}

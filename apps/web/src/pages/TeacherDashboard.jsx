@@ -352,6 +352,26 @@ export function TeacherDashboard({ user }) {
         </div>
       </div>
 
+      {/* Prominent Next Scheduled Live Session Banner */}
+      {upcomingLessons[0] ? (
+        <div className="rounded-3xl bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 p-6 sm:p-7 text-white shadow-xl flex flex-wrap items-center justify-between gap-6 border border-emerald-500/30">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/30">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Next scheduled live session</span>
+            </div>
+            <h2 className="text-2xl font-black text-white">{upcomingLessons[0].title}</h2>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
+              <p>
+                📅 {formatSessionTime(upcomingLessons[0].startsAt)} — {formatSessionTime(upcomingLessons[0].endsAt)}
+              </p>
+              <span className="text-amber-300 font-medium">🔒 Meeting link activates 10 minutes prior</span>
+            </div>
+          </div>
+          {upcomingLessons[0].meetingUrl ? <LiveSessionButton session={upcomingLessons[0]} /> : null}
+        </div>
+      ) : null}
+
       {feedback ? (<div className="rounded-2xl bg-blue-50 p-4 text-sm font-semibold text-blue-900 ring-1 ring-blue-200 flex justify-between items-center">
           <span>{feedback}</span>
           <button onClick={() => setFeedback("")} className="text-blue-500 hover:text-blue-800">✕</button>

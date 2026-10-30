@@ -26,7 +26,7 @@ import { DiscussionModel } from "../models/Discussion.js";
 import { LearningResourceModel } from "../models/LearningResource.js";
 import { slugify } from "../utils.js";
 import { deleteStoredFile, getStoredFileStream } from "../lib/storage.js";
-import { sendAnnouncementEmail } from "../utils/email.js";
+import { sendAnnouncementEmail, sendClassPlacementEmail, sendSessionScheduledEmail } from "../utils/email.js";
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("hub_admin"));
 function isValidTimeZone(timeZone) {
@@ -732,6 +732,37 @@ adminRouter.post("/classes/:classId/assign-student", asyncHandler(async (req, re
         kind: "student_placement",
         link: "/student/classes",
     });
+
+    let teacherUser = null;
+    if (classroom.teacher) {
+        teacherUser = await UserModel.findById(classroom.teacher);
+        if (teacherUser) {
+            await NotificationModel.create({
+                user: teacherUser._id,
+                title: "New student enrolled",
+                message: `Student "${student.name}" has been placed into your class "${classroom.title}".`,
+                kind: "student_placement",
+                link: `/teacher/classes/${classroom._id}`,
+            });
+
+            sendClassPlacementEmail({
+                email: teacherUser.email,
+                name: teacherUser.name,
+                role: "teacher",
+                classroomTitle: classroom.title,
+                otherPartyName: student.name,
+            }).catch((err) => console.warn(`[Assignment Email Teacher Error] ${err?.message}`));
+        }
+    }
+
+    sendClassPlacementEmail({
+        email: student.email,
+        name: student.name,
+        role: "student",
+        classroomTitle: classroom.title,
+        otherPartyName: teacherUser?.name || null,
+    }).catch((err) => console.warn(`[Assignment Email Student Error] ${err?.message}`));
+
     await writeAudit(req.user.id, "student_assigned", "Classroom", classroom._id.toString(), {
         studentId: student._id.toString(),
     });
@@ -938,6 +969,27 @@ adminRouter.post("/sessions", asyncHandler(async (req, res) => {
         kind: "session",
         link: "/dashboard",
     })));
+
+    // Inbox email notification to teacher and enrolled students
+    UserModel.find({ _id: { $in: recipientIds }, accountStatus: "active" })
+        .select("name email role")
+        .lean()
+        .then((recipients) => {
+            recipients.forEach((recipient) => {
+                sendSessionScheduledEmail({
+                    email: recipient.email,
+                    name: recipient.name,
+                    role: recipient.role,
+                    sessionTitle: data.title,
+                    classroomTitle: classroom.title,
+                    startsAt: start,
+                    endsAt: end,
+                    meetingUrl: data.meetingUrl ?? "",
+                }).catch((err) => console.warn(`[Session Scheduled Email Error] ${recipient.email}:`, err?.message));
+            });
+        })
+        .catch((err) => console.warn("[Session Recipients Lookup Error]:", err?.message));
+
     await writeAudit(req.user.id, "session_created", "ClassSession", session._id.toString(), {
         classroomId: classroom._id.toString(),
     });

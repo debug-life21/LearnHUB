@@ -706,6 +706,40 @@ export function LearningWorkspace() {
                     </div>
                 )}
 
+                {/* Prominent Live Session Spotlight */}
+                {nextSession && (
+                    <div className="mb-6 overflow-hidden rounded-3xl border border-teal-500/30 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 p-6 sm:p-7 text-white shadow-2xl shadow-teal-900/20">
+                        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                            <div className="space-y-1.5">
+                                <div className="flex flex-wrap items-center gap-2.5">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/20 px-3 py-1 text-xs font-black uppercase tracking-wider text-teal-300 border border-teal-400/30">
+                                        <span className="h-2 w-2 rounded-full bg-teal-400 animate-ping" />
+                                        <span>Scheduled Live Session</span>
+                                    </span>
+                                    <span className="text-xs font-semibold text-slate-400">
+                                        Cohort: <span className="text-slate-200 font-bold">{classroom.title}</span>
+                                    </span>
+                                </div>
+                                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                                    {nextSession.title}
+                                </h2>
+                                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="text-teal-400">📅</span>
+                                        <span>{formatSessionTime(nextSession.startsAt)} — {formatSessionTime(nextSession.endsAt)}</span>
+                                    </span>
+                                    <span className="text-amber-300 font-medium">
+                                        🔒 Meeting link activates 10 minutes before class
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                <LiveSessionButton session={nextSession} />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {feedback && (
                     <div className="mt-4 rounded-2xl bg-sky-50 p-3.5 text-xs font-bold text-blue-900 ring-1 ring-sky-200 flex justify-between items-center">
                         <span>{feedback}</span>

@@ -263,19 +263,24 @@ export function StudentDashboard({ user }) {
     return (<div className="min-h-screen space-y-8 px-4 py-6 sm:px-6 lg:pl-72 lg:pr-8">
       <DashboardSidebar title="Student workspace" user={{ ...user, fullName: personalForm.fullName, avatarUrl: personalForm.avatarUrl }} tabs={dashboardTabs} activeTab={activeTab} onSelect={setActiveTab}/>
       {/* Next Lesson Banner */}
-      {nextSession ? (<div className="rounded-3xl bg-gradient-to-r from-blue-900 via-slate-900 to-cyan-950 p-8 text-white shadow-xl flex flex-wrap items-center justify-between gap-6 border border-cyan-500/20">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300">
+      {nextSession ? (
+        <div className="rounded-3xl bg-gradient-to-r from-blue-900 via-slate-900 to-cyan-950 p-6 sm:p-8 text-white shadow-xl flex flex-wrap items-center justify-between gap-6 border border-cyan-500/30">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-500/30">
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping"></span>
               <span>Next live session</span>
             </div>
-            <h2 className="mt-3 text-2xl font-black">{nextSession.title}</h2>
-            <p className="mt-1 text-xs text-slate-300">
-              {formatSessionTime(nextSession.startsAt)} — {formatSessionTime(nextSession.endsAt)}
-            </p>
+            <h2 className="text-2xl font-black text-white">{nextSession.title}</h2>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
+              <p>
+                📅 {formatSessionTime(nextSession.startsAt)} — {formatSessionTime(nextSession.endsAt)}
+              </p>
+              <span className="text-amber-300 font-medium">🔒 Meeting link activates 10 minutes prior</span>
+            </div>
           </div>
           {nextSession.meetingUrl ? <LiveSessionButton session={nextSession} /> : null}
-        </div>) : null}
+        </div>
+      ) : null}
 
       {/* Verification notice if email not yet verified */}
       {(!user.isVerified && !user.emailVerified) ? (
