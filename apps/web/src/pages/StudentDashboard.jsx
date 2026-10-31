@@ -379,7 +379,7 @@ export function StudentDashboard({ user }) {
 
             <DashboardCard title="Recent notifications">
               <div className="space-y-3">
-                {notifications.length === 0 ? (<EmptyState title="No new notifications."/>) : (notifications.map((n) => (<div key={n._id} className="rounded-xl bg-slate-50 p-3 text-xs">
+                {notifications.length === 0 ? (<EmptyState title="No new notifications."/>) : (notifications.slice(0, 10).map((n) => (<div key={n._id} className="rounded-xl bg-slate-50 p-3 text-xs">
                       <p className="font-bold text-slate-900">{n.title}</p>
                       <p className="mt-1 text-slate-600">{n.message}</p>
                       <span className="mt-1 block text-[10px] text-slate-400">

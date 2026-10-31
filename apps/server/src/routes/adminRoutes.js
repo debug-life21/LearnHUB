@@ -11,7 +11,7 @@ import { ContactInquiryModel } from "../models/ContactInquiry.js";
 import { CourseModel } from "../models/Course.js";
 import { FAQModel } from "../models/FAQ.js";
 import { LearningCategoryModel } from "../models/LearningCategory.js";
-import { NotificationModel } from "../models/Notification.js";
+import { NotificationModel, pruneNotifications, NOTIFICATION_CAPS } from "../models/Notification.js";
 import { TeacherApplicationModel } from "../models/TeacherApplication.js";
 import { UserModel } from "../models/User.js";
 import { AnnouncementModel } from "../models/Announcement.js";
@@ -37,6 +37,16 @@ function isValidTimeZone(timeZone) {
         return false;
     }
 }
+// Admin: get own notifications (capped at 20)
+adminRouter.get("/notifications", asyncHandler(async (req, res) => {
+    const adminId = req.user.id;
+    const notifications = await NotificationModel.find({ user: adminId })
+        .sort({ createdAt: -1 })
+        .limit(NOTIFICATION_CAPS.hub_admin)
+        .lean();
+    void pruneNotifications(adminId, NOTIFICATION_CAPS.hub_admin);
+    res.json({ notifications });
+}));
 adminRouter.get("/teachers/pending", asyncHandler(async (_req, res) => {
     const teachers = await UserModel.find({ role: "teacher", isDeleted: { $ne: true }, teacherStatus: "pending", isVerified: { $ne: false } })
         .select("-password -passwordHash -verificationCode")
@@ -74,6 +84,8 @@ async function updateTeacherReview(req, res, status) {
         kind: "teacher_application",
         link: "/dashboard",
     });
+    // Prune teacher's notifications to cap
+    void pruneNotifications(teacher._id, NOTIFICATION_CAPS.teacher);
     await writeAudit(req.user.id, `teacher_application_${status}`, "User", teacher._id.toString());
     res.json({ message: `Teacher application ${status}.` });
 }
@@ -1207,6 +1219,12 @@ adminRouter.post("/announcements", asyncHandler(async (req, res) => {
             kind: "announcement",
             link: "/dashboard",
         })));
+        // Prune each recipient's notifications to their role-based cap (fire-and-forget)
+        void Promise.all(uniqueRecipients.map(async (u) => {
+            const userDoc = await UserModel.findById(u._id).select("role").lean();
+            const cap = NOTIFICATION_CAPS[userDoc?.role] || NOTIFICATION_CAPS.student;
+            await pruneNotifications(u._id, cap);
+        }));
 
         // 2. Direct Email Inboxing to everyone registered
         void (async () => {

@@ -101,178 +101,176 @@ function ProtectedDocumentPreview({ resource, kind = "document" }) {
     const { url, error, loading, retry } = useProtectedObjectUrl(resource);
     const [zoom, setZoom] = useState(100);
     const [isDarkMode, setIsDarkMode] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
-    return (
-        <div className={`relative ${isFullscreen ? "fixed inset-0 z-50 p-4 bg-slate-950/95" : "h-[80vh] min-h-[620px] w-full"} transition-all duration-300`} onContextMenu={(e) => e.preventDefault()}>
-            <div className="relative h-full w-full rounded-3xl p-1 bg-gradient-to-b from-blue-500/30 via-slate-700/20 to-transparent shadow-[0_20px_80px_rgba(0,102,255,0.22)] ring-1 ring-white/10 overflow-hidden flex flex-col bg-slate-950">
-                {/* Top Glassmorphic Reader Bar */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/90 backdrop-blur-md">
-                    <div className="flex items-center gap-2.5">
-                        <span className="h-3 w-3 rounded-full bg-rose-500/80 shadow-xs" />
-                        <span className="h-3 w-3 rounded-full bg-amber-500/80 shadow-xs" />
-                        <span className="h-3 w-3 rounded-full bg-emerald-500/80 shadow-xs" />
-                        <span className="ml-2 flex items-center gap-1.5 text-xs font-bold text-slate-200 truncate max-w-xs sm:max-w-md">
-                            <span>{kind === "image" ? "🖼️" : "📕"}</span>
-                            <span className="truncate">{resource?.originalFilename || resource?.title || "Document Reader"}</span>
-                        </span>
-                    </div>
+    // Dismiss expand modal on Escape key
+    useEffect(() => {
+        if (!isExpanded) return undefined;
+        const onKey = (e) => { if (e.key === "Escape") setIsExpanded(false); };
+        document.addEventListener("keydown", onKey);
+        // Prevent body scrolling while modal is open
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            document.body.style.overflow = "";
+        };
+    }, [isExpanded]);
 
-                    {/* Reader Controls Toolbar */}
-                    <div className="flex items-center gap-2 text-xs">
-                        {/* Zoom controls */}
-                        <div className="hidden sm:flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10 text-slate-300">
-                            <button
-                                type="button"
-                                onClick={() => setZoom((z) => Math.max(50, z - 15))}
-                                className="rounded-lg px-2 py-0.5 hover:bg-white/10 font-bold transition"
-                                title="Zoom Out"
-                            >
-                                −
-                            </button>
-                            <span className="px-1 text-[11px] font-mono font-bold text-cyan-300 min-w-[36px] text-center">
-                                {zoom}%
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setZoom((z) => Math.min(200, z + 15))}
-                                className="rounded-lg px-2 py-0.5 hover:bg-white/10 font-bold transition"
-                                title="Zoom In"
-                            >
-                                +
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setZoom(100)}
-                                className="rounded-lg px-2 py-0.5 text-[10px] hover:bg-white/10 text-slate-400 hover:text-white transition"
-                                title="Reset Zoom"
-                            >
-                                Fit
-                            </button>
-                        </div>
-
-                        {/* Canvas Mode Toggle */}
-                        <button
-                            type="button"
-                            onClick={() => setIsDarkMode((d) => !d)}
-                            className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition ${
-                                isDarkMode
-                                    ? "bg-slate-800 text-cyan-300 border-cyan-500/30"
-                                    : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10"
-                            }`}
-                            title="Toggle Reader Mode"
-                        >
-                            {isDarkMode ? "🌙 Dark" : "☀️ Light"}
-                        </button>
-
-                        {/* Fullscreen Toggle */}
-                        <button
-                            type="button"
-                            onClick={() => setIsFullscreen((f) => !f)}
-                            className="rounded-xl bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300 border border-white/10 hover:bg-white/15 transition"
-                            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                        >
-                            {isFullscreen ? "↙ Exit" : "⛶ Expand"}
-                        </button>
-
-                        {/* Pop out action */}
-                        {url && (
-                            <a
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-1 text-[11px] font-bold text-white shadow-sm hover:from-blue-500 hover:to-cyan-500 transition"
-                            >
-                                Pop-out ↗
-                            </a>
-                        )}
-                    </div>
+    const ReaderToolbar = ({ inModal = false }) => (
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/90 backdrop-blur-md">
+            <div className="flex items-center gap-2.5">
+                <span className="h-3 w-3 rounded-full bg-rose-500/80" />
+                <span className="h-3 w-3 rounded-full bg-amber-500/80" />
+                <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
+                <span className="ml-2 flex items-center gap-1.5 text-xs font-bold text-slate-200 truncate max-w-xs sm:max-w-md">
+                    <span>{kind === "image" ? "🖼️" : "📕"}</span>
+                    <span className="truncate">{resource?.originalFilename || resource?.title || "Document Reader"}</span>
+                </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+                {/* Zoom controls */}
+                <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10 text-slate-300">
+                    <button type="button" onClick={() => setZoom((z) => Math.max(25, z - 15))}
+                        className="rounded-lg px-2 py-0.5 hover:bg-white/10 font-bold transition" title="Zoom Out">−</button>
+                    <span className="px-1 text-[11px] font-mono font-bold text-cyan-300 min-w-[40px] text-center">{zoom}%</span>
+                    <button type="button" onClick={() => setZoom((z) => Math.min(300, z + 15))}
+                        className="rounded-lg px-2 py-0.5 hover:bg-white/10 font-bold transition" title="Zoom In">+</button>
+                    <button type="button" onClick={() => setZoom(100)}
+                        className="rounded-lg px-2 py-0.5 text-[10px] hover:bg-white/10 text-slate-400 hover:text-white transition" title="Reset Zoom">Fit</button>
                 </div>
-
-                {/* Content Canvas */}
-                <div className={`relative flex-1 overflow-auto p-4 flex items-center justify-center transition-colors ${
-                    isDarkMode ? "bg-slate-950" : "bg-slate-100/90"
-                }`}>
-                    {loading && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm font-medium text-slate-300">
-                            <div className="h-10 w-10 animate-spin rounded-full border-3 border-cyan-400 border-t-transparent shadow-lg shadow-cyan-500/20" />
-                            <span className="font-semibold text-xs tracking-wider uppercase text-cyan-300">Loading document…</span>
-                        </div>
-                    )}
-                    {error && !loading && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-slate-900">
-                            <span className="text-4xl">📄</span>
-                            <p className="text-sm font-bold text-rose-300">We couldn't display this file.</p>
-                            <p className="max-w-md text-xs text-slate-400 leading-relaxed">{error}</p>
-                            <div className="mt-3 flex items-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={retry}
-                                    className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-2.5 text-xs font-bold text-white hover:from-blue-500 hover:to-cyan-500 transition shadow-md shadow-blue-500/20"
-                                >
-                                    Retry loading
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    {url && !error && (
-                        kind === "image" ? (
-                            <div className="flex h-full w-full items-center justify-center p-4">
-                                <img
-                                    src={url}
-                                    alt={resource?.title}
-                                    style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
-                                    className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl transition-transform duration-200 select-none ring-1 ring-white/10"
-                                    draggable={false}
-                                    onContextMenu={(e) => e.preventDefault()}
-                                />
-                            </div>
-                        ) : (
-                            <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center", width: "100%", height: "100%" }} className="transition-transform duration-200 flex flex-col h-full w-full">
-                                <object
-                                    data={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
-                                    type="application/pdf"
-                                    className="h-full w-full rounded-2xl border-0 bg-white shadow-2xl ring-1 ring-black/10 flex-1"
-                                    title={resource?.title}
-                                >
-                                    <iframe
-                                        src={`${url}#toolbar=0&navpanes=0&scrollbar=1`}
-                                        title={resource?.title}
-                                        className="h-full w-full rounded-2xl border-0 bg-white"
-                                    >
-                                        <div className="flex flex-col items-center justify-center p-8 text-center text-slate-800 bg-white rounded-2xl h-full">
-                                            <span className="text-4xl mb-3">📕</span>
-                                            <p className="font-bold text-base mb-1 text-slate-900">{resource?.title || "PDF Document"}</p>
-                                            <p className="text-xs text-slate-500 mb-4 max-w-sm">Tap below to view this document in your browser's native reader.</p>
-                                            <a
-                                                href={url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-cyan-500 transition"
-                                            >
-                                                Open Full PDF ↗
-                                            </a>
-                                        </div>
-                                    </iframe>
-                                </object>
-                            </div>
-                        )
-                    )}
-                </div>
-
-                {/* Reader Bottom Info Bar */}
-                <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/10 bg-slate-900/90 text-[11px] text-slate-400">
-                    <span className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span className="font-semibold text-slate-300">TedbabeLearnHUB Secured Reader</span>
-                        <span className="hidden sm:inline text-slate-500">• In-Place Protected Material</span>
-                    </span>
-                    <span className="font-mono text-[10px] text-cyan-300/80 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
-                        {resource?.mimeType || "application/pdf"}
-                    </span>
-                </div>
+                {/* Reader mode */}
+                <button type="button" onClick={() => setIsDarkMode((d) => !d)}
+                    className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition ${
+                        isDarkMode ? "bg-slate-800 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10"
+                    }`} title="Toggle Reader Mode">
+                    {isDarkMode ? "🌙 Dark" : "☀️ Light"}
+                </button>
+                {/* Expand/collapse */}
+                {inModal ? (
+                    <button type="button" onClick={() => setIsExpanded(false)}
+                        className="rounded-xl bg-rose-600/80 px-2.5 py-1 text-[11px] font-bold text-white border border-rose-500/40 hover:bg-rose-600 transition"
+                        title="Exit Expanded View">
+                        ✕ Close
+                    </button>
+                ) : (
+                    <button type="button" onClick={() => setIsExpanded(true)}
+                        className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2.5 py-1 text-[11px] font-bold text-white border border-emerald-500/40 hover:from-emerald-500 hover:to-teal-500 transition"
+                        title="Expand to Full View">
+                        ⛶ Expand
+                    </button>
+                )}
+                {/* Pop out */}
+                {url && (
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                        className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-1 text-[11px] font-bold text-white shadow-sm hover:from-blue-500 hover:to-cyan-500 transition">
+                        Pop-out ↗
+                    </a>
+                )}
             </div>
         </div>
+    );
+
+    const ReaderContent = () => (
+        <div className={`relative flex-1 overflow-auto p-4 flex items-start justify-center transition-colors ${
+            isDarkMode ? "bg-slate-950" : "bg-slate-100/90"
+        }`}>
+            {loading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm font-medium text-slate-300">
+                    <div className="h-10 w-10 animate-spin rounded-full border-3 border-cyan-400 border-t-transparent shadow-lg shadow-cyan-500/20" />
+                    <span className="font-semibold text-xs tracking-wider uppercase text-cyan-300">Loading document…</span>
+                </div>
+            )}
+            {error && !loading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-slate-900">
+                    <span className="text-4xl">📄</span>
+                    <p className="text-sm font-bold text-rose-300">We couldn't display this file.</p>
+                    <p className="max-w-md text-xs text-slate-400 leading-relaxed">{error}</p>
+                    <div className="mt-3 flex items-center gap-3">
+                        <button type="button" onClick={retry}
+                            className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-2.5 text-xs font-bold text-white hover:from-blue-500 hover:to-cyan-500 transition shadow-md shadow-blue-500/20">
+                            Retry loading
+                        </button>
+                    </div>
+                </div>
+            )}
+            {url && !error && (
+                kind === "image" ? (
+                    <div className="flex h-full w-full items-center justify-center p-4">
+                        <img src={url} alt={resource?.title}
+                            style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center top" }}
+                            className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl transition-transform duration-200 select-none ring-1 ring-white/10"
+                            draggable={false} onContextMenu={(e) => e.preventDefault()} />
+                    </div>
+                ) : (
+                    <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center", width: "100%", height: zoom > 100 ? `${zoom}%` : "100%" }}
+                        className="transition-transform duration-200 flex flex-col w-full min-h-full">
+                        <object data={`${url}#toolbar=0&navpanes=0&scrollbar=1`} type="application/pdf"
+                            className="h-full w-full min-h-[600px] rounded-2xl border-0 bg-white shadow-2xl ring-1 ring-black/10 flex-1"
+                            title={resource?.title}>
+                            <iframe src={`${url}#toolbar=0&navpanes=0&scrollbar=1`} title={resource?.title}
+                                className="h-full w-full min-h-[600px] rounded-2xl border-0 bg-white">
+                                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-800 bg-white rounded-2xl h-full">
+                                    <span className="text-4xl mb-3">📕</span>
+                                    <p className="font-bold text-base mb-1 text-slate-900">{resource?.title || "PDF Document"}</p>
+                                    <p className="text-xs text-slate-500 mb-4 max-w-sm">Tap below to view this document in your browser's native reader.</p>
+                                    <a href={url} target="_blank" rel="noopener noreferrer"
+                                        className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-cyan-500 transition">
+                                        Open Full PDF ↗
+                                    </a>
+                                </div>
+                            </iframe>
+                        </object>
+                    </div>
+                )
+            )}
+        </div>
+    );
+
+    const ReaderBottomBar = () => (
+        <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/10 bg-slate-900/90 text-[11px] text-slate-400">
+            <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-semibold text-slate-300">TedbabeLearnHUB Secured Reader</span>
+                <span className="hidden sm:inline text-slate-500">• Protected Material</span>
+            </span>
+            <span className="font-mono text-[10px] text-cyan-300/80 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
+                {resource?.mimeType || "application/pdf"}
+            </span>
+        </div>
+    );
+
+    return (
+        <>
+            {/* Inline reader */}
+            <div className="relative h-[80vh] min-h-[620px] w-full" onContextMenu={(e) => e.preventDefault()}>
+                <div className="relative h-full w-full rounded-3xl p-1 bg-gradient-to-b from-blue-500/30 via-slate-700/20 to-transparent shadow-[0_20px_80px_rgba(0,102,255,0.22)] ring-1 ring-white/10 overflow-hidden flex flex-col bg-slate-950">
+                    <ReaderToolbar />
+                    <ReaderContent />
+                    <ReaderBottomBar />
+                </div>
+            </div>
+
+            {/* Full-screen expand overlay */}
+            {isExpanded && (
+                <div
+                    className="fixed inset-0 z-[9999] flex flex-col bg-slate-950/98 backdrop-blur-2xl"
+                    onContextMenu={(e) => e.preventDefault()}
+                    style={{ animation: "fadeInScale 0.2s ease" }}
+                >
+                    <style>{`
+                        @keyframes fadeInScale {
+                            from { opacity: 0; transform: scale(0.97); }
+                            to { opacity: 1; transform: scale(1); }
+                        }
+                    `}</style>
+                    <div className="relative h-full w-full flex flex-col overflow-hidden">
+                        <ReaderToolbar inModal />
+                        <ReaderContent />
+                        <ReaderBottomBar />
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
 
@@ -355,6 +353,73 @@ const isVideoResource = (resource) => (
     resource.mimeType?.startsWith("video/")
 );
 
+function DocVideoPlayer({ resource, resUrl: resUrlFn }) {
+    const [docVideoExpanded, setDocVideoExpanded] = useState(false);
+    const src = resUrlFn ? resUrlFn(`/api/resources/${resource.storedKey}/file`) : "";
+
+    useEffect(() => {
+        if (!docVideoExpanded) return undefined;
+        const onKey = (e) => { if (e.key === "Escape") setDocVideoExpanded(false); };
+        document.addEventListener("keydown", onKey);
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            document.body.style.overflow = "";
+        };
+    }, [docVideoExpanded]);
+
+    return (
+        <>
+            <div className="rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-black">
+                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900/90 border-b border-white/10">
+                    <span className="text-xs font-bold text-slate-200 truncate">{resource?.title}</span>
+                    <button type="button" onClick={() => setDocVideoExpanded(true)}
+                        className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2.5 py-1 text-[11px] font-bold text-white border border-emerald-500/40 hover:from-emerald-500 hover:to-teal-500 transition"
+                        title="Expand Video to Full View">
+                        ⛶ Expand
+                    </button>
+                </div>
+                <video
+                    src={src}
+                    controls
+                    controlsList="nodownload"
+                    onContextMenu={(e) => e.preventDefault()}
+                    preload="metadata"
+                    className="h-[70vh] w-full bg-black"
+                    aria-label={resource?.title}
+                />
+            </div>
+            {docVideoExpanded && (
+                <div className="fixed inset-0 z-[9999] flex flex-col bg-black" style={{ animation: "fadeInScale 0.2s ease" }}>
+                    <style>{`
+                        @keyframes fadeInScale {
+                            from { opacity: 0; transform: scale(0.97); }
+                            to { opacity: 1; transform: scale(1); }
+                        }
+                    `}</style>
+                    <div className="flex items-center justify-between px-5 py-3 bg-slate-900/90 border-b border-white/10">
+                        <span className="text-xs font-bold text-slate-200 truncate">{resource?.title}</span>
+                        <button type="button" onClick={() => setDocVideoExpanded(false)}
+                            className="rounded-xl bg-rose-600/80 px-3 py-1.5 text-[11px] font-bold text-white border border-rose-500/40 hover:bg-rose-600 transition">
+                            ✕ Exit Full View
+                        </button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center bg-black">
+                        <video
+                            src={src}
+                            controls
+                            autoPlay
+                            controlsList="nodownload"
+                            onContextMenu={(e) => e.preventDefault()}
+                            className="w-full h-full object-contain bg-black"
+                        />
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
 export function LearningWorkspace() {
     const { classroomId } = useParams();
     const { user } = useAuth();
@@ -381,6 +446,19 @@ export function LearningWorkspace() {
     const [playbackRate, setPlaybackRate] = useState(1);
     const videoRef = useRef(null);
     const [selectedVideoResource, setSelectedVideoResource] = useState(null);
+    const [videoExpanded, setVideoExpanded] = useState(false);
+
+    // Dismiss video expanded overlay on Escape key
+    useEffect(() => {
+        if (!videoExpanded) return undefined;
+        const onKey = (e) => { if (e.key === "Escape") setVideoExpanded(false); };
+        document.addEventListener("keydown", onKey);
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            document.body.style.overflow = "";
+        };
+    }, [videoExpanded]);
 
     // Discussion modal / form state
     const [newThreadModal, setNewThreadModal] = useState(false);
@@ -752,7 +830,82 @@ export function LearningWorkspace() {
                     <div className="mt-6 grid gap-8 lg:grid-cols-3">
                         {/* Video Player Column */}
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="relative rounded-3xl p-1 bg-gradient-to-b from-cyan-400/35 via-slate-700/25 to-transparent shadow-[0_25px_95px_rgba(0,102,255,0.28)] ring-1 ring-white/15">
+                            {/* Video player expanded overlay */}
+                        {videoExpanded && (
+                            <div
+                                className="fixed inset-0 z-[9999] flex flex-col bg-black"
+                                style={{ animation: "fadeInScale 0.2s ease" }}
+                            >
+                                <style>{`
+                                    @keyframes fadeInScale {
+                                        from { opacity: 0; transform: scale(0.97); }
+                                        to { opacity: 1; transform: scale(1); }
+                                    }
+                                `}</style>
+                                <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/90 backdrop-blur-md">
+                                    <div className="flex items-center gap-2">
+                                        <span className="h-3 w-3 rounded-full bg-rose-500/80" />
+                                        <span className="h-3 w-3 rounded-full bg-amber-500/80" />
+                                        <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
+                                        <span className="ml-3 text-xs font-bold text-slate-200 truncate max-w-xs sm:max-w-lg">
+                                            {selectedVideoResource?.title || currentLesson?.title || "Classroom Player"}
+                                        </span>
+                                    </div>
+                                    <button type="button" onClick={() => setVideoExpanded(false)}
+                                        className="rounded-xl bg-rose-600/80 px-3 py-1.5 text-[11px] font-bold text-white border border-rose-500/40 hover:bg-rose-600 transition">
+                                        ✕ Exit Full View
+                                    </button>
+                                </div>
+                                <div className="flex-1 flex items-center justify-center bg-black overflow-hidden">
+                                    {selectedVideoResource?.sourceType === "youtube" ? (
+                                        <iframe
+                                            src={`https://www.youtube-nocookie.com/embed/${getYouTubeVideoId(selectedVideoResource.sourceUrl || selectedVideoResource.externalUrl)}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&controls=1&fs=1&autoplay=1`}
+                                            title={selectedVideoResource.title}
+                                            className="w-full h-full border-0 bg-black"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            referrerPolicy="strict-origin-when-cross-origin"
+                                            allowFullScreen
+                                        />
+                                    ) : selectedVideoResource?.sourceType === "google_drive" ? (
+                                        <iframe
+                                            src={selectedVideoResource.externalUrl}
+                                            title={selectedVideoResource.title}
+                                            className="w-full h-full border-0 bg-black"
+                                            referrerPolicy="no-referrer"
+                                            allow="autoplay"
+                                            allowFullScreen
+                                        />
+                                    ) : selectedVideoResource ? (
+                                        <video
+                                            src={resUrl(`/api/resources/${selectedVideoResource.storedKey}/file`)}
+                                            controls
+                                            autoPlay
+                                            controlsList="nodownload"
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            onTimeUpdate={handleTimeUpdate}
+                                            className="w-full h-full object-contain bg-black"
+                                        />
+                                    ) : currentLesson?.videoUrl ? (
+                                        <video
+                                            src={currentLesson.videoUrl}
+                                            controls
+                                            autoPlay
+                                            controlsList="nodownload"
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            onTimeUpdate={handleTimeUpdate}
+                                            className="w-full h-full object-contain bg-black"
+                                        />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center p-8 text-slate-400">
+                                            <span className="text-5xl mb-4">📺</span>
+                                            <p className="font-bold text-white text-lg">No video available</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="relative rounded-3xl p-1 bg-gradient-to-b from-cyan-400/35 via-slate-700/25 to-transparent shadow-[0_25px_95px_rgba(0,102,255,0.28)] ring-1 ring-white/15">
                                 <div className="relative rounded-[22px] overflow-hidden bg-slate-950 backdrop-blur-xl">
                                     {/* Top Media Bar / Window Frame */}
                                     <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-slate-900/90 backdrop-blur-md">
@@ -771,6 +924,11 @@ export function LearningWorkspace() {
                                             <span className="hidden sm:inline-block rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
                                                 {selectedVideoResource?.sourceType === "youtube" ? "Interactive Video" : "Live Session Lab"}
                                             </span>
+                                            <button type="button" onClick={() => setVideoExpanded(true)}
+                                                className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2.5 py-1 text-[11px] font-bold text-white border border-emerald-500/40 hover:from-emerald-500 hover:to-teal-500 transition"
+                                                title="Expand Video to Full View">
+                                                ⛶ Expand
+                                            </button>
                                         </div>
                                     </div>
 
@@ -1009,17 +1167,7 @@ export function LearningWorkspace() {
                                                 />
                                             </div>
                                         ) : selectedDoc.mimeType?.startsWith("video/") ? (
-                                            <div className="rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-black">
-                                                <video
-                                                    src={resUrl(`/api/resources/${selectedDoc.storedKey}/file`)}
-                                                    controls
-                                                    controlsList="nodownload"
-                                                    onContextMenu={(e) => e.preventDefault()}
-                                                    preload="metadata"
-                                                    className="h-[70vh] w-full bg-black"
-                                                    aria-label={selectedDoc.title}
-                                                />
-                                            </div>
+                                            <DocVideoPlayer resource={selectedDoc} resUrl={resUrl} />
                                         ) : (selectedDoc.mimeType?.includes("pdf") || selectedDoc.category === "pdf" || /\.pdf$/i.test(selectedDoc.originalFilename || "")) ? (
                                             <ProtectedDocumentPreview resource={selectedDoc} kind="document" />
                                         ) : selectedDoc.mimeType?.includes("image") ? (

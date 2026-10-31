@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from "../auth.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
 import { ClassroomModel } from "../models/Classroom.js";
 import { ClassSessionModel } from "../models/ClassSession.js";
-import { NotificationModel } from "../models/Notification.js";
+import { NotificationModel, pruneNotifications, NOTIFICATION_CAPS } from "../models/Notification.js";
 import { UserModel } from "../models/User.js";
 import { AssignmentModel } from "../models/Assignment.js";
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.js";
@@ -29,8 +29,10 @@ studentRouter.get("/dashboard", asyncHandler(async (req, res) => {
             .populate("teacher", "fullName email")
             .sort({ createdAt: -1 })
             .lean(),
-        NotificationModel.find({ user: studentId }).sort({ createdAt: -1 }).limit(10).lean(),
+        NotificationModel.find({ user: studentId }).sort({ createdAt: -1 }).limit(NOTIFICATION_CAPS.student).lean(),
     ]);
+    // Prune any notifications beyond the cap in the background (fire-and-forget)
+    void pruneNotifications(studentId, NOTIFICATION_CAPS.student);
     const classIds = classes.map((classroom) => classroom._id);
     const [upcomingLessons, assignments, submissions, attendanceRecords] = await Promise.all([
         ClassSessionModel.find({

@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { apiRequest } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
+// Role-based caps matching the backend NOTIFICATION_CAPS
+const NOTIFICATION_CAPS = { hub_admin: 20, admin: 20, teacher: 10, student: 10 };
+const getCapForRole = (role) => NOTIFICATION_CAPS[role] ?? 10;
+
 // Play a subtle, non-intrusive notification chime using Web Audio API
 function playAlertChime() {
     try {
@@ -25,6 +29,8 @@ function playAlertChime() {
     }
 }
 
+const ALLOWED_ROLES = new Set(["student", "teacher", "hub_admin", "admin"]);
+
 export function NotificationCenter() {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState([]);
@@ -34,35 +40,54 @@ export function NotificationCenter() {
     const knownIdsRef = useRef(new Set());
     const dropdownRef = useRef(null);
 
+    const cap = user ? getCapForRole(user.role) : 10;
+    const isAdmin = user?.role === "hub_admin" || user?.role === "admin";
+
     const fetchNotifications = useCallback(async () => {
-        if (!user || (user.role !== "student" && user.role !== "teacher")) return;
+        if (!user || !ALLOWED_ROLES.has(user.role)) return;
         try {
-            const apiPrefix = user.role === "teacher" ? "/api/teacher" : "/api/student";
-            const [dashRes, annRes] = await Promise.all([
-                apiRequest(`${apiPrefix}/dashboard`).catch(() => ({})),
-                apiRequest(`${apiPrefix}/announcements`).catch(() => ({ announcements: [] })),
-            ]);
+            let merged = [];
 
-            const notifs = dashRes?.notifications || [];
-            const anns = (annRes?.announcements || []).map((ann) => ({
-                _id: ann._id,
-                title: `📢 ${ann.title}`,
-                message: ann.content,
-                createdAt: ann.createdAt,
-                kind: "announcement",
-                link: ann.classroom ? `/workspace/${ann.classroom}` : "/dashboard",
-                priority: ann.priority,
-            }));
+            if (isAdmin) {
+                // Admins get their own notification feed from the dedicated endpoint
+                const adminRes = await apiRequest("/api/admin/notifications").catch(() => ({ notifications: [] }));
+                merged = adminRes?.notifications || [];
+            } else {
+                const apiPrefix = user.role === "teacher" ? "/api/teacher" : "/api/student";
+                const [dashRes, annRes] = await Promise.all([
+                    apiRequest(`${apiPrefix}/dashboard`).catch(() => ({})),
+                    apiRequest(`${apiPrefix}/announcements`).catch(() => ({ announcements: [] })),
+                ]);
 
-            // Merge and sort
-            const merged = [...anns, ...notifs];
-            merged.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+                const notifs = dashRes?.notifications || [];
+                const anns = (annRes?.announcements || []).map((ann) => ({
+                    _id: ann._id,
+                    title: `📢 ${ann.title}`,
+                    message: ann.content,
+                    createdAt: ann.createdAt,
+                    kind: "announcement",
+                    link: ann.classroom ? `/workspace/${ann.classroom}` : "/dashboard",
+                    priority: ann.priority,
+                }));
+
+                // Merge and sort, then enforce cap
+                merged = [...anns, ...notifs];
+                merged.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            }
+
+            // Enforce the role-based cap on the frontend too
+            const capped = merged.slice(0, cap);
+
+            // Keep knownIds bounded to avoid memory growth
+            if (knownIdsRef.current.size > cap * 3) {
+                knownIdsRef.current = new Set([...knownIdsRef.current].slice(-cap));
+            }
 
             // Check for new items to alert
             const isInitial = knownIdsRef.current.size === 0;
             const newHighPriority = [];
 
-            merged.forEach((item) => {
+            capped.forEach((item) => {
                 if (!knownIdsRef.current.has(item._id)) {
                     knownIdsRef.current.add(item._id);
                     if (!isInitial) {
@@ -71,10 +96,10 @@ export function NotificationCenter() {
                 }
             });
 
-            setNotifications(merged.slice(0, 15));
-            setUnreadCount(merged.filter((n) => !n.read).length || merged.slice(0, 3).length);
+            setNotifications(capped);
+            setUnreadCount(capped.filter((n) => !n.isRead && !n.read).length || Math.min(capped.length, 3));
 
-            // Trigger prompt alert for newest notification
+            // Trigger toast alert for newest notification
             if (newHighPriority.length > 0) {
                 const latest = newHighPriority[0];
                 setActiveToast(latest);
@@ -83,7 +108,7 @@ export function NotificationCenter() {
         } catch {
             // Non-blocking background fetch
         }
-    }, [user]);
+    }, [user, cap, isAdmin]);
 
     // Poll every 25 seconds for prompt alerts
     useEffect(() => {
@@ -112,7 +137,7 @@ export function NotificationCenter() {
         return () => document.removeEventListener("mousedown", handleClick);
     }, [open]);
 
-    if (!user || (user.role !== "student" && user.role !== "teacher")) return null;
+    if (!user || !ALLOWED_ROLES.has(user.role)) return null;
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -141,16 +166,21 @@ export function NotificationCenter() {
                         <div className="flex items-center gap-2">
                             <span className="text-base">📢</span>
                             <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                                Class Alerts & Notices
+                                {isAdmin ? "Admin Alerts" : "Class Alerts & Notices"}
                             </h3>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setUnreadCount(0)}
-                            className="text-[11px] font-semibold text-blue-600 hover:underline"
-                        >
-                            Mark all read
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 font-mono">
+                                {notifications.length}/{cap} max
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setUnreadCount(0)}
+                                className="text-[11px] font-semibold text-blue-600 hover:underline"
+                            >
+                                Mark all read
+                            </button>
+                        </div>
                     </div>
 
                     <div className="mt-3 max-h-80 overflow-y-auto space-y-2.5 divide-y divide-slate-50">

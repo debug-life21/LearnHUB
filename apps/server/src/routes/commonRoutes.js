@@ -1,14 +1,17 @@
 import { Router } from "express";
 import { requireAuth } from "../auth.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
-import { NotificationModel } from "../models/Notification.js";
+import { NotificationModel, pruneNotifications, NOTIFICATION_CAPS, DEFAULT_CAP } from "../models/Notification.js";
 export const commonRouter = Router();
 commonRouter.use(requireAuth);
 commonRouter.get("/notifications", asyncHandler(async (req, res) => {
+    const role = req.user?.role;
+    const cap = NOTIFICATION_CAPS[role] || DEFAULT_CAP;
     const notifications = await NotificationModel.find({ user: req.user.id })
         .sort({ createdAt: -1 })
-        .limit(50)
+        .limit(cap)
         .lean();
+    void pruneNotifications(req.user.id, cap);
     res.json({
         notifications,
         unreadCount: notifications.filter((item) => !item.isRead).length,

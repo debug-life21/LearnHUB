@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from "../auth.js";
 import { asyncHandler, ApiError } from "../lib/http.js";
 import { ClassroomModel } from "../models/Classroom.js";
 import { ClassSessionModel } from "../models/ClassSession.js";
-import { NotificationModel } from "../models/Notification.js";
+import { NotificationModel, pruneNotifications, NOTIFICATION_CAPS } from "../models/Notification.js";
 import { AssignmentModel } from "../models/Assignment.js";
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.js";
 import { AssessmentModel } from "../models/Assessment.js";
@@ -30,9 +30,11 @@ teacherRouter.get("/dashboard", asyncHandler(async (req, res) => {
             .sort({ startsAt: 1 })
             .limit(50)
             .lean(),
-        NotificationModel.find({ user: teacherId }).sort({ createdAt: -1 }).limit(10).lean(),
+        NotificationModel.find({ user: teacherId }).sort({ createdAt: -1 }).limit(NOTIFICATION_CAPS.teacher).lean(),
         AssignmentModel.find({ teacher: teacherId }).select("_id").lean(),
     ]);
+    // Prune excess notifications beyond the cap in the background
+    void pruneNotifications(teacherId, NOTIFICATION_CAPS.teacher);
     const assignmentIds = assignments.map((a) => a._id);
     const pendingSubmissions = await AssignmentSubmissionModel.countDocuments({
         assignment: { $in: assignmentIds },
