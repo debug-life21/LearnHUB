@@ -667,6 +667,25 @@ export function AdminDashboard({ user }) {
             setInquiryFeedback(err instanceof Error ? err.message : "Could not update inquiry.");
         }
     };
+    const [deletingAuditLogId, setDeletingAuditLogId] = useState("");
+    const [auditLogDeleteConfirm, setAuditLogDeleteConfirm] = useState("");
+    const handleDeleteAuditLog = async (logId) => {
+        if (auditLogDeleteConfirm !== logId) {
+            setAuditLogDeleteConfirm(logId);
+            return;
+        }
+        setDeletingAuditLogId(logId);
+        setAuditLogDeleteConfirm("");
+        try {
+            await apiRequest(`/api/admin/audit-logs/${logId}`, { method: "DELETE" });
+            setAuditLogs((prev) => prev.filter((l) => l._id !== logId));
+            setFeedback("Activity entry removed.");
+        } catch (err) {
+            setFeedback(err instanceof Error ? err.message : "Could not delete activity entry.");
+        } finally {
+            setDeletingAuditLogId("");
+        }
+    };
     const handleSaveAdminProfile = async (event) => {
         event.preventDefault();
         try {
@@ -1433,16 +1452,32 @@ export function AdminDashboard({ user }) {
             </div>
           </DashboardCard>
 
-          <DashboardCard title="Recent activity">
-            <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-              {auditLogs.map((log) => (<div key={log._id} className="py-3 text-xs flex justify-between items-center">
-                  <div>
-                    <span className="font-bold text-slate-900">{log.action}</span>
-                    <span className="text-slate-500 ml-2">({log.targetType})</span>
-                    <p className="text-slate-400">By: {log.actor?.fullName || "System"}</p>
+          <DashboardCard title="Recent activity" subtitle={`${auditLogs.length} entr${auditLogs.length === 1 ? 'y' : 'ies'} — click the trash icon to remove an entry`}>
+            <div className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
+              {auditLogs.length === 0 ? (
+                <EmptyState title="No activity recorded yet." />
+              ) : auditLogs.map((log) => (
+                <div key={log._id} className="py-3 text-xs flex items-center justify-between gap-4 group">
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-slate-900 break-words">{log.action.replace(/_/g, " ")}</span>
+                    <span className="text-slate-400 ml-2">({log.targetType})</span>
+                    <p className="text-slate-400 mt-0.5">By: {log.actor?.fullName || "System"} &mdash; {new Date(log.createdAt).toLocaleString()}</p>
                   </div>
-                  <span className="text-slate-400 text-[11px]">{new Date(log.createdAt).toLocaleString()}</span>
-                </div>))}
+                  <button
+                    id={`delete-audit-${log._id}`}
+                    title={auditLogDeleteConfirm === log._id ? "Click again to confirm deletion" : "Remove this activity entry"}
+                    onClick={() => handleDeleteAuditLog(log._id)}
+                    disabled={deletingAuditLogId === log._id}
+                    className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all ${
+                      auditLogDeleteConfirm === log._id
+                        ? "bg-rose-600 text-white animate-pulse"
+                        : "bg-slate-100 text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-600"
+                    } disabled:opacity-40`}
+                  >
+                    {deletingAuditLogId === log._id ? "…" : auditLogDeleteConfirm === log._id ? "Confirm delete" : "🗑"}
+                  </button>
+                </div>
+              ))}
             </div>
           </DashboardCard>
         </div>) : null}

@@ -82,6 +82,8 @@ export function TeacherDashboard({ user }) {
         description: "",
         classroomId: "",
         category: "document",
+        sourceType: "upload",
+        sourceUrl: "",
         originalFilename: "",
         mimeType: "application/pdf",
         base64Data: "",
@@ -234,25 +236,33 @@ export function TeacherDashboard({ user }) {
             setFeedback(err.message);
         }
     };
-    // File Upload
+    // Upload Resource (file, YouTube, or Google Drive)
     const handleFileUpload = async (e) => {
         e.preventDefault();
         try {
+            const targetClass = uploadForm.classroomId || classes[0]?._id;
+            const isExternal = uploadForm.sourceType === "youtube" || uploadForm.sourceType === "google_drive";
             await apiRequest("/api/resources/upload", {
                 method: "POST",
                 body: JSON.stringify({
                     title: uploadForm.title,
                     description: uploadForm.description,
-                    classroomId: uploadForm.classroomId || classes[0]?._id,
-                    category: uploadForm.category,
-                    originalFilename: uploadForm.originalFilename || "document.pdf",
-                    mimeType: uploadForm.mimeType || "application/pdf",
-                    base64Data: uploadForm.base64Data || btoa("TedbabeLearnHUB Sample Resource Content"),
+                    classroomId: targetClass,
+                    category: uploadForm.sourceType === "youtube" ? "video" : uploadForm.category,
+                    sourceType: uploadForm.sourceType || "upload",
+                    ...(isExternal ? {
+                        sourceUrl: uploadForm.sourceUrl,
+                    } : {
+                        originalFilename: uploadForm.originalFilename || "document.pdf",
+                        mimeType: uploadForm.mimeType || "application/pdf",
+                        base64Data: uploadForm.base64Data || btoa("TedbabeLearnHUB Sample Resource Content"),
+                    }),
                     visibility: "class_only",
                 }),
             });
             setUploadModal(false);
-            setFeedback("Learning resource uploaded.");
+            setUploadForm({ title: "", description: "", classroomId: "", category: "document", sourceType: "upload", sourceUrl: "", originalFilename: "", mimeType: "application/pdf", base64Data: "" });
+            setFeedback("Learning resource shared with your cohort.");
             void loadTeacherData();
         }
         catch (err) {
@@ -793,40 +803,132 @@ export function TeacherDashboard({ user }) {
         </form>
       </Modal>
 
-      {/* MODAL: Upload Resource */}
-      <Modal title={t("uploadResource")} isOpen={uploadModal} onClose={() => setUploadModal(false)}>
+      {/* MODAL: Share Learning Resource */}
+      <Modal title="Share a learning resource" isOpen={uploadModal} onClose={() => { setUploadModal(false); setUploadForm({ title: "", description: "", classroomId: "", category: "document", sourceType: "upload", sourceUrl: "", originalFilename: "", mimeType: "application/pdf", base64Data: "" }); }}>
         <form onSubmit={handleFileUpload} className="space-y-4">
+          {/* Cohort selector */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Share with cohort</label>
+            <select
+              value={uploadForm.classroomId || classes[0]?._id || ""}
+              onChange={(e) => setUploadForm({ ...uploadForm, classroomId: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white"
+              required
+            >
+              {classes.map((c) => (<option key={c._id} value={c._id}>{c.title} ({c.students?.length || 0} learners)</option>))}
+            </select>
+            <p className="mt-1 text-[10px] text-slate-400">You can only share resources with cohorts you are assigned to teach.</p>
+          </div>
+
+          {/* Resource type selector */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Resource type</label>
+            <div className="flex gap-2">
+              {[
+                { value: "upload", label: "📄 File upload" },
+                { value: "youtube", label: "▶️ YouTube" },
+                { value: "google_drive", label: "🗂 Google Drive" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setUploadForm({ ...uploadForm, sourceType: opt.value, sourceUrl: "", base64Data: "", originalFilename: "", mimeType: "application/pdf" })}
+                  className={`flex-1 rounded-xl border py-2 px-2 text-[11px] font-bold transition-all ${
+                    uploadForm.sourceType === opt.value
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title */}
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("title")}</label>
-            <input required type="text" value={uploadForm.title} onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+            <input required type="text" value={uploadForm.title} onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="e.g. Chapter 3 — Introduction to Algebra" />
           </div>
+
+          {/* Description */}
           <div>
             <label className="block text-xs font-bold text-slate-700">{t("description")}</label>
-            <textarea rows={2} value={uploadForm.description} onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none"/>
+            <textarea rows={2} value={uploadForm.description} onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm outline-none" placeholder="Brief description for your students…" />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-700">Choose a file</label>
-            <input type="file" onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const base64 = reader.result.split(",")[1];
-                    setUploadForm({
-                        ...uploadForm,
-                        originalFilename: file.name,
-                        mimeType: file.type || "application/pdf",
-                        base64Data: base64,
-                    });
-                };
-                reader.readAsDataURL(file);
-            }
-        }} className="mt-1 w-full text-xs"/>
-          </div>
-          <button type="submit" className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white">
-            {t("uploadResource")}
+
+          {/* YouTube URL input */}
+          {uploadForm.sourceType === "youtube" && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700">YouTube video or playlist URL</label>
+              <input
+                required
+                type="url"
+                value={uploadForm.sourceUrl}
+                onChange={(e) => setUploadForm({ ...uploadForm, sourceUrl: e.target.value })}
+                className="mt-1 w-full rounded-xl border border-red-200 bg-red-50/30 p-2 text-sm outline-none focus:border-red-400"
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+              <p className="mt-1 text-[10px] text-slate-400">Paste a YouTube video, short, or playlist link from your YouTube account. Students will view it embedded in the workspace.</p>
+            </div>
+          )}
+
+          {/* Google Drive URL input */}
+          {uploadForm.sourceType === "google_drive" && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700">Google Drive sharing link</label>
+                <input
+                  required
+                  type="url"
+                  value={uploadForm.sourceUrl}
+                  onChange={(e) => setUploadForm({ ...uploadForm, sourceUrl: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-emerald-200 bg-emerald-50/30 p-2 text-sm outline-none focus:border-emerald-400"
+                  placeholder="https://drive.google.com/file/d/..."
+                />
+                <p className="mt-1 text-[10px] text-slate-400">Paste a shareable link from your Google Drive, Docs, Sheets, or Slides. Ensure sharing is set to "Anyone with the link can view".</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700">Document category</label>
+                <select value={uploadForm.category} onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none bg-white">
+                  <option value="document">📄 Document (Google Docs)</option>
+                  <option value="spreadsheet">📊 Spreadsheet (Google Sheets)</option>
+                  <option value="slide">🖼 Presentation (Google Slides)</option>
+                  <option value="pdf">📑 PDF file</option>
+                  <option value="video">🎥 Video file</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* File upload input */}
+          {uploadForm.sourceType === "upload" && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Choose a file (max 25 MB)</label>
+              <input type="file" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = reader.result.split(",")[1];
+                        setUploadForm({
+                            ...uploadForm,
+                            originalFilename: file.name,
+                            mimeType: file.type || "application/pdf",
+                            base64Data: base64,
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+              }} className="mt-1 w-full text-xs" />
+            </div>
+          )}
+
+          <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#0066ff] to-[#0099ff] py-2.5 text-xs font-bold text-white hover:from-[#0052cc] hover:to-[#0088e6] shadow-md shadow-blue-500/20 transition-all">
+            {uploadForm.sourceType === "youtube" ? "▶️ Share YouTube resource" : uploadForm.sourceType === "google_drive" ? "🗂 Share Google Drive resource" : "📄 Upload and share file"}
           </button>
         </form>
       </Modal>
+
     </div>);
 }

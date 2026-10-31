@@ -1134,6 +1134,16 @@ adminRouter.get("/audit-logs", asyncHandler(async (_req, res) => {
         .lean();
     res.json({ logs });
 }));
+adminRouter.delete("/audit-logs/:logId", asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.logId)) {
+        throw new ApiError(400, "Invalid audit log ID.");
+    }
+    const log = await AuditLogModel.findByIdAndDelete(req.params.logId);
+    if (!log) {
+        throw new ApiError(404, "Audit log entry not found.");
+    }
+    res.json({ message: "Activity entry deleted successfully." });
+}));
 adminRouter.patch("/teachers/:teacherId/status", asyncHandler(async (req, res) => {
     const data = z.object({
         status: z.enum(["active", "suspended"]),

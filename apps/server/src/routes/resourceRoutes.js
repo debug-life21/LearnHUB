@@ -9,6 +9,7 @@ import { deleteStoredFile, generateDocumentPdf, getGridFSBucket, getStoredFileSt
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { normalizeExternalResource } from "../utils/externalResource.js";
+import { NotificationModel, pruneNotifications, NOTIFICATION_CAPS } from "../models/Notification.js";
 export const resourceRouter = Router();
 resourceRouter.use(requireAuth);
 resourceRouter.post("/upload", asyncHandler(async (req, res) => {
@@ -28,8 +29,24 @@ resourceRouter.post("/upload", asyncHandler(async (req, res) => {
         mimeType: z.string().optional(),
         base64Data: z.string().optional(),
     }).parse(req.body);
-    if (data.visibility === "class_only" && !data.classroomId) {
-        throw new ApiError(400, "Choose a cohort for a class-only resource.");
+    // Check teacher ownership and enforce strict cohort scope
+    if (req.user.role === "teacher") {
+        if (!data.classroomId) {
+            throw new ApiError(400, "Please select the cohort you teach to attach this learning resource.");
+        }
+        const classroom = await ClassroomModel.findOne({ _id: data.classroomId, teacher: req.user.id });
+        if (!classroom) {
+            throw new ApiError(403, "You can only add learning resources to cohorts and students you teach.");
+        }
+        data.visibility = "class_only";
+        data.courseId = classroom.course ? classroom.course.toString() : undefined;
+    } else {
+        if (data.visibility === "class_only" && !data.classroomId) {
+            throw new ApiError(400, "Choose a cohort for a class-only resource.");
+        }
+        if (data.classroomId && !await ClassroomModel.exists({ _id: data.classroomId })) {
+            throw new ApiError(404, "Classroom not found.");
+        }
     }
     let external = null;
     if (data.sourceType !== "upload") {
@@ -43,16 +60,6 @@ resourceRouter.post("/upload", asyncHandler(async (req, res) => {
         throw new ApiError(400, "Select a file to upload.");
     } else if (!validateFileType(data.originalFilename, data.mimeType)) {
         throw new ApiError(400, "File type or extension is not allowed for educational resources.");
-    }
-    // Check teacher ownership if uploading to classroom
-    if (req.user.role === "teacher" && data.classroomId) {
-        const classroom = await ClassroomModel.findOne({ _id: data.classroomId, teacher: req.user.id });
-        if (!classroom) {
-            throw new ApiError(403, "You can only upload resources to classes you are assigned to teach.");
-        }
-    }
-    if (data.classroomId && !await ClassroomModel.exists({ _id: data.classroomId })) {
-        throw new ApiError(404, "Classroom not found.");
     }
     let saved = null;
     let fileBuffer = null;
@@ -87,6 +94,26 @@ resourceRouter.post("/upload", asyncHandler(async (req, res) => {
         if (saved) await deleteStoredFile(saved.key, saved.storageProvider);
         throw error;
     }
+
+    // Notify enrolled students in the cohort (fire-and-forget)
+    if (data.classroomId) {
+        void (async () => {
+            try {
+                const classroom = await ClassroomModel.findById(data.classroomId).select("students title").lean();
+                if (classroom && classroom.students?.length) {
+                    await NotificationModel.insertMany(classroom.students.map((studentId) => ({
+                        user: studentId,
+                        title: "New Learning Resource Added",
+                        message: `"${data.title}" was shared with ${classroom.title || "your class"}.`,
+                        kind: "classroom",
+                        link: `/workspace/${classroom._id}?tab=documents`,
+                    })));
+                    await Promise.all(classroom.students.map((sId) => pruneNotifications(sId, NOTIFICATION_CAPS.student)));
+                }
+            } catch {}
+        })();
+    }
+
     res.status(201).json({
         message: "Resource uploaded successfully.",
         resource,
@@ -97,28 +124,24 @@ resourceRouter.get("/", asyncHandler(async (req, res) => {
     const userId = req.user.id;
     let filter = {};
     if (userRole === "student") {
-        // Students can only see resources for classes they are enrolled in or public
-        const classes = await ClassroomModel.find({ students: userId }).select("_id course").lean();
+        // Students can only see resources for cohorts they are actively enrolled in or platform-wide public docs
+        const classes = await ClassroomModel.find({ students: userId }).select("_id").lean();
         const classIds = classes.map((c) => c._id);
-        const courseIds = classes.map((c) => c.course).filter(Boolean);
         filter = {
             $or: [
-                { visibility: "public" },
                 { classroom: { $in: classIds } },
-                { course: { $in: courseIds } },
+                { visibility: "public", classroom: null },
             ],
         };
     }
     else if (userRole === "teacher") {
-        const teacherClasses = await ClassroomModel.find({ teacher: userId }).select("_id course").lean();
+        // Teachers only see resources for cohorts they teach, or resources they personally uploaded
+        const teacherClasses = await ClassroomModel.find({ teacher: userId }).select("_id").lean();
         const classIds = teacherClasses.map((c) => c._id);
-        const courseIds = teacherClasses.map((c) => c.course).filter(Boolean);
         filter = {
             $or: [
                 { uploader: userId },
                 { classroom: { $in: classIds } },
-                { course: { $in: courseIds } },
-                { visibility: "public" },
             ],
         };
     }
@@ -178,8 +201,13 @@ resourceRouter.delete("/:id", asyncHandler(async (req, res) => {
     if (!resource) {
         throw new ApiError(404, "Resource not found.");
     }
-    if (req.user.role !== "hub_admin" && req.user.role !== "admin" && resource.uploader.toString() !== req.user.id) {
-        throw new ApiError(403, "You cannot delete resources uploaded by someone else.");
+    const isAdmin = req.user.role === "hub_admin" || req.user.role === "admin";
+    const isUploader = resource.uploader.toString() === req.user.id;
+    const teachesClass = resource.classroom
+        ? await ClassroomModel.exists({ _id: resource.classroom, teacher: req.user.id })
+        : false;
+    if (!isAdmin && !isUploader && !teachesClass) {
+        throw new ApiError(403, "You can only delete resources that you uploaded for your students.");
     }
     if (!["youtube", "google_drive"].includes(resource.sourceType)) {
         await deleteStoredFile(resource.storedKey, resource.storageProvider || "local_disk");
@@ -198,22 +226,17 @@ async function authorizeResourceAccess(req, resource) {
         const teachesClass = resource.classroom
             ? await ClassroomModel.exists({ _id: resource.classroom, teacher: req.user.id })
             : false;
-        const teachesCourse = resource.course
-            ? await ClassroomModel.exists({ course: resource.course, teacher: req.user.id })
-            : false;
-        if (!isUploader && !teachesClass && !teachesCourse && resource.visibility !== "public") {
-            throw new ApiError(403, "You do not have permission to access this resource.");
+        if (!isUploader && !teachesClass) {
+            throw new ApiError(403, "You do not have permission to access this resource. It is restricted to the assigned instructor.");
         }
         return;
     }
-    if (resource.visibility === "public") return;
+    if (resource.visibility === "public" && !resource.classroom) return;
     const enrolled = resource.classroom
         ? await ClassroomModel.exists({ _id: resource.classroom, students: req.user.id })
-        : resource.course
-            ? await ClassroomModel.exists({ course: resource.course, students: req.user.id })
-            : false;
+        : false;
     if (!enrolled) {
-        throw new ApiError(403, "You do not have permission to access this resource.");
+        throw new ApiError(403, "You do not have permission to access this resource. It is restricted to students taught in this cohort.");
     }
 }
 
